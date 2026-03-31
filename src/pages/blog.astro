@@ -1,0 +1,108 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation.astro';
+import { getCollection } from 'astro:content';
+
+// 从你之前设置好的 src/content.config.ts 中提取所有文章，并按时间倒序排列
+const allPosts = await getCollection('blog').catch(() => []);
+const posts = allPosts.sort((a, b) => new Date(b.data.pubDate).valueOf() - new Date(a.data.pubDate).valueOf());
+const categories = [...new Set(posts.map(post => post.data.category).filter(Boolean))];
+---
+
+<Layout title="Blog - Shane Lorien">
+  <main class="max-w-4xl mx-auto p-12 bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 leading-relaxed min-h-screen">
+    <Navigation />
+    
+    <header class="mb-10">
+      <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 mb-4">Blog</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-lg">记录一些思考。</p>
+    </header>
+
+    {categories.length > 0 && (
+      <div class="mb-12 flex flex-wrap gap-3" id="category-filter">
+        <button 
+          class="category-btn cursor-pointer px-4 py-1.5 rounded-full border bg-slate-800 text-slate-100 border-slate-800 dark:bg-slate-200 dark:text-slate-900 dark:border-slate-200 transition-colors text-sm"
+          data-target="all"
+        >
+          全部
+        </button>
+        {categories.map(cat => (
+          <button 
+            class="category-btn cursor-pointer px-4 py-1.5 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm"
+            data-target={cat}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+    )}
+
+    <div class="space-y-12 border-l border-slate-100 dark:border-slate-800 pl-6 ml-2">
+      {posts.length > 0 ? (
+        posts.map(post => (
+          <article class="post-item group relative" data-category={post.data.category || ''}>
+            <div class="absolute -left-[31px] top-2 w-2.5 h-2.5 rounded-full bg-slate-200 dark:bg-slate-700 group-hover:bg-slate-900 dark:group-hover:bg-slate-300 transition-colors border-2 border-white dark:border-slate-950 ring-2 ring-transparent"></div>
+            <a href={`/blog/${post.id}`} class="block">
+              <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between mb-2 gap-2">
+                <h2 class="text-xl font-semibold text-slate-900 dark:text-slate-100 group-hover:text-slate-600 dark:group-hover:text-slate-400 transition-colors">
+                  {post.data.title}
+                </h2>
+                <time class="text-sm font-mono text-slate-400 dark:text-slate-500 shrink-0">
+                  {new Date(post.data.pubDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                </time>
+              </div>
+              <div class="flex flex-wrap items-center gap-2 mb-2">
+                {post.data.category && (
+                  <span class="px-2 py-0.5 text-[0.65rem] font-mono uppercase tracking-wider text-slate-500 bg-slate-50 dark:bg-slate-800/50 dark:text-slate-400 rounded border border-slate-100 dark:border-slate-800">
+                    {post.data.category}
+                  </span>
+                )}
+                {post.data.tags && post.data.tags.map(tag => (
+                  <span class="text-xs text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">#{tag}</span>
+                ))}
+              </div>
+              {post.data.description && (
+                <p class="text-slate-600 dark:text-slate-400 text-sm leading-relaxed max-w-2xl">{post.data.description}</p>
+              )}
+            </a>
+          </article>
+        ))
+      ) : (
+        <div class="text-slate-400 dark:text-slate-500 italic font-mono text-sm">
+          No posts found yet. Start writing in src/content/blog/
+        </div>
+      )}
+    </div>
+  </main>
+</Layout>
+
+<script>
+  const buttons = document.querySelectorAll('.category-btn');
+  const posts = document.querySelectorAll('.post-item') as NodeListOf<HTMLElement>;
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // 重置所有按钮样式为不活跃状态
+      buttons.forEach(b => {
+        b.classList.remove('bg-slate-800', 'text-slate-100', 'border-slate-800', 'dark:bg-slate-200', 'dark:text-slate-900', 'dark:border-slate-200');
+        b.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200', 'dark:bg-slate-900', 'dark:text-slate-400', 'dark:border-slate-800');
+      });
+      
+      // 为当前点击的按钮添加活跃状态样式
+      btn.classList.remove('bg-slate-50', 'text-slate-600', 'border-slate-200', 'dark:bg-slate-900', 'dark:text-slate-400', 'dark:border-slate-800');
+      btn.classList.add('bg-slate-800', 'text-slate-100', 'border-slate-800', 'dark:bg-slate-200', 'dark:text-slate-900', 'dark:border-slate-200');
+
+      // 获取目标分类
+      const target = btn.getAttribute('data-target');
+      
+      // 过滤文章列表
+      posts.forEach(post => {
+        if (target === 'all' || post.dataset.category === target) {
+          post.style.display = 'block';
+        } else {
+          post.style.display = 'none';
+        }
+      });
+    });
+  });
+</script>

@@ -1,0 +1,102 @@
+﻿---
+import { getCollection, render } from 'astro:content';
+import Layout from '../../../layouts/Layout.astro';
+import Navigation from '../../../components/Navigation.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map(post => ({
+    params: { id: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content, headings } = await render(post);
+---
+
+<Layout title={`${post.data.title} - Shane Lorien`}>
+  <main class="max-w-6xl mx-auto p-6 md:p-8 lg:p-12 bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 leading-relaxed min-h-screen relative">
+    <Navigation />
+
+    <div class="mt-10 flex flex-col md:flex-row gap-8 lg:gap-12 items-start">
+      <article class="flex-1 min-w-0 w-full">
+        <div class="mb-8">
+          <a href="/en/blog" class="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 transition-colors">
+            <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Blog List
+          </a>
+        </div>
+
+        <header class="border-b border-slate-100 dark:border-slate-800 pb-10 mb-10">
+          <div class="flex flex-wrap items-center gap-2 mb-4">
+            {post.data.category && (
+              <span class="px-2.5 py-1 text-xs font-mono uppercase tracking-wider text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 rounded-md">  
+                {post.data.category}
+              </span>
+            )}
+            {post.data.tags && post.data.tags.map(tag => (
+              <span class="text-sm text-slate-400 dark:text-slate-500 hover:text-blue-500 dark:hover:text-blue-400 transition-colors">#{tag}</span>
+            ))}
+          </div>
+          <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 mb-4">{post.data.title}</h1>
+          <div class="flex items-center gap-4 text-slate-500 dark:text-slate-400 text-sm">
+            <time>{new Date(post.data.pubDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</time>
+            <span>{post.data.author || 'Shane Lorien'}</span>
+          </div>
+        </header>
+
+        <div class="prose prose-slate dark:prose-invert max-w-none text-slate-700 dark:text-slate-300 leading-loose prose-a:text-blue-600 hover:prose-a:text-blue-500 dark:prose-a:text-blue-400 dark:hover:prose-a:text-blue-300 prose-headings:text-slate-900 dark:prose-headings:text-slate-100 prose-img:rounded-xl prose-headings:scroll-mt-24">
+          <Content />
+        </div>
+      </article>
+
+      {headings && headings.length > 0 && (
+        <aside class="hidden md:block w-48 lg:w-72 shrink-0 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-contain pb-8">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-100 mb-4">TABLE OF CONTENTS</h2>
+          <nav class="flex flex-col border-l-2 border-slate-100 dark:border-slate-800">
+            {headings.map((heading) => {
+              const padding = heading.depth === 1 ? 'pl-4' : heading.depth === 2 ? 'pl-4' : heading.depth === 3 ? 'pl-8' : heading.depth === 4 ? 'pl-12' : 'pl-16';
+              return (
+                <a
+                  href={"#" + heading.slug}
+                  class={`py-1.5 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 transition-colors border-l-2 -ml-[2px] border-transparent hover:border-slate-400 dark:hover:border-slate-500 ${padding}`}
+                >
+                  {heading.text}
+                </a>
+              );
+            })}
+          </nav>
+        </aside>
+      )}
+    </div>
+
+    <button
+      id="back-to-top"
+      class="fixed bottom-8 right-8 p-3 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shadow-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-all opacity-0 translate-y-4 pointer-events-none z-50"
+      aria-label="Back to top"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+    </button>
+  </main>
+
+  <script is:inline>
+    const backToTopBtn = document.getElementById('back-to-top');
+    
+    if (backToTopBtn) {
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 300) {
+          backToTopBtn.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+          backToTopBtn.classList.add('opacity-100', 'translate-y-0');
+        } else {
+          backToTopBtn.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+          backToTopBtn.classList.remove('opacity-100', 'translate-y-0');
+        }
+      });
+
+      backToTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+  </script>
+</Layout>

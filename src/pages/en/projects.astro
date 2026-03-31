@@ -1,0 +1,77 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navigation from '../../components/Navigation.astro';
+import { Icon } from 'astro-icon/components';
+
+const projects = [
+  {
+    name: "AmazonChess",
+    stack: "C++",
+    desc: "PKU Intro to CS Fall 2025 Final Project: Game of the Amazons",
+    points: [
+      "Implemented fundamental board logic, legal move validation, and obstacle detection",
+      "Built the core game logic and decision framework purely in C++",
+      "Maintained well-organized project structure and clean codebase"
+    ],
+    github: "https://github.com/Logic61/AmazonChess"
+  },
+  {
+    name: "Obsidian-to-Hexo",
+    stack: "Python",
+    desc: "Automation tool for migrating Obsidian Markdown documents to Hexo blog",
+    points: [
+      "Parsed and converted Obsidian-specific syntax in Markdown files",
+      "Automatically structured files for Hexo's posts directory and managed frontmatter",
+      "Written in Python to enable seamless batch backup and publishing workflow"
+    ],
+    github: "https://github.com/Logic61/Obsidian-to-Hexo"
+  },
+  {
+    name: "Carnival-game-suite",
+    stack: "JavaScript",
+    desc: "A collection of web-based mini carnival games",
+    points: [
+      "Built fully interactive web front-end logic using pure JavaScript",
+      "Implemented basic probability mechanics, event listeners, and UI feedback",
+      "Developed as a hands-on project to practice front-end componentization"
+    ],
+    github: "https://github.com/Logic61/Carnival-game-suite"
+  }
+];
+---
+
+<Layout title="Projects - Shane Lorien">
+  <main class="max-w-4xl mx-auto p-12 bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 leading-relaxed min-h-screen">
+    <Navigation />
+    
+    <header class="mb-20">
+      <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 mb-4">Projects</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-lg">Selected open-source repositories and academic experiments.</p>
+    </header>
+
+    <div class="grid grid-cols-1 gap-16 border-t border-slate-100 dark:border-slate-800 pt-10">
+      {projects.map(proj => (
+        <section class="group">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              {proj.name}
+              <a href={proj.github} target="_blank" rel="noopener noreferrer" class="text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" aria-label="GitHub Repository">
+                <Icon name="mdi:github" class="w-6 h-6" />
+              </a>
+            </h2>
+            <span class="text-xs font-mono text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1 rounded border border-slate-100/50 dark:border-slate-800">{proj.stack}</span>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 mb-6">{proj.desc}</p>
+          <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-2.5">
+            {proj.points.map(pt => (
+              <li class="flex items-start gap-2 max-w-3xl">
+                <span class="text-slate-300 dark:text-slate-600 select-none mt-0.5">•</span>
+                <span class="leading-relaxed">{pt}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  </main>
+</Layout>

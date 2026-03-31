@@ -1,0 +1,217 @@
+---
+import { Icon } from 'astro-icon/components';
+
+const pathname = Astro.url.pathname;
+const isEn = pathname.startsWith('/en');
+const toggleUrl = isEn 
+  ? pathname.replace(/^\/en/, '') || '/' 
+  : `/en${pathname === '/' ? '' : pathname}`;
+---
+
+<nav class="flex items-center justify-between mb-24">
+  <a href={isEn ? "/en" : "/"} class="font-bold text-lg tracking-tight hover:text-slate-600 dark:text-slate-100 dark:hover:text-slate-300 transition-colors">
+    Shane Lorien
+  </a>
+  <div class="flex items-center space-x-6 text-sm font-medium text-slate-600 dark:text-slate-400">
+    <a href={isEn ? "/en/blog" : "/blog"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "Blog" : "博客"}</a>
+    <a href={isEn ? "/en/projects" : "/projects"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "Projects" : "项目"}</a>
+    <div class="w-px h-4 bg-slate-200 dark:bg-slate-800"></div>
+    <div class="flex items-center space-x-2">
+      <!-- 搜索按钮 -->
+      <button id="search-btn" class="w-9 h-9 flex items-center justify-center p-0 rounded-lg bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-slate-600 hover:text-slate-900 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-slate-100 ring-1 ring-slate-900/5 dark:ring-white/10 shadow-sm" aria-label="Search">
+        <Icon name="mdi:magnify" class="w-5 h-5" />
+      </button>
+
+      <!-- 暗黑模式切换按钮 -->
+      <button id="theme-toggle" class="w-9 h-9 flex items-center justify-center p-0 rounded-lg bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-slate-600 hover:text-slate-900 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-slate-100 ring-1 ring-slate-900/5 dark:ring-white/10 shadow-sm" aria-label="Toggle Theme">
+        <Icon name="mdi:theme-light-dark" class="w-5 h-5" />
+      </button>
+
+      <!-- 中英语言切换按钮设计 -->
+      <a href={toggleUrl} title="Toggle Language" class="w-9 h-9 flex items-center justify-center p-0 rounded-lg bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-slate-600 hover:text-slate-900 font-mono text-sm dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-slate-100 ring-1 ring-slate-900/5 dark:ring-white/10 shadow-sm" aria-label="Toggle Language">
+        <span class="font-bold leading-none">{isEn ? "中" : "EN"}</span>
+      </a>
+
+      <!-- 社交媒体链接 -->
+      <a href="https://github.com/logic61" class="w-9 h-9 flex items-center justify-center p-0 rounded-lg bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-slate-600 hover:text-slate-900 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-slate-100 ring-1 ring-slate-900/5 dark:ring-white/10 shadow-sm" target="_blank" aria-label="GitHub">
+        <Icon name="mdi:github" class="w-5 h-5" />
+      </a>
+      <a href="mailto:logic.dreemurr@gmail.com" class="w-9 h-9 flex items-center justify-center p-0 rounded-lg bg-slate-50 hover:bg-slate-100 active:scale-95 transition-all text-slate-600 hover:text-slate-900 cursor-pointer dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-slate-100 ring-1 ring-slate-900/5 dark:ring-white/10 shadow-sm" aria-label="Email">
+        <Icon name="mdi:email-outline" class="w-5 h-5" />
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- 搜索弹窗 -->
+<div id="search-modal" class="fixed inset-0 z-50 hidden items-start justify-center pt-[15vh] px-4" aria-modal="true" role="dialog">
+  <!-- 遮罩层 -->
+  <div id="search-backdrop" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm transition-opacity opacity-0 cursor-pointer"></div>
+  
+  <div id="search-container" class="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden transform transition-all scale-95 opacity-0 flex flex-col border border-slate-100 dark:border-slate-800 pointer-events-auto">
+    <!-- 搜索输入框 -->
+    <div class="flex items-center px-4 py-4 border-b border-slate-100 dark:border-slate-800">
+      <Icon name="mdi:magnify" class="w-6 h-6 text-slate-400 shrink-0" />
+      <input 
+        id="search-input" 
+        type="text" 
+        placeholder={isEn ? "Search posts..." : "搜索文章..."}
+        class="w-full bg-transparent border-none focus:ring-0 text-slate-800 dark:text-slate-100 placeholder-slate-400 text-lg px-4 outline-none"
+        autocomplete="off"
+      />
+      <button id="search-close" class="p-1 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300 transition-colors">
+        <Icon name="mdi:close" class="w-5 h-5" />
+      </button>
+    </div>
+    
+    <!-- 搜索结果列表 -->
+    <div class="max-h-[60vh] overflow-y-auto">
+      <ul id="search-results" class="py-2 px-2 hidden"></ul>
+      <div id="search-empty" class="py-12 text-center text-slate-500 dark:text-slate-400 hidden">
+        {isEn ? "No results found." : "没有找到相关文章。"}
+      </div>
+    </div>
+    
+    <!-- 底部提示 -->
+    <div class="px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
+      <span>{isEn ? "Type to search by title, description or category" : "输入以搜索标题、描述或分类"}</span>
+      <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 rounded-md bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 font-mono text-[10px] shadow-sm">ESC</kbd> {isEn ? "to close" : "关闭"}</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const handleToggleClick = () => {
+    const element = document.documentElement;
+    element.classList.toggle("dark");
+    
+    const isDark = element.classList.contains("dark");
+    localStorage.setItem("theme", isDark ? "dark" : "light");
+  }
+
+  document.getElementById("theme-toggle")?.addEventListener("click", handleToggleClick);
+
+  // --- 搜索功能逻辑 ---
+  const searchBtn = document.getElementById('search-btn');
+  const searchModal = document.getElementById('search-modal');
+  const searchBackdrop = document.getElementById('search-backdrop');
+  const searchContainer = document.getElementById('search-container');
+  const searchInput = document.getElementById('search-input') as HTMLInputElement | null;
+  const searchClose = document.getElementById('search-close');
+  const searchResults = document.getElementById('search-results');
+  const searchEmpty = document.getElementById('search-empty');
+  
+  let searchData: any[] | null = null;
+  // 通过当前路径判断是否为英文环境
+  const isEnPath = window.location.pathname.startsWith('/en');
+
+  const openSearch = async () => {
+    if (!searchModal || !searchBackdrop || !searchContainer || !searchInput) return;
+    
+    // 显示弹窗基础结构
+    searchModal.classList.remove('hidden');
+    searchModal.classList.add('flex');
+    
+    // 微小延时触发动画
+    requestAnimationFrame(() => {
+      searchBackdrop.classList.remove('opacity-0');
+      searchBackdrop.classList.add('opacity-100');
+      searchContainer.classList.remove('scale-95', 'opacity-0');
+      searchContainer.classList.add('scale-100', 'opacity-100');
+    });
+
+    searchInput.focus();
+
+    // 懒加载文章数据，减少初始带宽
+    if (!searchData) {
+      try {
+        const res = await fetch('/api/search.json');
+        searchData = await res.json();
+      } catch (err) {
+        console.error("Failed to load search index:", err);
+      }
+    }
+  };
+
+  const closeSearch = () => {
+    if (!searchModal || !searchBackdrop || !searchContainer || !searchInput || !searchResults || !searchEmpty) return;
+
+    searchBackdrop.classList.remove('opacity-100');
+    searchBackdrop.classList.add('opacity-0');
+    searchContainer.classList.remove('scale-100', 'opacity-100');
+    searchContainer.classList.add('scale-95', 'opacity-0');
+    
+    // 动画结束后隐藏 DOM
+    setTimeout(() => {
+      searchModal.classList.remove('flex');
+      searchModal.classList.add('hidden');
+      searchInput.value = '';
+      searchResults.innerHTML = '';
+      searchResults.classList.add('hidden');
+      searchEmpty.classList.add('hidden');
+    }, 200);
+  };
+
+  // 绑定事件
+  searchBtn?.addEventListener('click', openSearch);
+  searchClose?.addEventListener('click', closeSearch);
+  searchBackdrop?.addEventListener('click', closeSearch);
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && searchModal && !searchModal.classList.contains('hidden')) {
+      closeSearch();
+    }
+    // Command/Ctrl + K 快捷键打开搜索
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      openSearch();
+    }
+  });
+
+  searchInput?.addEventListener('input', (e) => {
+    if (!searchResults || !searchEmpty || !searchInput) return;
+    
+    const query = searchInput.value.trim().toLowerCase();
+    if (!query) {
+      searchResults.classList.add('hidden');
+      searchEmpty.classList.add('hidden');
+      return;
+    }
+
+    if (!searchData) return;
+
+    const matched = searchData.filter(item => {
+      return (item.title && item.title.toLowerCase().includes(query)) ||
+             (item.description && item.description.toLowerCase().includes(query)) ||
+             (item.category && item.category.toLowerCase().includes(query));
+    });
+
+    if (matched.length > 0) {
+      searchEmpty.classList.add('hidden');
+      searchResults.classList.remove('hidden');
+      
+      searchResults.innerHTML = matched.map(item => {
+        // 构建正确的 URL
+        const prefix = isEnPath ? '/en/blog/' : '/blog/';
+        // 去除可能的双斜杠
+        const slug = item.slug.startsWith('en/') ? item.slug.replace('en/', '') : item.slug;
+        const finalUrl = isEnPath ? `/en/blog/${slug}` : `/blog/${slug}`;
+        
+        return `
+          <li>
+            <a href="${finalUrl}" class="group flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+              <svg class="w-4 h-4 text-slate-400 mt-1 shrink-0 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-base font-medium text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate transition-colors">${item.title}</h4>
+                ${item.description ? `<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">${item.description}</p>` : ''}
+              </div>
+            </a>
+          </li>
+        `;
+      }).join('');
+    } else {
+      searchResults.classList.add('hidden');
+      searchEmpty.classList.remove('hidden');
+    }
+  });
+</script>

@@ -1,0 +1,23 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 修复 TailwindCSS 的默认样式导致 MathJax 公式换行的问题 */
+mjx-container svg {
+  display: inline !important;
+}
+mjx-container[display="true"] {
+  display: block !important;
+  text-align: center;
+  margin: 1rem 0;
+}
+mjx-container:not([display="true"]) {
+  display: inline-block !important;
+}
+
+html { scroll-behavior: smooth; }
+

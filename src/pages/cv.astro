@@ -1,0 +1,36 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { Icon } from 'astro-icon/components';
+---
+
+<Layout title="Shane Lorien - CV">
+  <main class="max-w-4xl mx-auto p-12 bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 leading-relaxed min-h-screen">
+    <nav class="flex items-center justify-between mb-24">
+      <div class="font-bold text-lg tracking-tight">Shane Lorien</div>
+      <div class="flex items-center space-x-6 text-sm font-medium text-slate-600 dark:text-slate-400">
+        <a href="/blog" class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">Blog</a>
+        <a href="/projects" class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">Projects</a>
+        <div class="w-px h-4 bg-slate-200 dark:bg-slate-800"></div>
+        <div class="flex items-center space-x-2">
+          <a href="https://github.com/logic61" class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100" aria-label="GitHub">
+            <Icon name="mdi:github" class="w-5 h-5" />
+          </a>
+          <a href="mailto:logic.dreemurr@gmail.com" class="p-2 rounded-lg bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-all text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100" aria-label="Email">
+            <Icon name="mdi:email-outline" class="w-5 h-5" />
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <header class="flex justify-between items-start mb-20">
+      <div class="space-y-4">
+        <h1 class="text-6xl font-extrabold tracking-tighter text-slate-900 dark:text-slate-100">Shane Lorien</h1>
+        <p class="text-xl text-slate-500  dark:text-slate-400 font-medium">Peking University · School of EECS · CS Major</p>
+      </div>
+
+      <div class="flex-shrink-0">
+        <img src="/avatar.png" alt="Avatar" class="w-28 h-28 rounded-full border border-slate-100 shadow-sm object-cover" />
+      </div>
+    </header>
+  </main>
+</Layout>

@@ -1,0 +1,78 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation.astro';
+import { Icon } from 'astro-icon/components';
+
+// 项目数据（之后你也可以把它们放进 src/content/projects 里让它完全自动化）
+const projects = [
+  {
+    name: "AmazonChess",
+    stack: "C++",
+    desc: "北京大学计算概论A 2025秋大作业：亚马逊棋",
+    points: [
+      "实现基础棋盘逻辑、合法落子判定与障碍物检测",
+      "使用 C++ 编写核心博弈逻辑框架",
+      "良好的代码组织与模块化实现"
+    ],
+    github: "https://github.com/Logic61/AmazonChess"
+  },
+  {
+    name: "Obsidian-to-Hexo",
+    stack: "Python",
+    desc: "将 Obsidian 的 Markdown 笔记迁移至 Hexo 博客的自动化工具",
+    points: [
+      "解析并转换 Obsidian 特有语法的 Markdown 文档",
+      "自动适配与转移到 Hexo 的 posts 目录，并整理元数据",
+      "由 Python 编写以实现批量无缝备份与发布"
+    ],
+    github: "https://github.com/Logic61/Obsidian-to-Hexo"
+  },
+  {
+    name: "Carnival-game-suite",
+    stack: "JavaScript",
+    desc: "一系列基于网页的小游戏集合项目",
+    points: [
+      "完整使用 JavaScript 构建网页端的交互逻辑",
+      "实现了基础的概率机制、事件监听和界面反馈",
+      "作为趣味性的前端开发与组件化练习"
+    ],
+    github: "https://github.com/Logic61/Carnival-game-suite"
+  }
+];
+---
+
+<Layout title="项目 - Shane Lorien">
+  <main class="max-w-4xl mx-auto p-12 bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 leading-relaxed min-h-screen">
+    <Navigation />
+    
+    <header class="mb-20">
+      <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 mb-4">项目</h1>
+      <p class="text-slate-500 dark:text-slate-400 text-lg">一些精选的开源仓库体验和学术实验。</p>
+    </header>
+
+    <div class="grid grid-cols-1 gap-16 border-t border-slate-100 dark:border-slate-800 pt-10">
+      {projects.map(proj => (
+        <section class="group">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3">
+              {proj.name}
+              <a href={proj.github} target="_blank" rel="noopener noreferrer" class="text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" aria-label="GitHub Repository">
+                <Icon name="mdi:github" class="w-6 h-6" />
+              </a>
+            </h2>
+            <span class="text-xs font-mono text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1 rounded border border-slate-100/50 dark:border-slate-800">{proj.stack}</span>
+          </div>
+          <p class="text-slate-600 dark:text-slate-300 mb-6">{proj.desc}</p>
+          <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-2.5">
+            {proj.points.map(pt => (
+              <li class="flex items-start gap-2 max-w-3xl">
+                <span class="text-slate-300 dark:text-slate-600 select-none mt-0.5">•</span>
+                <span class="leading-relaxed">{pt}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  </main>
+</Layout>
