@@ -7,6 +7,8 @@ import rehypeMathjax from 'rehype-mathjax/svg';
 
 // https://astro.build/config
 export default defineConfig({
+  site: 'https://logic61.github.io',
+  base: '/MyPage',
   markdown: {
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeMathjax],
