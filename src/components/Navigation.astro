@@ -2,19 +2,23 @@
 import { Icon } from 'astro-icon/components';
 
 const pathname = Astro.url.pathname;
-const isEn = pathname.startsWith('/en');
-const toggleUrl = isEn 
-  ? pathname.replace(/^\/en/, '') || '/' 
-  : `/en${pathname === '/' ? '' : pathname}`;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const cleanPath = pathname.startsWith(basePath) ? pathname.slice(basePath.length) || '/' : pathname;
+const isEn = cleanPath.startsWith('/en');
+
+// Calculate toggle URL
+const pathWithoutEn = isEn ? cleanPath.replace(/^\/en/, '') || '/' : cleanPath;
+const targetCleanPath = isEn ? pathWithoutEn : `/en${pathWithoutEn === '/' ? '' : pathWithoutEn}`;
+const toggleUrl = `${basePath}${targetCleanPath}`.replace(/\/+$/, '') || '/MyPage';
 ---
 
 <nav class="flex items-center justify-between mb-24">
-  <a href={isEn ? "/en" : "/"} class="font-bold text-lg tracking-tight hover:text-slate-600 dark:text-slate-100 dark:hover:text-slate-300 transition-colors">
+  <a href={isEn ? "/MyPage/en" : "/MyPage/"} class="font-bold text-lg tracking-tight hover:text-slate-600 dark:text-slate-100 dark:hover:text-slate-300 transition-colors">
     Shane Lorien
   </a>
   <div class="flex items-center space-x-6 text-sm font-medium text-slate-600 dark:text-slate-400">
-    <a href={isEn ? "/en/blog" : "/blog"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "Blog" : "博客"}</a>
-    <a href={isEn ? "/en/projects" : "/projects"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "Projects" : "项目"}</a>
+    <a href={isEn ? "/MyPage/en/blog" : "/MyPage/blog"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "Blog" : "博客"}</a>
+    <a href={isEn ? "/MyPage/en/projects" : "/MyPage/projects"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "Projects" : "项目"}</a>
     <div class="w-px h-4 bg-slate-200 dark:bg-slate-800"></div>
     <div class="flex items-center space-x-2">
       <!-- 搜索按钮 -->
@@ -102,8 +106,7 @@ const toggleUrl = isEn
   const searchEmpty = document.getElementById('search-empty');
   
   let searchData: any[] | null = null;
-  // 通过当前路径判断是否为英文环境
-  const isEnPath = window.location.pathname.startsWith('/en');
+  const isEnPath = window.location.pathname.replace('/MyPage', '').startsWith('/en');
 
   const openSearch = async () => {
     if (!searchModal || !searchBackdrop || !searchContainer || !searchInput) return;
@@ -125,7 +128,7 @@ const toggleUrl = isEn
     // 懒加载文章数据，减少初始带宽
     if (!searchData) {
       try {
-        const res = await fetch('/api/search.json');
+        const res = await fetch('/MyPage/api/search.json');
         searchData = await res.json();
       } catch (err) {
         console.error("Failed to load search index:", err);
