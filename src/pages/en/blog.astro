@@ -112,45 +112,71 @@ const categories = [...new Set(posts.map(post => post.data.category).filter(Bool
 
   function renderPaginationControls(totalPages) {
     if (!paginationContainer) return;
-    
+
     if (totalPages <= 1) {
       paginationContainer.innerHTML = '';
       return;
     }
     
-    let html = `<div class="flex justify-center items-center gap-4">`;
-    
+    let html = `<div class="flex justify-center items-center gap-2 sm:gap-4 flex-wrap">`;
+
     if (currentPage > 1) {
-      html += `<button id="prev-page" class="px-5 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm">&larr;</button>`;
+      html += `<button id="first-page" class="px-3 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="首页">&laquo;</button>`;
+      html += `<button id="prev-page" class="px-4 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="上一页">&larr;</button>`;
     } else {
-      html += `<button disabled class="px-5 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&larr;</button>`;
+      html += `<button disabled class="px-3 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&laquo;</button>`;
+      html += `<button disabled class="px-4 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&larr;</button>`;
     }
-    
-    html += `<span class="text-sm text-slate-500 dark:text-slate-400 font-mono tracking-widest">${currentPage} / ${totalPages}</span>`;
-    
+
+    html += `<div class="flex items-center gap-2">
+      <input type="number" id="page-input" value="${currentPage}" min="1" max="${totalPages}" class="w-12 text-center px-1 py-1 text-sm rounded border bg-white text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-slate-400 font-mono" />
+      <span class="text-sm text-slate-500 dark:text-slate-400 font-mono tracking-widest">/ ${totalPages}</span>
+    </div>`;
+
     if (currentPage < totalPages) {
-      html += `<button id="next-page" class="px-5 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm">&rarr;</button>`;
+      html += `<button id="next-page" class="px-4 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="下一页">&rarr;</button>`;
+      html += `<button id="last-page" class="px-3 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="末页">&raquo;</button>`;
     } else {
-      html += `<button disabled class="px-5 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&rarr;</button>`;
+      html += `<button disabled class="px-4 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&rarr;</button>`;
+      html += `<button disabled class="px-3 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&raquo;</button>`;
     }
-    
+
     html += `</div>`;
     paginationContainer.innerHTML = html;
-    
+
+    const firstBtn = document.getElementById('first-page');
+    if (firstBtn) firstBtn.addEventListener('click', () => jumpToPage(1));
     const prevBtn = document.getElementById('prev-page');
-    if (prevBtn) prevBtn.addEventListener('click', () => changePage(-1));
-    
+    if (prevBtn) prevBtn.addEventListener('click', () => jumpToPage(currentPage - 1));
     const nextBtn = document.getElementById('next-page');
-    if (nextBtn) nextBtn.addEventListener('click', () => changePage(1));
+    if (nextBtn) nextBtn.addEventListener('click', () => jumpToPage(currentPage + 1));
+    const lastBtn = document.getElementById('last-page');
+    if (lastBtn) lastBtn.addEventListener('click', () => jumpToPage(totalPages));
+
+    const pageInput = document.getElementById('page-input');
+    if (pageInput) {
+      pageInput.addEventListener('change', (e) => {
+        let val = parseInt(e.target.value);
+        if (isNaN(val)) val = currentPage;
+        if (val < 1) val = 1;
+        if (val > totalPages) val = totalPages;
+        jumpToPage(val);
+      });
+      pageInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+          pageInput.blur(); // Triggers change event
+        }
+      });
+    }
   }
 
-  function changePage(delta) {
-    currentPage += delta;
+  function jumpToPage(targetPage) {
+    if (currentPage === targetPage) return;
+    currentPage = targetPage;
     renderPosts();
     const filterEl = document.getElementById('category-filter') || document.querySelector('header');
     if(filterEl) window.scrollTo({ top: filterEl.offsetTop - 40, behavior: 'smooth' });
   }
-
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
       buttons.forEach(b => {
