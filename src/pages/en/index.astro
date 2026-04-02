@@ -4,17 +4,17 @@ import Navigation from '../../components/Navigation.astro';
 ---
 
 <Layout title="Shane Lorien - Home">
-  <main class="max-w-4xl mx-auto p-12 bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 leading-relaxed">
+  <main class="max-w-4xl mx-auto p-12 bg-white font-sans text-slate-900 leading-relaxed dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
     <Navigation />
 
     <header class="flex justify-between items-start mb-20">
       <div class="space-y-4">
         <h1 class="text-6xl font-extrabold tracking-tighter text-slate-900 dark:text-slate-100">Shane Lorien</h1>
-        <p class="text-xl text-slate-500 font-medium dark:text-slate-400">Peking University · School of EECS · CS Major</p>
+        <p class="text-xl text-slate-500 font-medium dark:text-slate-400">As by cutting and filing, as by carving and polishing</p>
       </div>
 
       <div class="flex-shrink-0">
-        <img src="/MyPage/avatar.jpg" alt="Avatar" class="w-28 h-28 rounded-full border border-slate-100 shadow-sm object-cover" />
+        <img src="/MyPage/avatar.jpg" alt="Avatar" class="w-28 h-28 rounded-full border border-slate-100 shadow-sm object-cover dark:border-slate-800" />
       </div>
     </header>
 
@@ -24,10 +24,13 @@ import Navigation from '../../components/Navigation.astro';
         <h2 class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-1">About</h2>
         <div class="space-y-4 text-slate-700 dark:text-slate-300">
           <p>
-            Undergraduate student at Peking University, majoring in Computer Science at the School of EECS. Deeply passionate about system design, algorithm optimization, and modern web technologies.
+            Hi, I'm Shane Lorien, a freshman majoring in Computer Science at the School of EECS, Peking University.
           </p>
           <p>
-            I enjoy breaking down complex engineering problems into clean, elegant solutions. Dedicated to creating efficient, user-friendly, and delightful products through code.
+            My specific interests are still developing and I am currently exploring various directions.
+            Besides my major, I'm also interested in piano, writing, and Daoyin (traditional physical exercises).
+            For content related to these topics, you can find some records and thoughts on my personal lifestyle blog:
+            <a href="https://logic61.github.io/" class="text-blue-600 dark:text-blue-400 hover:underline">https://logic61.github.io/</a>.
           </p>
         </div>
       </section>
@@ -42,7 +45,7 @@ import Navigation from '../../components/Navigation.astro';
           </div>
           <p class="text-slate-600 mb-2 dark:text-slate-300">School of EECS</p>
           <p class="text-sm text-slate-500 dark:text-slate-400">Computer Science Undergraduate</p>
-          <p class="text-sm text-slate-400 mt-2 dark:text-slate-500">Coursework: Data Structures, Algorithms, Operating Systems, Database Systems</p>
+          <p class="text-sm text-slate-400 mt-2 dark:text-slate-500">Coursework: Advanced Mathematics, Linear Algebra, Introduction to Computing, etc.</p>
         </div>
       </section>
 
@@ -51,29 +54,19 @@ import Navigation from '../../components/Navigation.astro';
         <h2 class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-1">Skills</h2>
         <div class="grid grid-cols-2 gap-y-6 gap-x-4 text-sm">
           <div>
-            <h3 class="font-medium text-slate-900 mb-2 dark:text-slate-100">Languages</h3>
-            <p class="text-slate-600 dark:text-slate-300 flex flex-wrap gap-2">
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">C++</span>
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">Python</span>
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">TypeScript</span>
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">SQL</span>
+            <h3 class="font-medium text-slate-900 mb-2">Programming Languages</h3>
+            <p class="text-slate-600 flex flex-wrap gap-2">
+              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">C++</span>
+              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Python</span>
             </p>
           </div>
-          <div>
-            <h3 class="font-medium text-slate-900 mb-2 dark:text-slate-100">Frontend</h3>
-            <p class="text-slate-600 dark:text-slate-300 flex flex-wrap gap-2">
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">React</span>
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">Astro</span>
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">Tailwind</span>
-            </p>
-          </div>
+
           <div class="col-span-2">
-            <h3 class="font-medium text-slate-900 mb-2 dark:text-slate-100">Tools & Others</h3>
-            <p class="text-slate-600 dark:text-slate-300 flex flex-wrap gap-2">
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">Git / GitHub</span>
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">Linux</span>
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">OOP Design</span>
-              <span class="px-2 py-1 bg-slate-50 dark:bg-slate-900/50 rounded">System Design</span>
+            <h3 class="font-medium text-slate-900 mb-2">Tools & Others</h3>
+            <p class="text-slate-600 flex flex-wrap gap-2">
+              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Git / GitHub</span>
+              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">LaTeX</span>
+              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Markdown</span>
             </p>
           </div>
         </div>
@@ -81,14 +74,14 @@ import Navigation from '../../components/Navigation.astro';
 
       <!-- Projects Section -->
       <section class="grid grid-cols-[140px,1fr] gap-8 items-start">
-        <h2 class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-1">Projects</h2>
+        <h2 class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-1">Selected Projects</h2>
         <div class="space-y-10">
           <div class="group">
             <div class="flex items-center justify-between mb-2">
-              <h3 class="font-medium text-slate-900 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400 transition-colors">
+              <h3 class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 <a href="https://github.com/Logic61/AmazonChess" target="_blank" rel="noopener noreferrer">AmazonChess</a>
               </h3>
-              <span class="text-xs font-mono text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded">C++</span>
+              <span class="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded">C++</span>
             </div>
             <p class="text-slate-600 dark:text-slate-300 text-sm mb-3">PKU Intro to CS Fall 2025 Final Project: Game of the Amazons</p>
             <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-1.5 list-disc list-inside">
@@ -100,10 +93,10 @@ import Navigation from '../../components/Navigation.astro';
 
           <div class="group">
             <div class="flex items-center justify-between mb-2">
-              <h3 class="font-medium text-slate-900 group-hover:text-blue-600 dark:text-slate-100 dark:group-hover:text-blue-400 transition-colors">
+              <h3 class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                 <a href="https://github.com/Logic61/Obsidian-to-Hexo" target="_blank" rel="noopener noreferrer">Obsidian-to-Hexo</a>
               </h3>
-              <span class="text-xs font-mono text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded">Python</span>
+              <span class="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded">Python</span>
             </div>
             <p class="text-slate-600 dark:text-slate-300 text-sm mb-3">Automation tool for migrating Obsidian Markdown documents to Hexo blog</p>
             <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-1.5 list-disc list-inside">
@@ -112,6 +105,35 @@ import Navigation from '../../components/Navigation.astro';
               <li>Written in Python to enable seamless batch backup and publishing workflow</li>
             </ul>
           </div>
+        </div>
+      </section>
+
+	  <!-- Hobbies & Skills Section -->
+      <section class="grid grid-cols-[140px,1fr] gap-8 items-start">
+        <h2 class="text-sm font-semibold tracking-widest text-slate-400 dark:text-slate-500 uppercase mt-1">Hobbies & Skills</h2>
+        <div class="space-y-6">
+          
+          <div class="group">
+            <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">Piano (Selected repertoire)</h3>
+            <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1.5 list-none">
+              <li><span class="text-slate-500 dark:text-slate-400 mr-2">Etudes:</span>Op. 10 No. 1, 2, 4, 5, 8 <span class="mx-1 text-slate-300 dark:text-slate-600">|</span> Op. 25 No. 5, 6, 9, 11</li>
+              <li><span class="text-slate-500 dark:text-slate-400 mr-2">Ballades:</span>No. 1, 3</li>
+              <li><span class="text-slate-500 dark:text-slate-400 mr-2">Scherzos:</span>No. 2</li>
+			  <li><span class="text-slate-500 dark:text-slate-400 mr-2">Nocturnes:</span>Op. 9 No. 1, 2</li>
+			  <li><span class="text-slate-500 dark:text-slate-400 mr-2">Grande Polonaise Brillante:</span>Op. 22</li>
+			</ul>
+          </div>
+
+          <div class="group">
+            <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">Daoyin (Traditional Chinese Mind-Body Exercise)</h3>
+            <div class="flex flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300">
+              <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Ba Duan Jin</span>
+              <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Wu Qin Xi</span>
+              <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Chang Shou Gong</span>
+              <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Jin Gang Gong</span>
+            </div>
+          </div>
+
         </div>
       </section>
     </div>

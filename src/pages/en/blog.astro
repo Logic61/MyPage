@@ -121,8 +121,8 @@ const categories = [...new Set(posts.map(post => post.data.category).filter(Bool
     let html = `<div class="flex justify-center items-center gap-2 sm:gap-4 flex-wrap">`;
 
     if (currentPage > 1) {
-      html += `<button id="first-page" class="px-3 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="首页">&laquo;</button>`;
-      html += `<button id="prev-page" class="px-4 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="上一页">&larr;</button>`;
+      html += `<button id="first-page" class="px-3 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="First">&laquo;</button>`;
+      html += `<button id="prev-page" class="px-4 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="Prev">&larr;</button>`;
     } else {
       html += `<button disabled class="px-3 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&laquo;</button>`;
       html += `<button disabled class="px-4 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&larr;</button>`;
@@ -134,8 +134,8 @@ const categories = [...new Set(posts.map(post => post.data.category).filter(Bool
     </div>`;
 
     if (currentPage < totalPages) {
-      html += `<button id="next-page" class="px-4 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="下一页">&rarr;</button>`;
-      html += `<button id="last-page" class="px-3 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="末页">&raquo;</button>`;
+      html += `<button id="next-page" class="px-4 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="Next">&rarr;</button>`;
+      html += `<button id="last-page" class="px-3 py-2 rounded-full border bg-slate-50 text-slate-600 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-sm" title="Last">&raquo;</button>`;
     } else {
       html += `<button disabled class="px-4 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&rarr;</button>`;
       html += `<button disabled class="px-3 py-2 rounded-full border bg-slate-50 opacity-40 text-slate-400 border-slate-200 dark:bg-slate-900 dark:text-slate-600 dark:border-slate-800 cursor-not-allowed text-sm">&raquo;</button>`;
