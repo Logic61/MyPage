@@ -9,7 +9,7 @@ SOURCE_BASE = r"C:\Users\32372\myBlog\source\_posts"
 DEST_BASE = r"C:\Users\32372\MyPage\src\content\blog"
 
 # 需要同步的分类目录
-CATEGORIES = ["离散", "数学随笔", "线代", "高数"]
+CATEGORIES = ["离散", "数学随笔", "线代", "高数", "西方文化选读", "高数"]
 
 def process_content(content, filename, category, filepath):
     """
@@ -137,9 +137,9 @@ def sync_and_format():
                 with open(dest_file, 'w', encoding='utf-8') as f:
                     f.write(formatted_content)
                     
-                print(f"✅ 已同步并格式化: {category}/{filename}")
+                print(f" 已同步并格式化: {category}/{filename}")
             except Exception as e:
-                print(f"❌ 处理文件时出错 {src_file}: {e}")
+                print(f" 处理文件时出错 {src_file}: {e}")
                 
         # (可选) 如果你的 Obsidian 里有附带的 images 文件夹，也会一并同步过来
         src_img_dir = os.path.join(src_dir, "images")
@@ -149,7 +149,7 @@ def sync_and_format():
             for img_file in glob.glob(os.path.join(src_img_dir, "*")):
                 if os.path.isfile(img_file):
                     shutil.copy2(img_file, dest_img_dir)
-            print(f"🖼️ 已同步 {category} 的附带图片")
+            print(f" 已同步 {category} 的附带图片")
 
 if __name__ == "__main__":
     print("开始同步、格式化和修复 YAML 笔记...")
