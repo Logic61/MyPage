@@ -24,12 +24,12 @@ import Navigation from '../../components/Navigation.astro';
         <h2 class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-1">About</h2>
         <div class="space-y-4 text-slate-700 dark:text-slate-300">
           <p>
-            Hi, I'm Shane Lorien, a freshman majoring in Computer Science at the School of EECS, Peking University.
+            Hello, I’m Guan Yu Chen, a 2025 undergraduate student in Computer Science at Peking University, School of Information Science and Technology.
           </p>
           <p>
-            My specific interests are still developing and I am currently exploring various directions.
-            Besides my major, I'm also interested in piano, writing, and Daoyin (traditional physical exercises).
-            For content related to these topics, you can find some records and thoughts on my personal lifestyle blog:
+            My interests are still developing, and I’m currently exploring different directions. I have preliminary interest in LLM, NLP, CV, and I’m also self-studying related content such as CS241N.
+            In spring 2026, I applied for the Peking University Innovation + Workstation project “Dog Intent Recognition via Pose and Voiceprint,” and passed the proposal defense; I’m now advancing the project. I also participate in AI Infra Seminars organized by LCPU and the Peking University supercomputing team, and I have a preliminary understanding of AI infrastructure.
+            Besides my academic interests, I also enjoy piano, writing, and Daoyin. You can find some of my reflections and notes on my lifestyle blog:
             <a href="https://logic61.github.io/" class="text-blue-600 dark:text-blue-400 hover:underline">https://logic61.github.io/</a>.
           </p>
         </div>
@@ -43,9 +43,9 @@ import Navigation from '../../components/Navigation.astro';
             <h3 class="font-medium text-slate-900 dark:text-slate-100">Peking University</h3>
             <span class="text-sm text-slate-500 dark:text-slate-400">2025 - Present</span>
           </div>
-          <p class="text-slate-600 mb-2 dark:text-slate-300">School of EECS</p>
+          <p class="text-slate-600 mb-2 dark:text-slate-300">School of Information Science and Technology</p>
           <p class="text-sm text-slate-500 dark:text-slate-400">Computer Science Undergraduate</p>
-          <p class="text-sm text-slate-400 mt-2 dark:text-slate-500">Coursework: Advanced Mathematics, Linear Algebra, Introduction to Computing, etc.</p>
+          <p class="text-sm text-slate-400 mt-2 dark:text-slate-500">Relevant coursework: Programming Practice, Fundamentals of AI, etc.</p>
         </div>
       </section>
 
@@ -58,6 +58,8 @@ import Navigation from '../../components/Navigation.astro';
             <p class="text-slate-600 flex flex-wrap gap-2">
               <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">C++</span>
               <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Python</span>
+              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">PyTorch</span>
+              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">CUDA / Triton / TileLang (beginner)</span>
             </p>
           </div>
 
@@ -79,15 +81,15 @@ import Navigation from '../../components/Navigation.astro';
           <div class="group">
             <div class="flex items-center justify-between mb-2">
               <h3 class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                <a href="https://github.com/Logic61/AmazonChess" target="_blank" rel="noopener noreferrer">AmazonChess</a>
+                <a href="https://github.com/Logic61/PKU-Planner" target="_blank" rel="noopener noreferrer">PKU-Planner</a>
               </h3>
               <span class="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded">C++</span>
             </div>
-            <p class="text-slate-600 dark:text-slate-300 text-sm mb-3">PKU Intro to CS Fall 2025 Final Project: Game of the Amazons</p>
+            <p class="text-slate-600 dark:text-slate-300 text-sm mb-3">A course and deadline assistant adapted to the Peking University teaching website</p>
             <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-1.5 list-disc list-inside">
-              <li>Implemented fundamental board logic, legal move validation, and obstacle detection</li>
-              <li>Built the core game logic and decision framework purely in C++</li>
-              <li>Maintained well-organized project structure and clean codebase</li>
+              <li>Visually driven task reminders; tasks change color according to urgency</li>
+              <li>Supports importing courses from the teaching website and through screenshots</li>
+              <li>Enables one-click AI-generated personalized suggestions based on course and deadline information</li>
             </ul>
           </div>
 
@@ -98,42 +100,33 @@ import Navigation from '../../components/Navigation.astro';
               </h3>
               <span class="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded">Python</span>
             </div>
-            <p class="text-slate-600 dark:text-slate-300 text-sm mb-3">Automation tool for migrating Obsidian Markdown documents to Hexo blog</p>
+            <p class="text-slate-600 dark:text-slate-300 text-sm mb-3">An automation tool for migrating Obsidian Markdown notes to a Hexo blog</p>
             <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-1.5 list-disc list-inside">
-              <li>Parsed and converted Obsidian-specific syntax in Markdown files</li>
-              <li>Automatically structured files for Hexo's posts directory and managed frontmatter</li>
-              <li>Written in Python to enable seamless batch backup and publishing workflow</li>
+              <li>Parses and converts Obsidian-specific Markdown syntax</li>
+              <li>Automatically adapts and transfers files into Hexo’s posts directory and organizes metadata</li>
+              <li>Written in Python to enable batch backup and publishing workflows</li>
             </ul>
           </div>
         </div>
       </section>
 
-	  <!-- Hobbies & Skills Section -->
+      <!-- Hobbies & Skills Section -->
       <section class="grid grid-cols-[140px,1fr] gap-8 items-start">
         <h2 class="text-sm font-semibold tracking-widest text-slate-400 dark:text-slate-500 uppercase mt-1">Hobbies & Skills</h2>
         <div class="space-y-6">
-          
           <div class="group">
-            <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">Piano (Selected repertoire)</h3>
+            <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">Piano</h3>
             <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1.5 list-none">
-              <li><span class="text-slate-500 dark:text-slate-400 mr-2">Etudes:</span>Op. 10 No. 1, 2, 4, 5, 8 <span class="mx-1 text-slate-300 dark:text-slate-600">|</span> Op. 25 No. 5, 6, 9, 11</li>
-              <li><span class="text-slate-500 dark:text-slate-400 mr-2">Ballades:</span>No. 1, 3</li>
-              <li><span class="text-slate-500 dark:text-slate-400 mr-2">Scherzos:</span>No. 2</li>
-			  <li><span class="text-slate-500 dark:text-slate-400 mr-2">Nocturnes:</span>Op. 9 No. 1, 2</li>
-			  <li><span class="text-slate-500 dark:text-slate-400 mr-2">Grande Polonaise Brillante:</span>Op. 22</li>
-			</ul>
+              I’ve played some well-known Chopin pieces such as the first ballade, the Grande Polonaise, and pieces like “Liebestraum” and “The Snow”.
+            </ul>
           </div>
 
           <div class="group">
-            <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">Daoyin (Traditional Chinese Mind-Body Exercise)</h3>
+            <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">Daoyin</h3>
             <div class="flex flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Ba Duan Jin</span>
-              <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Wu Qin Xi</span>
-              <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Chang Shou Gong</span>
-              <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-800 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Jin Gang Gong</span>
+              I joined the Peking University Daoyin team and won fourth place in the group event for Wu Qin Xi at the 2026 Spring Capital Universities Fitness Qigong competition.
             </div>
           </div>
-
         </div>
       </section>
     </div>
