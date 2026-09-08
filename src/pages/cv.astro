@@ -4,47 +4,44 @@ import Navigation from '../components/Navigation.astro';
 ---
 
 <Layout title="陈冠宇 - Curriculum Vitae">
-  <main class="max-w-[68ch] mx-auto px-6 sm:px-10 py-12 sm:py-16 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-serif leading-normal transition-colors duration-300 min-h-screen">
+  <main class="max-w-3xl mx-auto px-6 sm:px-10 py-12 sm:py-16 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-serif leading-relaxed transition-colors duration-300 min-h-screen">
 
     <Navigation />
 
-    <!-- Header: left-aligned, two-line identity block -->
-    <header class="mb-10 pb-5 border-b border-slate-300 dark:border-slate-700">
-      <h1 class="text-3xl sm:text-4xl font-medium tracking-tight text-slate-900 dark:text-slate-50">陈冠宇</h1>
-      <p class="font-sans text-[12px] tracking-[0.18em] uppercase text-slate-500 dark:text-slate-400 mt-1.5">Guan-Yu Chen · Shane Lorien</p>
-
-      <div class="font-sans text-[12px] text-slate-600 dark:text-slate-400 mt-5 grid sm:grid-cols-[auto_1fr] gap-x-8 gap-y-1 tabular-nums">
-        <span class="uppercase tracking-[0.14em] text-slate-500 dark:text-slate-500">Address</span>
-        <span>北京市海淀区北京大学 · 信息科学技术学院</span>
-
-        <span class="uppercase tracking-[0.14em] text-slate-500 dark:text-slate-500">Email</span>
-        <a href="mailto:logic.dreemurr@gmail.com" class="hover:text-slate-900 dark:hover:text-slate-200 underline underline-offset-4 decoration-slate-300 dark:decoration-slate-700">logic.dreemurr@gmail.com</a>
-
-        <span class="uppercase tracking-[0.14em] text-slate-500 dark:text-slate-500">GitHub</span>
-        <a href="https://github.com/logic61" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900 dark:hover:text-slate-200 underline underline-offset-4 decoration-slate-300 dark:decoration-slate-700">github.com/logic61</a>
-      </div>
+    <!-- Header: centered, single-row identity with horizontal contact list -->
+    <header class="text-center mb-14 pb-8 border-b border-slate-200 dark:border-slate-800">
+      <h1 class="text-4xl sm:text-5xl font-medium tracking-wide text-slate-900 dark:text-slate-100">陈冠宇</h1>
+      <ul class="font-mono text-[11px] text-slate-500 dark:text-slate-500 mt-7 flex justify-center flex-wrap gap-x-3 gap-y-1 uppercase tracking-[0.14em]">
+        <li>北京大学</li>
+        <li aria-hidden="true">·</li>
+        <li>计算机科学与技术 · 2025级</li>
+        <li aria-hidden="true">·</li>
+        <li><a href="mailto:logic.dreemurr@gmail.com" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors normal-case tracking-normal">logic.dreemurr@gmail.com</a></li>
+        <li aria-hidden="true">·</li>
+        <li><a href="https://github.com/logic61" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors normal-case tracking-normal">github.com/logic61</a></li>
+      </ul>
     </header>
 
     <div class="space-y-9">
 
-      <!-- Research Interests -->
+      <!-- 研究兴趣 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">I.</span>Research Interests</h2>
+        <h2 class="section-heading"><span class="section-num">I.</span>研究兴趣</h2>
         <p class="text-[15px] text-slate-700 dark:text-slate-300">
-          Efficient deep learning systems; GPU programming and compiler stacks (CUDA, Triton, TileLang); multimodal representation learning, with current focus on behaviour and affect recognition in non-human animals.
+          高效深度学习系统；GPU 编程与编译栈（CUDA、Triton、TileLang）；多模态表征学习，当前关注非人类动物的行为与情感识别。
         </p>
       </section>
 
-      <!-- Education -->
+      <!-- 教育背景 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">II.</span>Education</h2>
+        <h2 class="section-heading"><span class="section-num">II.</span>教育背景</h2>
         <ul class="cv-list">
           <li class="cv-entry">
             <div class="cv-head">
-              <span class="cv-title">北京大学 · Peking University</span>
-              <span class="cv-date">2025.09 — Present</span>
+              <span class="cv-title">北京大学</span>
+              <span class="cv-date">2025.09 — 至今</span>
             </div>
-            <p class="cv-sub">信息科学技术学院 · B.E. 计算机科学与技术 <span class="cv-meta">(in progress)</span></p>
+            <p class="cv-sub">信息科学技术学院 · 本科 · 计算机科学与技术</p>
             <ul class="cv-bullets">
               <li>相关课程：程序设计实习、人工智能基础.</li>
             </ul>
@@ -52,34 +49,34 @@ import Navigation from '../components/Navigation.astro';
         </ul>
       </section>
 
-      <!-- Honors & Awards -->
+      <!-- 荣誉与奖项 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">III.</span>Honors &amp; Awards</h2>
+        <h2 class="section-heading"><span class="section-num">III.</span>荣誉与奖项</h2>
         <ul class="cv-list">
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title">团体第四名 · 五禽戏项目</span>
-              <span class="cv-date">2026 Spring</span>
+              <span class="cv-date">2026 春</span>
             </div>
             <p class="cv-sub">首都高校健身气功比赛 · 代表北京大学导引队参赛</p>
           </li>
         </ul>
       </section>
 
-      <!-- Selected Projects & Research -->
+      <!-- 项目与研究 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">IV.</span>Selected Projects &amp; Research</h2>
+        <h2 class="section-heading"><span class="section-num">IV.</span>项目与研究</h2>
         <ul class="cv-list">
 
           <li class="cv-entry">
             <div class="cv-head">
-              <span class="cv-title"><a href="https://github.com/ruguo0119/dog-emotion-recognition" target="_blank" rel="noopener noreferrer" class="cv-link">Dog Emotion Recognition</a></span>
+              <span class="cv-title"><a href="https://github.com/ruguo0119/dog-emotion-recognition" target="_blank" rel="noopener noreferrer" class="cv-link">犬类情绪识别</a></span>
               <span class="cv-date">2026 —</span>
             </div>
-            <p class="cv-sub">Research · Python · PyTorch <span class="cv-meta">— Peking University Innovation + Workstation</span></p>
+            <p class="cv-sub">研究项目 · Python · PyTorch <span class="cv-meta">— 北京大学创新+工作站</span></p>
             <ul class="cv-bullets">
               <li>基于姿态与声纹特征对犬类意图进行多模态识别.</li>
-              <li>已通过开题答辩, 项目持续推进中.</li>
+              <li>已通过开题答辩，项目持续推进中.</li>
             </ul>
           </li>
 
@@ -88,10 +85,10 @@ import Navigation from '../components/Navigation.astro';
               <span class="cv-title"><a href="https://github.com/Logic61/PKU-Planner" target="_blank" rel="noopener noreferrer" class="cv-link">PKU-Planner</a></span>
               <span class="cv-date">2025</span>
             </div>
-            <p class="cv-sub">Software · C++ · Qt <span class="cv-meta">— Independent</span></p>
+            <p class="cv-sub">软件项目 · C++ · Qt <span class="cv-meta">— 独立项目</span></p>
             <ul class="cv-bullets">
-              <li>面向北京大学教学网的课程与 DDL 桌面助手, 支持教学网导入与截图识别课程.</li>
-              <li>以视觉驱动的紧迫度提示展示任务; 集成一键 AI 个性化建议.</li>
+              <li>面向北京大学教学网的课程与 DDL 桌面助手，支持教学网导入与截图识别课程.</li>
+              <li>以视觉驱动的紧迫度提示展示任务；集成一键 AI 个性化建议.</li>
             </ul>
           </li>
 
@@ -100,60 +97,60 @@ import Navigation from '../components/Navigation.astro';
               <span class="cv-title"><a href="https://github.com/Logic61/Obsidian-to-Hexo" target="_blank" rel="noopener noreferrer" class="cv-link">Obsidian-to-Hexo</a></span>
               <span class="cv-date">2025</span>
             </div>
-            <p class="cv-sub">Tooling · Python <span class="cv-meta">— Independent</span></p>
+            <p class="cv-sub">工具 · Python <span class="cv-meta">— 独立项目</span></p>
             <ul class="cv-bullets">
               <li>将 Obsidian 笔记迁移至 Hexo 博客的自动化工具.</li>
-              <li>解析 Obsidian 特有 Markdown 语法, 整理 frontmatter 并写入 Hexo posts 目录, 支持批量备份与发布.</li>
+              <li>解析 Obsidian 特有 Markdown 语法，整理 frontmatter 并写入 Hexo posts 目录，支持批量备份与发布.</li>
             </ul>
           </li>
 
         </ul>
       </section>
 
-      <!-- Technical Skills -->
+      <!-- 技术能力 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">V.</span>Technical Skills</h2>
+        <h2 class="section-heading"><span class="section-num">V.</span>技术能力</h2>
         <dl class="cv-skills">
           <div class="cv-skill-row">
-            <dt class="cv-skill-key">Languages</dt>
-            <dd>C++, Python</dd>
+            <dt class="cv-skill-key">编程语言</dt>
+            <dd>C++、Python</dd>
           </div>
           <div class="cv-skill-row">
-            <dt class="cv-skill-key">Frameworks</dt>
+            <dt class="cv-skill-key">框架</dt>
             <dd>PyTorch</dd>
           </div>
           <div class="cv-skill-row">
-            <dt class="cv-skill-key">GPU &amp; Compilers</dt>
-            <dd>CUDA, Triton, TileLang <span class="cv-meta">(beginner)</span></dd>
+            <dt class="cv-skill-key">GPU 与编译器</dt>
+            <dd>CUDA、Triton、TileLang <span class="cv-meta">（入门）</span></dd>
           </div>
           <div class="cv-skill-row">
-            <dt class="cv-skill-key">Tools</dt>
-            <dd>Git / GitHub, LaTeX, Markdown, Linux</dd>
+            <dt class="cv-skill-key">工具</dt>
+            <dd>Git / GitHub、LaTeX、Markdown、Linux</dd>
           </div>
           <div class="cv-skill-row">
-            <dt class="cv-skill-key">Languages <span class="cv-meta">(spoken)</span></dt>
-            <dd>Chinese (native), English (working)</dd>
+            <dt class="cv-skill-key">语言</dt>
+            <dd>中文（母语）、英文（工作语言）</dd>
           </div>
         </dl>
       </section>
 
-      <!-- Service & Activities -->
+      <!-- 服务与活动 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">VI.</span>Service &amp; Activities</h2>
+        <h2 class="section-heading"><span class="section-num">VI.</span>服务与活动</h2>
         <ul class="cv-list">
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title">北京大学导引队</span>
-              <span class="cv-date">2025.09 — Present</span>
+              <span class="cv-date">2025.09 — 至今</span>
             </div>
-            <p class="cv-sub">Member · 五禽戏项目代表队员</p>
+            <p class="cv-sub">队员 · 五禽戏项目代表</p>
           </li>
           <li class="cv-entry">
             <div class="cv-head">
-              <span class="cv-title">Piano Performance</span>
-              <span class="cv-date">ongoing</span>
+              <span class="cv-title">钢琴演奏</span>
+              <span class="cv-date">持续中</span>
             </div>
-            <p class="cv-sub">Repertoire includes Chopin Ballade No. 1, Chopin Grande Polonaise Brillante, Liszt Rigoletto Paraphrase, Liszt Chasse-neige.</p>
+            <p class="cv-sub">演奏曲目包括肖邦第一叙事曲、肖邦华丽大波兰舞曲、李斯特《弄臣》与《追雪》.</p>
           </li>
         </ul>
       </section>
@@ -161,8 +158,8 @@ import Navigation from '../components/Navigation.astro';
     </div>
 
     <footer class="mt-12 pt-4 border-t border-slate-200 dark:border-slate-800 font-sans text-[10px] uppercase tracking-[0.16em] text-slate-400 dark:text-slate-600 flex justify-between flex-wrap gap-2">
-      <span>Last updated Sep 2026</span>
-      <span>Beijing, China</span>
+      <span>最后更新 2026 年 9 月</span>
+      <span>中国 · 北京</span>
     </footer>
 
   </main>
