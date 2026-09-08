@@ -17,6 +17,7 @@ const toggleUrl = `${basePath}${targetCleanPath}`.replace(/\/+$/, '') || '/MyPag
     Shane Lorien
   </a>
   <div class="flex items-center space-x-6 text-sm font-medium text-slate-600 dark:text-slate-400">
+    <a href={isEn ? "/MyPage/en/cv" : "/MyPage/cv"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "CV" : "简历"}</a>
     <a href={isEn ? "/MyPage/en/blog" : "/MyPage/blog"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "Blog" : "博客"}</a>
     <a href={isEn ? "/MyPage/en/projects" : "/MyPage/projects"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "Projects" : "项目"}</a>
     <div class="w-px h-4 bg-slate-200 dark:bg-slate-800"></div>
@@ -171,9 +172,23 @@ const toggleUrl = `${basePath}${targetCleanPath}`.replace(/\/+$/, '') || '/MyPag
     }
   });
 
+  const escapeHtml = (s: string) =>
+    s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
+
+  const highlight = (text: string, query: string) => {
+    const safe = escapeHtml(text);
+    const idx = safe.toLowerCase().indexOf(query);
+    if (idx < 0) return safe;
+    return safe.slice(0, idx)
+      + '<mark class="bg-yellow-200/70 dark:bg-yellow-500/30 text-slate-900 dark:text-slate-100 rounded px-0.5">'
+      + safe.slice(idx, idx + query.length)
+      + '</mark>'
+      + safe.slice(idx + query.length);
+  };
+
   searchInput?.addEventListener('input', (e) => {
     if (!searchResults || !searchEmpty || !searchInput) return;
-    
+
     const query = searchInput.value.trim().toLowerCase();
     if (!query) {
       searchResults.classList.add('hidden');
@@ -183,30 +198,38 @@ const toggleUrl = `${basePath}${targetCleanPath}`.replace(/\/+$/, '') || '/MyPag
 
     if (!searchData) return;
 
-    const matched = searchData.filter(item => {
-      return (item.title && item.title.toLowerCase().includes(query)) ||
-             (item.description && item.description.toLowerCase().includes(query)) ||
-             (item.category && item.category.toLowerCase().includes(query));
-    });
+    // 加权: 标题命中 ×3, 分类 ×2, 描述 ×1
+    const scored = searchData
+      .map(item => {
+        const t = (item.title || '').toLowerCase();
+        const c = (item.category || '').toLowerCase();
+        const d = (item.description || '').toLowerCase();
+        let score = 0;
+        if (t.includes(query)) score += 3;
+        if (c.includes(query)) score += 2;
+        if (d.includes(query)) score += 1;
+        return { item, score };
+      })
+      .filter(x => x.score > 0)
+      .sort((a, b) => b.score - a.score);
 
-    if (matched.length > 0) {
+    if (scored.length > 0) {
       searchEmpty.classList.add('hidden');
       searchResults.classList.remove('hidden');
-      
-      searchResults.innerHTML = matched.map(item => {
-        // 构建正确的 URL
-        const prefix = isEnPath ? '/en/blog/' : '/blog/';
-        // 去除可能的双斜杠
+
+      searchResults.innerHTML = scored.map(({ item }) => {
         const slug = item.slug.startsWith('en/') ? item.slug.replace('en/', '') : item.slug;
         const finalUrl = isEnPath ? `/en/blog/${slug}` : `/blog/${slug}`;
-        
+        const titleHtml = highlight(item.title || '', query);
+        const descHtml = item.description ? highlight(item.description, query) : '';
+
         return `
           <li>
             <a href="${finalUrl}" class="group flex items-start gap-3 p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
               <svg class="w-4 h-4 text-slate-400 mt-1 shrink-0 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
               <div class="flex-1 min-w-0">
-                <h4 class="text-base font-medium text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate transition-colors">${item.title}</h4>
-                ${item.description ? `<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">${item.description}</p>` : ''}
+                <h4 class="text-base font-medium text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate transition-colors">${titleHtml}</h4>
+                ${descHtml ? `<p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-1 mt-0.5">${descHtml}</p>` : ''}
               </div>
             </a>
           </li>

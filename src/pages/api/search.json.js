@@ -1,7 +1,7 @@
 import { getCollection } from 'astro:content';
 
 export const GET = async () => {
-  const posts = await getCollection('blog');
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
   
   const searchIndex = posts.map(post => ({
     title: post.data.title,

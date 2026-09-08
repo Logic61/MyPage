@@ -9,7 +9,7 @@ SOURCE_BASE = r"C:\Users\32372\myBlog\source\_posts"
 DEST_BASE = r"C:\Users\32372\MyPage\src\content\blog"
 
 # 需要同步的分类目录
-CATEGORIES = ["离散", "数学随笔", "线代", "高数", "西方文化选读", "高数"]
+CATEGORIES = ["离散", "数学随笔", "线代", "高数", "西方文化选读"]
 
 def process_content(content, filename, category, filepath):
     """

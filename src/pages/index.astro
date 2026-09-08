@@ -1,140 +1,35 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import Navigation from '../components/Navigation.astro';
 ---
 
-<Layout title="Shane Lorien - 首页">
-  <main class="max-w-4xl mx-auto p-12 bg-white font-sans text-slate-900 leading-relaxed dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
-    <Navigation />
+<Layout title="Shane Lorien">
+  <main class="max-w-3xl mx-auto px-6 sm:px-8 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 min-h-screen flex flex-col">
 
-    <header class="flex justify-between items-start mb-20">
-      <div class="space-y-4">
-        <h1 class="text-6xl font-extrabold tracking-tighter text-slate-900 dark:text-slate-100">Shane Lorien</h1>
-        <p class="text-xl text-slate-500 font-medium dark:text-slate-400">如切如磋，如琢如磨</p>
+    <!-- Hero: centered, single-weight display, avatar above the type -->
+    <header class="flex-1 flex flex-col items-center justify-center text-center pt-24 pb-20">
+      <img
+        src="/MyPage/avatar.jpg"
+        alt=""
+        width="96"
+        height="96"
+        loading="eager"
+        class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover mb-12 sm:mb-16"
+      />
+      <h1 class="font-serif italic font-light text-[clamp(3.5rem,11vw,8rem)] leading-[0.95] tracking-[-0.035em] text-slate-900 dark:text-slate-50">
+        Shane Lorien
+      </h1>
+      <div class="mt-8 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
+        <span class="block w-8 h-px bg-slate-300 dark:bg-slate-700"></span>
+        <span>日月安属 · 列星安陈</span>
+        <span class="block w-8 h-px bg-slate-300 dark:bg-slate-700"></span>
       </div>
 
-      <div class="flex-shrink-0">
-        <img src="/MyPage/avatar.jpg" alt="Avatar" class="w-28 h-28 rounded-full border border-slate-100 shadow-sm object-cover dark:border-slate-800" />
-      </div>
+      <!-- Start: single entry point to the blog -->
+      <a href="/MyPage/blog" class="group mt-14 sm:mt-16 inline-flex items-baseline gap-3 font-serif italic text-2xl sm:text-3xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+        <span>Start</span>
+        <span aria-hidden="true" class="font-sans not-italic text-xl transition-transform group-hover:translate-x-1.5">→</span>
+      </a>
     </header>
-
-    <div class="space-y-24">
-      <!-- About Section -->
-      <section class="grid grid-cols-[140px,1fr] gap-8 items-start">
-        <h2 class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-1">关于我</h2>
-        <div class="space-y-4 text-slate-700 dark:text-slate-300">
-          <p>
-            你好，我是陈冠宇，北大计算机科学与技术的2025级学生。
-          </p>
-          <p>
-            目前兴趣仍并没有十分确定的方向，正在探索之中。对 llm, nlp, cv 等方向有初步兴趣，也在自学 cs224n 等相关内容。
-            我于 26 年春申报北京大学创新+工作站的“通过姿态和声纹识别犬类意图”项目并通过开题答辩，正在推进项目。也参与 LCPU 与北大超算队联办的 AI Infra Seminars，对 ai infra 有初步认知。
-          </p><p>
-			除了专业方向外，对钢琴、写作、导引等方面也有一定兴趣，
-			关于这方面内容，可以在我的生活向blog 
-			<a href="https://logic61.github.io/" class="text-blue-600 dark:text-blue-400 hover:underline">https://logic61.github.io/</a> 
-			中找到一些相关的记录和思考。
-          </p>
-        </div>
-      </section>
-
-      <!-- Education Section -->
-      <section class="grid grid-cols-[140px,1fr] gap-8 items-start">
-        <h2 class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-1">教育背景</h2>
-        <div>
-          <div class="flex items-center justify-between mb-1">
-            <h3 class="font-medium text-slate-900 dark:text-slate-100">北京大学</h3>
-            <span class="text-sm text-slate-500 dark:text-slate-400">2025 - 至今</span>
-          </div>
-          <p class="text-slate-600 mb-2 dark:text-slate-300">信息科学技术学院</p>
-          <p class="text-sm text-slate-500 dark:text-slate-400">计算机类 本科在读</p>
-          <p class="text-sm text-slate-400 mt-2 dark:text-slate-500">相关课程：程序设计实习，人工智能基础等</p>
-        </div>
-      </section>
-
-      <!-- Skills Section -->
-      <section class="grid grid-cols-[140px,1fr] gap-8 items-start">
-        <h2 class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-1">专业技能</h2>
-        <div class="grid grid-cols-2 gap-y-6 gap-x-4 text-sm">
-          <div>
-            <h3 class="font-medium text-slate-900 mb-2">编程语言</h3>
-            <p class="text-slate-600 flex flex-wrap gap-2">
-              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">C++</span>
-              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Python</span>
-              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Pytorch</span>
-              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Cuda/ Triton/ Tilelang(初步学习)</span>
-            </p>
-          </div>
-
-          <div class="col-span-2">
-            <h3 class="font-medium text-slate-900 mb-2">工具与其他</h3>
-            <p class="text-slate-600 flex flex-wrap gap-2">
-              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Git / GitHub</span>
-              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Latex</span>
-              <span class="px-2 py-1 bg-slate-50 rounded text-slate-600">Markdown</span>
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <!-- Projects Section -->
-      <section class="grid grid-cols-[140px,1fr] gap-8 items-start">
-        <h2 class="text-sm font-semibold tracking-widest text-slate-400 uppercase mt-1">部分项目</h2>
-        <div class="space-y-10">
-          <div class="group">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                <a href="https://github.com/Logic61/PKU-Planner" target="_blank" rel="noopener noreferrer">PKU-Planner</a>
-              </h3>
-              <span class="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded">C++</span>
-            </div>
-            <p class="text-slate-600 dark:text-slate-300 text-sm mb-3">适配北京大学教学网的课程、ddl助手</p>
-            <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-1.5 list-disc list-inside">
-              <li>视觉驱动的任务提示，任务  随紧迫度变色</li>
-              <li>支持教学网导入、截图导入课程</li>
-              <li>能够一键让 AI 由课程、DDL 信息给出个性化建议</li>
-            </ul>
-          </div>
-
-          <div class="group">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="font-medium text-slate-900 dark:text-slate-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                <a href="https://github.com/Logic61/Obsidian-to-Hexo" target="_blank" rel="noopener noreferrer">Obsidian-to-Hexo</a>
-              </h3>
-              <span class="text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/50 px-2 py-1 rounded">Python</span>
-            </div>
-            <p class="text-slate-600 dark:text-slate-300 text-sm mb-3">将 Obsidian 的 Markdown 笔记迁移至 Hexo 博客的自动化工具</p>
-            <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-1.5 list-disc list-inside">
-              <li>解析并转换 Obsidian 特有语法的 Markdown 文档</li>
-              <li>自动适配与转移到 Hexo 的 posts 目录，并整理元数据</li>
-              <li>由 Python 编写以实现批量无缝备份与发布</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-	  <!-- Hobbies & Skills Section -->
-      <section class="grid grid-cols-[140px,1fr] gap-8 items-start">
-        <h2 class="text-sm font-semibold tracking-widest text-slate-400 dark:text-slate-500 uppercase mt-1">业余技能</h2>
-        <div class="space-y-6">
-          
-          <div class="group">
-            <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">钢琴</h3>
-            <ul class="text-sm text-slate-600 dark:text-slate-300 space-y-1.5 list-none">
-              弹过较为知名的肖邦第一叙事曲、大波兰舞曲，李斯特弄臣、追雪等曲目。
-			</ul>
-          </div>
-
-          <div class="group">
-            <h3 class="font-medium text-slate-900 dark:text-slate-100 mb-2">导引</h3>
-            <div class="flex flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300">
-              加入北京大学导引队，于 2026 春在首都高校健身气功比赛中五禽戏项目获得团体第四名。
-            </div>
-          </div>
-
-        </div>
-      </section>
-    </div>
 
   </main>
 </Layout>

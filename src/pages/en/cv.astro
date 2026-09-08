@@ -1,0 +1,126 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Navigation from '../../components/Navigation.astro';
+---
+
+<Layout title="Shane Lorien - Curriculum Vitae">
+  <main class="max-w-3xl mx-auto px-6 sm:px-10 py-12 sm:py-16 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-serif leading-relaxed transition-colors duration-300 min-h-screen">
+
+    <Navigation />
+
+    <!-- Header -->
+    <header class="text-center mb-14 pb-8 border-b border-slate-200 dark:border-slate-800">
+      <h1 class="text-4xl sm:text-5xl font-medium tracking-wide text-slate-900 dark:text-slate-100">Shane Lorien</h1>
+      <p class="text-lg italic text-slate-500 dark:text-slate-400 mt-2 font-serif">Guan Yu Chen</p>
+      <ul class="font-mono text-[11px] text-slate-500 dark:text-slate-500 mt-7 flex justify-center flex-wrap gap-x-3 gap-y-1 uppercase tracking-[0.14em]">
+        <li>Peking University</li>
+        <li aria-hidden="true">·</li>
+        <li>B.E. Computer Science, 2025</li>
+        <li aria-hidden="true">·</li>
+        <li><a href="mailto:logic.dreemurr@gmail.com" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors normal-case tracking-normal">logic.dreemurr@gmail.com</a></li>
+        <li aria-hidden="true">·</li>
+        <li><a href="https://github.com/logic61" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors normal-case tracking-normal">github.com/logic61</a></li>
+      </ul>
+    </header>
+
+    <div class="space-y-12">
+
+      <!-- Education -->
+      <section>
+        <h2 class="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:text-slate-300 pb-2 mb-5 border-b border-slate-200 dark:border-slate-800">Education</h2>
+        <article>
+          <header class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+            <h3 class="text-lg text-slate-900 dark:text-slate-100">Peking University</h3>
+            <span class="font-mono text-xs text-slate-500 dark:text-slate-500 tabular-nums shrink-0">Sep 2025 -</span>
+          </header>
+          <p class="italic text-slate-600 dark:text-slate-400">School of Information Science and Technology. B.E. Computer Science and Technology.</p>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-2">Relevant coursework: Programming Practice, Fundamentals of AI.</p>
+        </article>
+      </section>
+
+      <!-- Selected Projects -->
+      <section>
+        <h2 class="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:text-slate-300 pb-2 mb-5 border-b border-slate-200 dark:border-slate-800">Selected Projects</h2>
+        <div class="space-y-7">
+
+          <article>
+            <header class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+              <h3 class="text-lg text-slate-900 dark:text-slate-100">
+                <a href="https://github.com/ruguo0119/dog-emotion-recognition" target="_blank" rel="noopener noreferrer" class="hover:underline underline-offset-4 decoration-slate-300">Dog Emotion Recognition</a>
+              </h3>
+              <span class="font-mono text-xs text-slate-500 dark:text-slate-500 tabular-nums shrink-0">Python · 2026</span>
+            </header>
+            <p class="italic text-slate-600 dark:text-slate-400">Recognition of canine intent via pose and voiceprint.</p>
+            <p class="text-sm text-slate-700 dark:text-slate-300 mt-2">A Peking University Innovation + Workstation project. Proposal defence passed; in progress.</p>
+          </article>
+
+          <article>
+            <header class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+              <h3 class="text-lg text-slate-900 dark:text-slate-100">
+                <a href="https://github.com/Logic61/PKU-Planner" target="_blank" rel="noopener noreferrer" class="hover:underline underline-offset-4 decoration-slate-300">PKU-Planner</a>
+              </h3>
+              <span class="font-mono text-xs text-slate-500 dark:text-slate-500 tabular-nums shrink-0">C++ · 2025</span>
+            </header>
+            <p class="italic text-slate-600 dark:text-slate-400">A course and deadline assistant adapted to the Peking University teaching website.</p>
+            <p class="text-sm text-slate-700 dark:text-slate-300 mt-2">Visually driven task urgency indication; tasks shift colour as deadlines approach. Supports importing courses from the teaching portal and via screenshot recognition. Integrates one-click AI-generated personalised suggestions.</p>
+          </article>
+
+          <article>
+            <header class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+              <h3 class="text-lg text-slate-900 dark:text-slate-100">
+                <a href="https://github.com/Logic61/Obsidian-to-Hexo" target="_blank" rel="noopener noreferrer" class="hover:underline underline-offset-4 decoration-slate-300">Obsidian-to-Hexo</a>
+              </h3>
+              <span class="font-mono text-xs text-slate-500 dark:text-slate-500 tabular-nums shrink-0">Python · 2025</span>
+            </header>
+            <p class="italic text-slate-600 dark:text-slate-400">An automation tool for migrating Obsidian Markdown notes to a Hexo blog.</p>
+            <p class="text-sm text-slate-700 dark:text-slate-300 mt-2">Parses Obsidian-specific Markdown syntax, organises frontmatter, and writes to Hexo's posts directory. Supports batch backup and publishing.</p>
+          </article>
+
+        </div>
+      </section>
+
+      <!-- Skills -->
+      <section>
+        <h2 class="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:text-slate-300 pb-2 mb-5 border-b border-slate-200 dark:border-slate-800">Technical Skills</h2>
+        <dl class="grid grid-cols-[120px_1fr] gap-y-3 text-sm">
+          <dt class="font-sans text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500 self-baseline pt-0.5">Languages</dt>
+          <dd class="text-slate-700 dark:text-slate-300">C++, Python</dd>
+
+          <dt class="font-sans text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500 self-baseline pt-0.5">Frameworks</dt>
+          <dd class="text-slate-700 dark:text-slate-300">PyTorch</dd>
+
+          <dt class="font-sans text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500 self-baseline pt-0.5">GPU</dt>
+          <dd class="text-slate-700 dark:text-slate-300">CUDA, Triton, TileLang <span class="italic text-slate-500">(beginner)</span></dd>
+
+          <dt class="font-sans text-[11px] uppercase tracking-[0.18em] text-slate-500 dark:text-slate-500 self-baseline pt-0.5">Tools</dt>
+          <dd class="text-slate-700 dark:text-slate-300">Git / GitHub, LaTeX, Markdown</dd>
+        </dl>
+      </section>
+
+      <!-- Activities -->
+      <section>
+        <h2 class="font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:text-slate-300 pb-2 mb-5 border-b border-slate-200 dark:border-slate-800">Selected Activities</h2>
+        <div class="space-y-4 text-sm text-slate-700 dark:text-slate-300">
+
+          <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+            <p>Piano. Performed Chopin Ballade No. 1, Grande Polonaise Brillante, Liszt Rigoletto and Chasse-neige.</p>
+            <span class="font-mono text-xs text-slate-500 tabular-nums shrink-0">ongoing</span>
+          </div>
+
+          <div class="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+            <p>Peking University Daoyin Team. <span class="italic text-slate-500 dark:text-slate-500">4th place, Wu Qin Xi event, Capital Universities Fitness Qigong Competition</span>.</p>
+            <span class="font-mono text-xs text-slate-500 tabular-nums shrink-0">2026 Spring</span>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+
+    <footer class="mt-16 pt-6 border-t border-slate-200 dark:border-slate-800 font-mono text-[10px] uppercase tracking-[0.18em] text-slate-400 dark:text-slate-600 flex justify-between flex-wrap gap-2">
+      <span>Last updated Sep 2026</span>
+      <span>Beijing, China</span>
+    </footer>
+
+  </main>
+</Layout>
