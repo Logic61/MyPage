@@ -8,6 +8,12 @@ on:
   # Allows you to run this workflow manually from the Actions tab on GitHub.
   workflow_dispatch:
 
+# Serialize deployments: cancel any in-progress deploy when a new one starts.
+# This prevents two jobs from racing on the `gh-pages` branch ref lock.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 # Allow this job to clone the repo and create a page deployment
 permissions:
   contents: write
@@ -32,3 +38,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           keep_files: false
+          # Publish as an orphan branch so push replaces the ref outright
+          # instead of relying on the previous tip — avoids the
+          # "cannot lock ref 'refs/heads/gh-pages'" race.
+          force_orphan: true
