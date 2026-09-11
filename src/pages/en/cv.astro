@@ -1,6 +1,9 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import Navigation from '../../components/Navigation.astro';
+
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const pdfHref = `${basePath}/cv.pdf`;
 ---
 
 <Layout title="Shane Lorien - Curriculum Vitae">
@@ -20,6 +23,12 @@ import Navigation from '../../components/Navigation.astro';
         <li aria-hidden="true">·</li>
         <li><a href="https://github.com/logic61" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors normal-case tracking-normal">github.com/logic61</a></li>
       </ul>
+      <div class="mt-6">
+        <a href={pdfHref} download class="inline-flex items-center gap-2 font-sans text-[11px] uppercase tracking-[0.16em] text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 px-3.5 py-1.5 rounded-md hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 transition-colors">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.5v7M6 8.5L3 5.5M6 8.5L9 5.5M2 10.5h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download PDF
+        </a>
+      </div>
     </header>
 
     <div class="space-y-9">
@@ -36,6 +45,16 @@ import Navigation from '../../components/Navigation.astro';
       <section>
         <h2 class="section-heading"><span class="section-num">II.</span>Education</h2>
         <ul class="cv-list">
+          <li class="cv-entry">
+            <div class="cv-head">
+              <span class="cv-title">Xiamen Foreign Language School</span>
+              <span class="cv-date">2022.09 — 2025.06</span>
+            </div>
+            <p class="cv-sub">High School</p>
+            <ul class="cv-bullets">
+              <li>Provincial First Prize, 40th and 41st Chinese Physics Olympiad (CPHO).</li>
+            </ul>
+          </li>
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title">Peking University</span>
@@ -111,7 +130,7 @@ import Navigation from '../../components/Navigation.astro';
           </div>
           <div class="cv-skill-row">
             <dt class="cv-skill-key">Tools</dt>
-            <dd>Git / GitHub, LaTeX, Markdown, Linux</dd>
+            <dd>Git / GitHub, LaTeX, Markdown</dd>
           </div>
         </dl>
       </section>

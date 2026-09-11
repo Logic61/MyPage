@@ -1,0 +1,159 @@
+% 陈冠宇 — Curriculum Vitae
+% Compile: xelatex cv.tex (run twice for refs)
+
+\documentclass[11pt,a4paper]{article}
+
+% --- Encoding & fonts ---
+\usepackage{fontspec}
+\usepackage{xeCJK}
+
+% English (Latin) font: classic serif close to the web CV
+\setmainfont{EB Garamond}[
+  UprightFont = *,
+  ItalicFont = *,
+  BoldFont = *,
+  Ligatures = TeX
+]
+
+% CJK fonts: use Fandol (bundled with TeX Live, static, no VF gotchas).
+% Song = 宋体 (serif body), Hei = 黑体 (sans for section heads), Kai = 楷体 (italic-ish).
+\setCJKmainfont{FandolSong}
+\setCJKsansfont{FandolHei}
+\setCJKfamilyfont{kai}{FandolKai}
+\xeCJKsetup{CJKecglue={\hskip 0.15em plus 0.05em}}
+
+% --- Layout ---
+\usepackage[a4paper,top=0.85in,bottom=0.85in,left=0.95in,right=0.95in]{geometry}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage[hidelinks,unicode]{hyperref}
+\usepackage{calc}
+
+% --- Colors (match the site palette) ---
+% Use named SVG colors so xcolor doesn't need the HTML model.
+\definecolor{rulecol}{rgb}{0.792,0.835,0.882}
+\definecolor{subdued}{rgb}{0.392,0.455,0.545}
+\definecolor{bodycol}{rgb}{0.118,0.161,0.231}
+\definecolor{accentcol}{rgb}{0.059,0.090,0.165}
+\color{bodycol}
+
+% --- Section heading style: small caps + rule, like the web CV ---
+\usepackage{titlesec}
+\titleformat{\section}
+  {\sffamily\fontsize{10.5pt}{12pt}\selectfont\bfseries\color{accentcol}\MakeUppercase}
+  {\makebox[1.6em][l]{\rmfamily\fontsize{9pt}{11pt}\selectfont\color{subdued}\thesection.}}{0pt}
+  {}
+  [\vspace{-2pt}{\color{rulecol}\rule{\linewidth}{0.4pt}}%
+   \rmfamily\mdseries\upshape\color{bodycol}]
+\titlespacing*{\section}{0pt}{1.3em}{0.55em}
+
+% --- Custom entry helper ---
+% Args: 1=date, 2=title, 3=subtitle, 4=bullet items (or empty)
+\newcommand{\cventry}[4]{%
+  \par\noindent
+  \makebox[\linewidth][s]{%
+    \sffamily\bfseries\color{accentcol}#2%
+    \hfill
+    \rmfamily\itshape\color{subdued}\fontsize{10pt}{12pt}\selectfont #1%
+  }\par
+  \vspace{0.15em}
+  {\itshape\color{subdued}#3}\par
+  \ifx&#4&\else
+    \vspace{0.2em}
+    \begin{itemize}[leftmargin=1.25em,labelsep=0.4em,itemsep=0.05em,topsep=0pt,parsep=0pt]
+      #4
+    \end{itemize}
+  \fi
+  \vspace{0.55em}
+}
+
+% --- Skill row helper ---
+% Args: 1=key (uppercased, gray, sans), 2=value (body, wraps if long)
+\newcommand{\cvskill}[2]{%
+  \par\noindent
+  \makebox[8em][l]{\sffamily\fontsize{9.5pt}{11pt}\selectfont\color{subdued}\MakeUppercase{#1}}%
+  \color{bodycol}#2%
+  \par
+  \vspace{0.35em}
+}
+
+% --- Tighten list spacing globally ---
+\setlist[itemize]{leftmargin=1.25em,itemsep=0.05em,topsep=0.1em,parsep=0pt}
+\linespread{1.08}\selectfont
+
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+
+\begin{document}
+
+%==================== HEADER ====================
+\begin{center}
+  {\fontsize{28pt}{32pt}\selectfont\rmfamily\bfseries\color{accentcol} 陈冠宇}\par
+  \vspace{0.9em}
+  {\sffamily\fontsize{9.5pt}{12pt}\selectfont\color{subdued}\MakeUppercase{%
+    Peking University \textperiodcentered\ B.E. Computer Science \textperiodcentered\ since 2025%
+  }}\par
+  \vspace{0.6em}
+  {\rmfamily\fontsize{10pt}{12pt}\selectfont\color{subdued}{%
+    \href{mailto:logic.dreemurr@gmail.com}{logic.dreemurr@gmail.com}%
+    \textperiodcentered\ %
+    \href{https://github.com/logic61}{github.com/logic61}%
+  }}\par
+\end{center}
+
+\vspace{0.2em}
+{\color{rulecol}\rule{\linewidth}{0.4pt}}
+\vspace{0.4em}
+
+%==================== I. 研究兴趣 ====================
+\section{研究兴趣}
+\noindent\color{bodycol}仍在持续探索.
+
+\vspace{0.3em}
+
+%==================== II. 教育背景 ====================
+\section{教育背景}
+\cventry{2022.09 -- 2025.06}{厦门外国语学校}{高中}{
+  \item 第 40 届、41 届全国中学生物理竞赛（CPHO）省一等奖.
+}
+\cventry{2025.09 -- 至今}{北京大学}{信息科学技术学院 \textperiodcentered\ 本科 \textperiodcentered\ 计算机科学与技术}{
+  \item 相关课程：程序设计实习、人工智能基础.
+}
+
+%==================== III. 项目与研究 ====================
+\section{项目与研究}
+\cventry{2026 --}{犬类情绪识别 \href{https://github.com/ruguo0119/dog-emotion-recognition}{\textnormal{\textit{\scriptsize (GitHub)}}}}{研究项目 \textperiodcentered\ Python \textperiodcentered\ PyTorch \textperiodcentered\ ---\ 北京大学创新+工作站}{
+  \item 基于姿态与声纹特征对犬类意图进行多模态识别.
+  \item 已通过开题答辩，项目持续推进中.
+}
+\cventry{2025}{PKU-Planner \href{https://github.com/Logic61/PKU-Planner}{\textnormal{\textit{\scriptsize (GitHub)}}}}{软件项目 \textperiodcentered\ C++ \textperiodcentered\ Qt \textperiodcentered\ --- 独立项目}{
+  \item 面向北京大学教学网的课程与 DDL 桌面助手，支持教学网导入与截图识别课程.
+  \item 以视觉驱动的紧迫度提示展示任务；集成一键 AI 个性化建议.
+}
+\cventry{2025}{Obsidian-to-Hexo \href{https://github.com/Logic61/Obsidian-to-Hexo}{\textnormal{\textit{\scriptsize (GitHub)}}}}{工具 \textperiodcentered\ Python \textperiodcentered\ --- 独立项目}{
+  \item 将 Obsidian 笔记迁移至 Hexo 博客的自动化工具.
+  \item 解析 Obsidian 特有 Markdown 语法，整理 frontmatter 并写入 Hexo posts 目录，支持批量备份与发布.
+}
+
+%==================== IV. 技术能力 ====================
+\section{技术能力}
+\cvskill{编程语言}{C++、Python}
+\cvskill{框架}{PyTorch}
+\cvskill{GPU 与编译器}{CUDA、Triton、TileLang（入门）}
+\cvskill{工具}{Git / GitHub、LaTeX、Markdown}
+
+%==================== V. 业余兴趣 ====================
+\section{业余兴趣}
+\cventry{2025.09 -- 至今}{北京大学导引队}{队员 \textperiodcentered\ 五禽戏项目代表}{}
+\cventry{2026 Spring}{团体第四名 \textperiodcentered\ 五禽戏项目}{首都高校健身气功比赛 \textperiodcentered\ 代表北京大学导引队参赛}{}
+\cventry{持续中}{钢琴演奏}{演奏曲目包括肖邦第一叙事曲、肖邦华丽大波兰舞曲、李斯特《弄臣》与《追雪》.}{}
+
+%==================== FOOTER ====================
+\vfill
+\begin{center}
+  \rmfamily\fontsize{9pt}{11pt}\selectfont\color{subdued}\MakeUppercase{%
+    最后更新 2026 年 9 月 \textperiodcentered\ 中国 \textperiodcentered\ 北京%
+  }
+\end{center}
+
+\end{document}
