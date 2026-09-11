@@ -1,0 +1,4 @@
+# LaTeX build artifacts (rebuild with: cd cv && xelatex cv.tex && xelatex cv.tex)
+cv/*.aux
+cv/*.log
+cv/*.out
