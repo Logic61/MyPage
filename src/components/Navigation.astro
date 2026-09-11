@@ -14,7 +14,7 @@ const toggleUrl = `${basePath}${targetCleanPath}`.replace(/\/+$/, '') || '/MyPag
 
 <nav class="flex items-center justify-between mb-24">
   <a href={isEn ? "/MyPage/en" : "/MyPage/"} class="font-bold text-lg tracking-tight hover:text-slate-600 dark:text-slate-100 dark:hover:text-slate-300 transition-colors">
-    Shane Lorien
+    {isEn ? "Guanyu Chen" : "Shane Lorien"}
   </a>
   <div class="flex items-center space-x-6 text-sm font-medium text-slate-600 dark:text-slate-400">
     <a href={isEn ? "/MyPage/en/cv" : "/MyPage/cv"} class="hover:text-slate-900 dark:hover:text-slate-100 transition-colors">{isEn ? "CV" : "简历"}</a>
