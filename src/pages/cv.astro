@@ -7,24 +7,24 @@ const pdfHref = `${basePath}/cv.pdf`;
 ---
 
 <Layout title="陈冠宇 - Curriculum Vitae">
-  <main class="max-w-3xl mx-auto px-6 sm:px-10 py-12 sm:py-16 bg-white dark:bg-slate-950 text-slate-800 dark:text-slate-200 font-serif leading-relaxed transition-colors duration-300 min-h-screen">
+  <main class="max-w-3xl mx-auto px-6 sm:px-10 py-12 sm:py-16 text-zinc-800 dark:text-zinc-200 font-sans leading-relaxed transition-colors duration-300 min-h-screen">
 
     <Navigation />
 
     <!-- Header: centered, single-row identity with horizontal contact list -->
-    <header class="text-center mb-14 pb-8 border-b border-slate-200 dark:border-slate-800">
-      <h1 class="text-4xl sm:text-5xl font-medium tracking-wide text-slate-900 dark:text-slate-100">陈冠宇</h1>
-      <ul class="font-mono text-[11px] text-slate-500 dark:text-slate-500 mt-7 flex justify-center flex-wrap gap-x-3 gap-y-1 uppercase tracking-[0.14em]">
+    <header class="text-center mb-14 pb-8 border-b border-zinc-200 dark:border-zinc-800">
+      <h1 class="text-4xl sm:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">陈冠宇</h1>
+      <ul class="font-mono text-[11px] text-zinc-500 dark:text-zinc-500 mt-7 flex justify-center flex-wrap gap-x-3 gap-y-1 uppercase tracking-[0.14em]">
         <li>北京大学</li>
         <li aria-hidden="true">·</li>
         <li>计算机科学与技术 · 2025级</li>
         <li aria-hidden="true">·</li>
-        <li><a href="mailto:logic.dreemurr@gmail.com" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors normal-case tracking-normal">logic.dreemurr@gmail.com</a></li>
+        <li><a href="mailto:logic.dreemurr@gmail.com" class="hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors normal-case tracking-normal">logic.dreemurr@gmail.com</a></li>
         <li aria-hidden="true">·</li>
-        <li><a href="https://github.com/logic61" target="_blank" rel="noopener noreferrer" class="hover:text-slate-900 dark:hover:text-slate-200 transition-colors normal-case tracking-normal">github.com/logic61</a></li>
+        <li><a href="https://github.com/logic61" target="_blank" rel="noopener noreferrer" class="hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors normal-case tracking-normal">github.com/logic61</a></li>
       </ul>
       <div class="mt-6">
-        <a href={pdfHref} download class="inline-flex items-center gap-2 font-sans text-[11px] uppercase tracking-[0.16em] text-slate-600 dark:text-slate-400 border border-slate-300 dark:border-slate-700 px-3.5 py-1.5 rounded-md hover:text-slate-900 dark:hover:text-slate-100 hover:border-slate-400 dark:hover:border-slate-500 transition-colors">
+        <a href={pdfHref} download class="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700 px-3.5 py-1.5 rounded-sm hover:text-accent dark:hover:text-accent-dark hover:border-accent dark:hover:border-accent-dark transition-colors">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.5v7M6 8.5L3 5.5M6 8.5L9 5.5M2 10.5h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           下载 PDF
         </a>
@@ -36,7 +36,7 @@ const pdfHref = `${basePath}/cv.pdf`;
       <!-- 探索中 -->
       <section>
         <h2 class="section-heading"><span class="section-num">I.</span>研究兴趣</h2>
-        <p class="text-[15px] text-slate-700 dark:text-slate-300">
+        <p class="text-[15px] text-zinc-700 dark:text-zinc-300">
           仍在持续探索.
         </p>
       </section>
@@ -165,7 +165,7 @@ const pdfHref = `${basePath}/cv.pdf`;
 
     </div>
 
-    <footer class="mt-12 pt-4 border-t border-slate-200 dark:border-slate-800 font-sans text-[10px] uppercase tracking-[0.16em] text-slate-400 dark:text-slate-600 flex justify-between flex-wrap gap-2">
+    <footer class="mt-12 pt-4 border-t border-zinc-200 dark:border-zinc-800 font-mono text-[10px] uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-600 flex justify-between flex-wrap gap-2">
       <span>最后更新 2026 年 9 月</span>
       <span>中国 · 北京</span>
     </footer>
@@ -177,10 +177,10 @@ const pdfHref = `${basePath}/cv.pdf`;
   @reference "../styles/global.css";
 
   .section-heading {
-    @apply font-sans text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-700 dark:text-slate-300 pb-1.5 mb-3 border-b border-slate-300 dark:border-slate-700 flex items-baseline gap-3;
+    @apply font-mono text-[11px] font-semibold uppercase tracking-[0.12em] text-zinc-700 dark:text-zinc-300 pb-1.5 mb-3 border-b border-zinc-300 dark:border-zinc-700 flex items-baseline gap-3;
   }
   .section-num {
-    @apply font-mono text-[10px] tracking-normal text-slate-400 dark:text-slate-500 normal-case;
+    @apply font-mono text-[10px] tracking-normal text-zinc-400 dark:text-zinc-500 normal-case;
   }
   .cv-list {
     @apply space-y-5;
@@ -192,33 +192,33 @@ const pdfHref = `${basePath}/cv.pdf`;
     @apply flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1;
   }
   .cv-title {
-    @apply font-medium text-slate-900 dark:text-slate-100;
+    @apply font-medium text-zinc-900 dark:text-zinc-100;
   }
   .cv-date {
-    @apply font-mono text-[11px] tracking-tight text-slate-500 dark:text-slate-500 tabular-nums shrink-0;
+    @apply font-mono text-[11px] tracking-tight text-zinc-500 dark:text-zinc-500 tabular-nums shrink-0;
   }
   .cv-sub {
-    @apply italic text-slate-600 dark:text-slate-400 mt-0.5 text-[14px];
+    @apply text-zinc-600 dark:text-zinc-400 mt-0.5 text-[14px];
   }
   .cv-meta {
-    @apply not-italic text-slate-500 dark:text-slate-500;
+    @apply not-italic text-zinc-500 dark:text-zinc-500;
   }
   .cv-bullets {
-    @apply mt-1.5 space-y-0.5 text-slate-700 dark:text-slate-300 text-[14px] pl-5 list-outside list-disc marker:text-slate-400 dark:marker:text-slate-600;
+    @apply mt-1.5 space-y-0.5 text-zinc-700 dark:text-zinc-300 text-[14px] pl-5 list-outside list-disc marker:text-zinc-400 dark:marker:text-zinc-600;
   }
   .cv-link {
-    @apply hover:underline underline-offset-4 decoration-slate-400 dark:decoration-slate-600;
+    @apply hover:text-accent dark:hover:text-accent-dark hover:underline underline-offset-4 decoration-accent/50 dark:decoration-accent-dark/50 transition-colors;
   }
   .cv-skills {
     @apply text-[14px];
   }
   .cv-skill-row {
-    @apply grid grid-cols-[8rem_1fr] gap-x-4 py-1 border-b border-dashed border-slate-200 dark:border-slate-800;
+    @apply grid grid-cols-[8rem_1fr] gap-x-4 py-1 border-b border-dashed border-zinc-200 dark:border-zinc-800;
   }
   .cv-skill-row:last-child {
     @apply border-b-0;
   }
   .cv-skill-key {
-    @apply font-sans text-[11px] uppercase tracking-[0.16em] text-slate-500 dark:text-slate-500 self-baseline pt-0.5;
+    @apply font-mono text-[11px] uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-500 self-baseline pt-0.5;
   }
 </style>

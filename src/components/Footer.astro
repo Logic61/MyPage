@@ -1,0 +1,14 @@
+---
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const pathname = Astro.url.pathname;
+const cleanPath = pathname.startsWith(basePath) ? pathname.slice(basePath.length) || '/' : pathname;
+const isEn = cleanPath.startsWith('/en');
+---
+
+<footer class="mt-24 pt-6 pb-2 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-2 font-mono text-[11px] text-zinc-400 dark:text-zinc-600">
+  <span>© 2026 Shane Lorien</span>
+  <div class="flex items-center gap-4">
+    <a href="https://github.com/logic61" target="_blank" rel="noopener noreferrer" class="hover:text-accent dark:hover:text-accent-dark transition-colors">github</a>
+    <a href="mailto:logic.dreemurr@gmail.com" class="hover:text-accent dark:hover:text-accent-dark transition-colors">{isEn ? "mail" : "邮箱"}</a>
+  </div>
+</footer>

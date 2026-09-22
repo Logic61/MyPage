@@ -1,35 +1,60 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import Navigation from '../components/Navigation.astro';
+import Footer from '../components/Footer.astro';
+
+const entries = [
+  { href: "/MyPage/blog", label: "博客", path: "~/blog", note: "数学与计算机笔记" },
+  { href: "/MyPage/cv", label: "简历", path: "~/cv", note: "教育与项目经历" },
+  { href: "/MyPage/projects", label: "项目", path: "~/projects", note: "开源仓库" },
+];
 ---
 
 <Layout title="Shane Lorien">
-  <main class="max-w-3xl mx-auto px-6 sm:px-8 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-300 min-h-screen flex flex-col">
+  <main class="max-w-3xl mx-auto px-6 sm:px-8 pt-10 sm:pt-12 pb-8 text-zinc-900 dark:text-zinc-100 transition-colors duration-300 min-h-[100dvh] flex flex-col">
 
-    <!-- Hero: centered, single-weight display, avatar above the type -->
-    <header class="flex-1 flex flex-col items-center justify-center text-center pt-24 pb-20">
-      <img
-        src="/MyPage/avatar.jpg"
-        alt=""
-        width="96"
-        height="96"
-        loading="eager"
-        class="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover mb-12 sm:mb-16"
-      />
-      <h1 class="font-serif italic font-light text-[clamp(3.5rem,11vw,8rem)] leading-[0.95] tracking-[-0.035em] text-slate-900 dark:text-slate-50">
+    <Navigation />
+
+    <header class="flex-1 flex flex-col justify-center">
+      <p class="rise font-mono text-xs text-accent dark:text-accent-dark select-none">$ whoami</p>
+      <h1 class="rise mt-4 font-sans font-bold text-6xl sm:text-7xl tracking-tighter text-zinc-900 dark:text-zinc-50" style="animation-delay: 60ms">
         Shane Lorien
       </h1>
-      <div class="mt-8 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.22em] text-slate-400 dark:text-slate-500">
-        <span class="block w-8 h-px bg-slate-300 dark:bg-slate-700"></span>
-        <span>日月安属 · 列星安陈</span>
-        <span class="block w-8 h-px bg-slate-300 dark:bg-slate-700"></span>
-      </div>
+      <p class="rise mt-5 font-mono text-xs sm:text-sm text-zinc-500 dark:text-zinc-400" style="animation-delay: 120ms">
+        北京大学 · 计算机科学与技术 · 2025 级
+      </p>
+      <p class="rise mt-4 max-w-md text-zinc-600 dark:text-zinc-400 leading-relaxed" style="animation-delay: 180ms">
+        写数学与计算机笔记，偶尔做些小工具。
+      </p>
 
-      <!-- Start: single entry point to the blog -->
-      <a href="/MyPage/blog" class="group mt-14 sm:mt-16 inline-flex items-baseline gap-3 font-serif italic text-2xl sm:text-3xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
-        <span>Start</span>
-        <span aria-hidden="true" class="font-sans not-italic text-xl transition-transform group-hover:translate-x-1.5">→</span>
-      </a>
+      <nav class="rise mt-14 border-b border-zinc-200 dark:border-zinc-800" style="animation-delay: 240ms">
+        {entries.map(e => (
+          <a href={e.href} class="group flex items-baseline gap-4 py-4 border-t border-zinc-200 dark:border-zinc-800 transition-all hover:pl-2">
+            <span class="font-mono text-xs text-accent dark:text-accent-dark shrink-0 w-20">{e.path}</span>
+            <span class="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 group-hover:text-accent dark:group-hover:text-accent-dark transition-colors">{e.label}</span>
+            <span class="flex-1 text-right sm:text-left text-sm text-zinc-400 dark:text-zinc-500">{e.note}</span>
+            <span aria-hidden="true" class="font-mono text-sm text-accent dark:text-accent-dark opacity-0 group-hover:opacity-100 transition-opacity">-&gt;</span>
+          </a>
+        ))}
+      </nav>
+
+      <p class="rise mt-16 font-mono text-xs text-zinc-400 dark:text-zinc-600" style="animation-delay: 300ms">日月安属，列星安陈。</p>
     </header>
+
+    <Footer />
 
   </main>
 </Layout>
+
+<style>
+  @media (prefers-reduced-motion: no-preference) {
+    .rise {
+      opacity: 0;
+      transform: translateY(8px);
+      animation: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    @keyframes rise {
+      to { opacity: 1; transform: none; }
+    }
+  }
+</style>

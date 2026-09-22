@@ -1,11 +1,39 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter/wght.css";
+@import "@fontsource-variable/jetbrains-mono/wght.css";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-serif: 'EB Garamond', 'Noto Serif SC', 'Source Han Serif SC', Georgia, 'Times New Roman', serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-sans: 'Inter Variable', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --color-accent: #059669;
+  --color-accent-hover: #047857;
+  --color-accent-dark: #34d399;
+  --color-accent-dark-hover: #6ee7b7;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: #fff;
+}
+.dark ::selection {
+  background: var(--color-accent-dark);
+  color: #052e22;
+}
+
+/* 终端式背景网格线 */
+body {
+  background-image:
+    linear-gradient(to right, rgb(9 9 11 / 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(9 9 11 / 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+.dark body {
+  background-image:
+    linear-gradient(to right, rgb(250 250 250 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(250 250 250 / 0.045) 1px, transparent 1px);
 }
 
 /* 修复 TailwindCSS 的默认样式导致 MathJax 公式换行的问题 */
@@ -23,3 +51,6 @@ mjx-container:not([display="true"]) {
 
 html { scroll-behavior: smooth; }
 
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

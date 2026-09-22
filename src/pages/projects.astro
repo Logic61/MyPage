@@ -1,7 +1,14 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Navigation from '../components/Navigation.astro';
+import Footer from '../components/Footer.astro';
 import { Icon } from 'astro-icon/components';
+
+const LANG_COLORS: Record<string, string> = {
+  "C++": "#f34b7d",
+  "Python": "#3572A5",
+  "JavaScript": "#f1e05a",
+};
 
 // 项目数据（之后你也可以把它们放进 src/content/projects 里让它完全自动化）
 const projects = [
@@ -42,37 +49,43 @@ const projects = [
 ---
 
 <Layout title="项目 - Shane Lorien">
-  <main class="max-w-4xl mx-auto p-12 bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 leading-relaxed min-h-screen">
+  <main class="max-w-5xl mx-auto px-6 sm:px-10 py-10 sm:py-12 font-sans text-zinc-900 dark:text-zinc-100 leading-relaxed min-h-[100dvh] flex flex-col transition-colors duration-300">
     <Navigation />
-    
-    <header class="mb-20">
-      <h1 class="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 mb-4">项目</h1>
-      <p class="text-slate-500 dark:text-slate-400 text-lg">一些开源仓库。</p>
+
+    <header class="pb-10 sm:pb-12">
+      <h1 class="font-sans font-bold text-5xl sm:text-6xl tracking-tighter text-zinc-900 dark:text-zinc-50">项目</h1>
+      <p class="mt-4 font-mono text-xs text-zinc-400 dark:text-zinc-500">一些开源仓库。</p>
     </header>
 
-    <div class="grid grid-cols-1 gap-16 border-t border-slate-100 dark:border-slate-800 pt-10">
+    <!-- hairline grid: gap-px renders the table lines -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-px bg-zinc-200 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800">
       {projects.map(proj => (
-        <section class="group">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3">
+        <section class="group flex flex-col p-6 sm:p-7 bg-white dark:bg-zinc-950 hover:bg-zinc-50 dark:hover:bg-zinc-900/60 transition-colors">
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <h2 class="font-mono text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 group-hover:text-accent dark:group-hover:text-accent-dark transition-colors">
               {proj.name}
-              <a href={proj.github} target="_blank" rel="noopener noreferrer" class="text-slate-300 dark:text-slate-600 hover:text-slate-900 dark:hover:text-slate-100 transition-colors" aria-label="GitHub Repository">
-                <Icon name="mdi:github" class="w-6 h-6" />
-              </a>
             </h2>
-            <span class="text-xs font-mono text-slate-500 bg-slate-50 dark:bg-slate-900/50 px-2.5 py-1 rounded border border-slate-100/50 dark:border-slate-800">{proj.stack}</span>
+            <a href={proj.github} target="_blank" rel="noopener noreferrer" class="text-zinc-300 dark:text-zinc-600 hover:text-accent dark:hover:text-accent-dark transition-colors" aria-label="GitHub Repository">
+              <Icon name="mdi:github" class="w-5 h-5" />
+            </a>
           </div>
-          <p class="text-slate-600 dark:text-slate-300 mb-6">{proj.desc}</p>
-          <ul class="text-sm text-slate-500 dark:text-slate-400 space-y-2.5">
+          <p class="text-sm text-zinc-600 dark:text-zinc-300 mb-5">{proj.desc}</p>
+          <ul class="text-sm text-zinc-500 dark:text-zinc-400 space-y-2 flex-1">
             {proj.points.map(pt => (
-              <li class="flex items-start gap-2 max-w-3xl">
-                <span class="text-slate-300 dark:text-slate-600 select-none mt-0.5">•</span>
+              <li class="flex items-start gap-2.5">
+                <span class="font-mono text-accent dark:text-accent-dark select-none">-</span>
                 <span class="leading-relaxed">{pt}</span>
               </li>
             ))}
           </ul>
+          <div class="mt-6 pt-4 border-t border-zinc-100 dark:border-zinc-800/70 flex items-center gap-2 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+            <span class="w-2.5 h-2.5 rounded-full" style={`background-color: ${LANG_COLORS[proj.stack] || '#8b949e'}`}></span>
+            <span>{proj.stack}</span>
+          </div>
         </section>
       ))}
     </div>
+
+    <Footer />
   </main>
 </Layout>
