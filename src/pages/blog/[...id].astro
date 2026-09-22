@@ -18,52 +18,52 @@ const { Content, headings } = await render(post);
 ---
 
 <Layout title={`${post.data.title} - Shane Lorien`}>
-  <main class="max-w-6xl mx-auto p-6 md:p-8 lg:p-12 font-sans text-zinc-900 dark:text-zinc-100 leading-relaxed min-h-[100dvh] relative">
+  <main class="max-w-6xl mx-auto p-6 md:p-8 lg:p-12 text-stone-900 dark:text-stone-100 leading-relaxed min-h-[100dvh] relative">
     <div id="top-sentinel" class="absolute top-0 left-0 w-px h-px" aria-hidden="true"></div>
     <Navigation />
 
     <div class="mt-10 flex flex-col md:flex-row gap-8 lg:gap-12 items-start">
       <article class="flex-1 min-w-0 w-full">
         <div class="mb-8">
-          <a href="/MyPage/blog" class="inline-flex items-center gap-1.5 font-mono text-xs text-zinc-500 hover:text-accent dark:text-zinc-400 dark:hover:text-accent-dark transition-colors">
+          <a href="/MyPage/blog" class="inline-flex items-center gap-1.5 font-serif text-[15px] text-stone-500 hover:text-accent dark:text-stone-400 dark:hover:text-accent-dark transition-colors">
             <Icon name="mdi:arrow-left" class="w-4 h-4" />
             返回博客列表
           </a>
         </div>
 
-        <header class="border-b border-zinc-100 dark:border-zinc-800 pb-10 mb-10">
+        <header class="border-b border-stone-100 dark:border-stone-800 pb-10 mb-10">
           <div class="flex flex-wrap items-center gap-2 mb-4">
             {post.data.category && (
-              <span class="px-2.5 py-1 font-mono text-xs text-accent dark:text-accent-dark bg-accent/5 dark:bg-accent-dark/10 rounded-sm">
+              <span class="px-2.5 py-1 font-serif text-sm text-accent dark:text-accent-dark bg-accent/5 dark:bg-accent-dark/10 rounded-sm">
                 {post.data.category}
               </span>
             )}
             {post.data.tags && post.data.tags.map(tag => (
-              <span class="font-mono text-xs text-zinc-400 dark:text-zinc-500 hover:text-accent dark:hover:text-accent-dark transition-colors">#{tag}</span>
+              <span class="font-serif text-sm text-stone-400 dark:text-stone-500 hover:text-accent dark:hover:text-accent-dark transition-colors">#{tag}</span>
             ))}
           </div>
-          <h1 class="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-4">{post.data.title}</h1>
-          <div class="flex items-center gap-4 font-mono text-xs text-zinc-500 dark:text-zinc-400">
+          <h1 class="font-serif text-4xl font-semibold tracking-tight text-stone-900 dark:text-stone-100 mb-4">{post.data.title}</h1>
+          <div class="flex items-center gap-4 font-serif text-sm text-stone-500 dark:text-stone-400">
             <time>{new Date(post.data.pubDate).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })}</time>
             <span>{post.data.author || 'Shane Lorien'}</span>
           </div>
         </header>
 
-        <div class="prose prose-zinc dark:prose-invert max-w-none text-zinc-700 dark:text-zinc-300 leading-loose prose-a:text-accent hover:prose-a:text-accent-hover dark:prose-a:text-accent-dark dark:hover:prose-a:text-accent-dark-hover prose-headings:text-zinc-900 dark:prose-headings:text-zinc-100 prose-headings:tracking-tight prose-img:rounded-sm prose-headings:scroll-mt-24">
+        <div class="prose prose-stone dark:prose-invert max-w-none font-serif text-stone-700 dark:text-stone-300 leading-loose prose-a:text-accent hover:prose-a:text-accent-hover dark:prose-a:text-accent-dark dark:hover:prose-a:text-accent-dark-hover prose-headings:font-serif prose-headings:text-stone-900 dark:prose-headings:text-stone-100 prose-img:rounded-sm prose-headings:scroll-mt-24">
           <Content />
         </div>
       </article>
 
       {headings && headings.length > 0 && (
         <aside class="hidden md:block w-48 lg:w-72 shrink-0 sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto overscroll-contain pb-8">
-          <h2 class="font-mono text-xs font-semibold text-zinc-900 dark:text-zinc-100 mb-4">目录</h2>
-          <nav class="flex flex-col border-l-2 border-zinc-100 dark:border-zinc-800">
+          <h2 class="font-serif text-base font-semibold text-stone-900 dark:text-stone-100 mb-4">目录</h2>
+          <nav class="flex flex-col border-l-2 border-stone-100 dark:border-stone-800">
             {headings.map((heading) => {
               const padding = heading.depth === 1 ? 'pl-4' : heading.depth === 2 ? 'pl-4' : heading.depth === 3 ? 'pl-8' : heading.depth === 4 ? 'pl-12' : 'pl-16';
               return (
                 <a
                   href={"#" + heading.slug}
-                  class={`py-1.5 text-sm text-zinc-500 hover:text-accent dark:text-zinc-400 dark:hover:text-accent-dark transition-colors border-l-2 -ml-[2px] border-transparent hover:border-accent dark:hover:border-accent-dark ${padding}`}
+                  class={`py-1.5 text-sm text-stone-500 hover:text-accent dark:text-stone-400 dark:hover:text-accent-dark transition-colors border-l-2 -ml-[2px] border-transparent hover:border-accent dark:hover:border-accent-dark ${padding}`}
                 >
                   {heading.text}
                 </a>
@@ -78,7 +78,7 @@ const { Content, headings } = await render(post);
 
     <button
       id="back-to-top"
-      class="fixed bottom-8 right-8 p-3 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 shadow-md hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-accent dark:hover:text-accent-dark transition-all opacity-0 translate-y-4 pointer-events-none z-50"
+      class="fixed bottom-8 right-8 p-3 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 shadow-md hover:bg-stone-200 dark:hover:bg-stone-700 hover:text-accent dark:hover:text-accent-dark transition-all opacity-0 translate-y-4 pointer-events-none z-50"
       aria-label="Back to top"
     >
       <Icon name="mdi:arrow-up" class="w-5 h-5" />

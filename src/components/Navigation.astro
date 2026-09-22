@@ -13,29 +13,29 @@ const toggleUrl = `${basePath}${targetCleanPath}`.replace(/\/+$/, '') || '/MyPag
 
 const section = pathWithoutEn.split('/')[1] || '';
 const navItems = [
-  { key: 'cv', href: isEn ? "/MyPage/en/cv" : "/MyPage/cv", label: isEn ? "~/cv" : "简历" },
-  { key: 'blog', href: isEn ? "/MyPage/en/blog" : "/MyPage/blog", label: isEn ? "~/blog" : "博客" },
-  { key: 'projects', href: isEn ? "/MyPage/en/projects" : "/MyPage/projects", label: isEn ? "~/projects" : "项目" },
+  { key: 'cv', href: isEn ? "/MyPage/en/cv" : "/MyPage/cv", label: isEn ? "CV" : "简历" },
+  { key: 'blog', href: isEn ? "/MyPage/en/blog" : "/MyPage/blog", label: isEn ? "Blog" : "博客" },
+  { key: 'projects', href: isEn ? "/MyPage/en/projects" : "/MyPage/projects", label: isEn ? "Projects" : "项目" },
 ];
 
-const ghostBtn = "w-8 h-8 inline-flex items-center justify-center rounded-sm text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100 active:scale-95 transition-all dark:text-zinc-400 dark:hover:text-zinc-100 dark:hover:bg-zinc-800/70 cursor-pointer";
+const ghostBtn = "w-8 h-8 inline-flex items-center justify-center rounded-sm text-stone-500 hover:text-stone-900 hover:bg-stone-100 active:scale-95 transition-all dark:text-stone-400 dark:hover:text-stone-100 dark:hover:bg-stone-800/70 cursor-pointer";
 ---
 
 <nav class="flex items-center justify-between gap-6 mb-16">
-  <a href={isEn ? "/MyPage/en" : "/MyPage/"} class="font-mono font-bold text-base tracking-tight whitespace-nowrap text-zinc-900 hover:text-accent dark:text-zinc-100 dark:hover:text-accent-dark transition-colors">
-    Shane Lorien<span class="text-accent dark:text-accent-dark">_</span>
+  <a href={isEn ? "/MyPage/en" : "/MyPage/"} class="font-serif font-semibold text-xl tracking-tight whitespace-nowrap text-stone-900 hover:text-accent dark:text-stone-100 dark:hover:text-accent-dark transition-colors">
+    Shane Lorien
   </a>
-  <div class="flex items-center gap-5 sm:gap-6 font-mono text-xs">
+  <div class="flex items-center gap-5 sm:gap-6 font-serif text-[15px]">
     {navItems.map(item => (
       <a
         href={item.href}
         aria-current={section === item.key ? 'page' : undefined}
         class={section === item.key
           ? "font-semibold text-accent dark:text-accent-dark transition-colors"
-          : "text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"}
+          : "text-stone-500 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 transition-colors"}
       >{item.label}</a>
     ))}
-    <div class="w-px h-4 bg-zinc-200 dark:bg-zinc-800"></div>
+    <div class="w-px h-4 bg-stone-200 dark:bg-stone-800"></div>
     <div class="flex items-center gap-1">
       <button id="search-btn" class={ghostBtn} aria-label="Search">
         <Icon name="mdi:magnify" class="w-[18px] h-[18px]" />
@@ -43,7 +43,7 @@ const ghostBtn = "w-8 h-8 inline-flex items-center justify-center rounded-sm tex
       <button id="theme-toggle" class={ghostBtn} aria-label="Toggle Theme">
         <Icon name="mdi:theme-light-dark" class="w-[18px] h-[18px]" />
       </button>
-      <a href={toggleUrl} title="Toggle Language" class={`${ghostBtn} font-mono text-xs font-semibold`} aria-label="Toggle Language">
+      <a href={toggleUrl} title="Toggle Language" class={`${ghostBtn} font-serif text-sm font-semibold`} aria-label="Toggle Language">
         {isEn ? "中" : "EN"}
       </a>
       <a href="https://github.com/logic61" class={ghostBtn} target="_blank" aria-label="GitHub">
@@ -58,33 +58,33 @@ const ghostBtn = "w-8 h-8 inline-flex items-center justify-center rounded-sm tex
 
 <!-- 搜索弹窗 -->
 <div id="search-modal" class="fixed inset-0 z-50 hidden items-start justify-center pt-[15vh] px-4" aria-modal="true" role="dialog">
-  <div id="search-backdrop" class="fixed inset-0 bg-zinc-900/50 backdrop-blur-sm transition-opacity opacity-0 cursor-pointer"></div>
+  <div id="search-backdrop" class="fixed inset-0 bg-stone-900/50 backdrop-blur-sm transition-opacity opacity-0 cursor-pointer"></div>
 
-  <div id="search-container" class="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-md shadow-2xl overflow-hidden transform transition-all scale-95 opacity-0 flex flex-col border border-zinc-200 dark:border-zinc-800 pointer-events-auto">
-    <div class="flex items-center px-4 py-4 border-b border-zinc-100 dark:border-zinc-800">
-      <span class="font-mono text-accent dark:text-accent-dark text-lg shrink-0 select-none">&gt;</span>
+  <div id="search-container" class="relative w-full max-w-2xl bg-paper dark:bg-nightsoft rounded-sm shadow-2xl overflow-hidden transform transition-all scale-95 opacity-0 flex flex-col border border-stone-200 dark:border-stone-800 pointer-events-auto">
+    <div class="flex items-center px-4 py-4 border-b border-stone-100 dark:border-stone-800">
+      <Icon name="mdi:magnify" class="w-5 h-5 text-stone-400 shrink-0" />
       <input
         id="search-input"
         type="text"
         placeholder={isEn ? "Search posts..." : "搜索文章..."}
-        class="w-full bg-transparent border-none focus:ring-0 font-mono text-zinc-800 dark:text-zinc-100 placeholder-zinc-400 text-base px-4 outline-none"
+        class="w-full bg-transparent border-none focus:ring-0 font-serif text-stone-800 dark:text-stone-100 placeholder-stone-400 text-lg px-4 outline-none"
         autocomplete="off"
       />
-      <button id="search-close" class="p-1 rounded-sm text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-300 transition-colors">
+      <button id="search-close" class="p-1 rounded-sm text-stone-400 hover:bg-stone-100 hover:text-stone-600 dark:hover:bg-stone-800 dark:hover:text-stone-300 transition-colors">
         <Icon name="mdi:close" class="w-5 h-5" />
       </button>
     </div>
 
     <div class="max-h-[60vh] overflow-y-auto">
       <ul id="search-results" class="py-2 px-2 hidden"></ul>
-      <div id="search-empty" class="py-12 text-center font-mono text-sm text-zinc-500 dark:text-zinc-400 hidden">
+      <div id="search-empty" class="py-12 text-center font-serif text-stone-500 dark:text-stone-400 hidden">
         {isEn ? "No results found." : "没有找到相关文章。"}
       </div>
     </div>
 
-    <div class="px-4 py-3 bg-zinc-50 dark:bg-zinc-800/50 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500 dark:text-zinc-400 flex items-center justify-between font-mono">
+    <div class="px-4 py-3 bg-stone-50 dark:bg-stone-800/50 border-t border-stone-100 dark:border-stone-800 text-xs text-stone-500 dark:text-stone-400 flex items-center justify-between font-serif">
       <span>{isEn ? "Type to search by title, description or category" : "输入以搜索标题、描述或分类"}</span>
-      <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 rounded-sm bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 font-mono text-[10px]">ESC</kbd> {isEn ? "to close" : "关闭"}</span>
+      <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 rounded-sm bg-paper dark:bg-nightsoft border border-stone-200 dark:border-stone-700 font-serif text-[10px]">ESC</kbd> {isEn ? "to close" : "关闭"}</span>
     </div>
   </div>
 </div>
@@ -178,7 +178,7 @@ const ghostBtn = "w-8 h-8 inline-flex items-center justify-center rounded-sm tex
     const idx = safe.toLowerCase().indexOf(query);
     if (idx < 0) return safe;
     return safe.slice(0, idx)
-      + '<mark class="bg-accent/20 dark:bg-accent-dark/20 text-zinc-900 dark:text-zinc-100 rounded-sm px-0.5">'
+      + '<mark class="bg-accent/20 dark:bg-accent-dark/20 text-stone-900 dark:text-stone-100 rounded-sm px-0.5">'
       + safe.slice(idx, idx + query.length)
       + '</mark>'
       + safe.slice(idx + query.length);
@@ -223,9 +223,9 @@ const ghostBtn = "w-8 h-8 inline-flex items-center justify-center rounded-sm tex
 
         return `
           <li>
-            <a href="${finalUrl}" class="group flex flex-col gap-0.5 p-3 rounded-sm hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
-              <h4 class="text-sm font-medium font-mono text-zinc-800 dark:text-zinc-200 group-hover:text-accent dark:group-hover:text-accent-dark truncate transition-colors">${titleHtml}</h4>
-              ${descHtml ? `<p class="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1">${descHtml}</p>` : ''}
+            <a href="${finalUrl}" class="group flex flex-col gap-0.5 p-3 rounded-sm hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors">
+              <h4 class="text-base font-medium font-serif text-stone-800 dark:text-stone-200 group-hover:text-accent dark:group-hover:text-accent-dark truncate transition-colors">${titleHtml}</h4>
+              ${descHtml ? `<p class="text-xs text-stone-500 dark:text-stone-400 line-clamp-1">${descHtml}</p>` : ''}
             </a>
           </li>
         `;

@@ -10,61 +10,64 @@ const categories = [...new Set(posts.map(post => post.data.category).filter(Bool
 ---
 
 <Layout title="Blog - Shane Lorien">
-  <main class="max-w-5xl mx-auto px-6 sm:px-10 py-10 sm:py-12 text-zinc-900 dark:text-zinc-100 leading-relaxed min-h-[100dvh] flex flex-col transition-colors duration-300">
+  <main class="max-w-4xl mx-auto px-6 sm:px-10 py-10 sm:py-12 text-stone-900 dark:text-stone-100 leading-relaxed min-h-[100dvh] flex flex-col transition-colors duration-300">
 
     <Navigation />
 
     <header class="pb-10 sm:pb-12">
-      <h1 class="font-sans font-bold text-5xl sm:text-6xl tracking-tighter text-zinc-900 dark:text-zinc-50">
+      <h1 class="font-serif font-medium text-5xl sm:text-6xl tracking-tight text-stone-900 dark:text-stone-50">
         Blog
       </h1>
-      <p class="mt-4 font-mono text-xs text-zinc-400 dark:text-zinc-500 tabular-nums">
+      <p class="mt-4 font-serif text-sm text-stone-400 dark:text-stone-500">
         {posts.length} posts · {categories.length} categories
       </p>
 
       {categories.length > 0 && (
-        <nav class="mt-8 flex flex-wrap items-baseline gap-x-2 gap-y-2 font-mono text-xs" id="category-filter">
+        <nav class="mt-8 flex flex-wrap items-baseline gap-x-2 gap-y-2 font-serif text-[15px]" id="category-filter">
           <span class="category-btn cursor-pointer transition-colors text-accent dark:text-accent-dark font-semibold" data-target="all">All</span>
           {categories.map(cat => (
             <>
-              <span class="text-zinc-300 dark:text-zinc-700">/</span>
-              <span class="category-btn cursor-pointer transition-colors text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100" data-target={cat}>{cat}</span>
+              <span class="text-stone-300 dark:text-stone-700">/</span>
+              <span class="category-btn cursor-pointer transition-colors text-stone-400 dark:text-stone-500 hover:text-stone-900 dark:hover:text-stone-100" data-target={cat}>{cat}</span>
             </>
           ))}
         </nav>
       )}
     </header>
 
-    <ol id="post-list" class="border-b border-zinc-200 dark:border-zinc-800">
-      {posts.map((post) => {
+    <!-- 编号索引行: 序号 / 标题+摘要 / 分类 / 日期 -->
+    <ol id="post-list" class="border-b border-stone-200 dark:border-stone-800">
+      {posts.map((post, i) => {
         const d = new Date(post.data.pubDate);
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
         const yyyy = d.getFullYear();
         return (
           <li class="post-item" data-category={post.data.category || ''}>
-            <a href={`/MyPage/en/blog/${post.id}`} class="group flex items-baseline gap-x-5 py-5 border-t border-zinc-200 dark:border-zinc-800 transition-all hover:pl-2">
+            <a href={`/MyPage/en/blog/${post.id}`} class="group flex items-baseline gap-x-5 py-5 border-t border-stone-200 dark:border-stone-800 transition-all hover:pl-2">
 
-              <time class="font-mono text-xs text-zinc-400 dark:text-zinc-600 tabular-nums shrink-0 w-[5.5rem] hidden sm:block" datetime={post.data.pubDate}>
-                {yyyy}-{mm}-{dd}
-              </time>
+              <span class="font-serif text-sm text-stone-300 dark:text-stone-600 tabular-nums shrink-0 w-7 text-right select-none">
+                {String(i + 1).padStart(2, '0')}
+              </span>
 
               <div class="flex-1 min-w-0">
-                <h3 class="font-sans font-semibold text-lg tracking-tight text-zinc-900 dark:text-zinc-100 group-hover:text-accent dark:group-hover:text-accent-dark transition-colors truncate">
+                <h3 class="font-serif font-semibold text-xl text-stone-900 dark:text-stone-100 group-hover:text-accent dark:group-hover:text-accent-dark transition-colors">
                   {post.data.title}
                 </h3>
                 {post.data.description && (
-                  <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400 line-clamp-1">
+                  <p class="mt-1 font-serif text-[15px] text-stone-500 dark:text-stone-400 line-clamp-1">
                     {post.data.description}
                   </p>
                 )}
               </div>
 
-              <span class="font-mono text-[11px] text-zinc-400 dark:text-zinc-500 shrink-0 hidden md:block">
+              <span class="font-serif text-sm text-stone-400 dark:text-stone-500 shrink-0 hidden md:block">
                 {post.data.category}
               </span>
 
-              <span aria-hidden="true" class="font-mono text-sm text-accent dark:text-accent-dark opacity-0 group-hover:opacity-100 transition-opacity shrink-0">-&gt;</span>
+              <time class="font-serif text-sm text-stone-400 dark:text-stone-600 tabular-nums shrink-0 w-24 text-right hidden sm:block" datetime={post.data.pubDate}>
+                {yyyy}.{mm}.{dd}
+              </time>
 
             </a>
           </li>
@@ -72,13 +75,14 @@ const categories = [...new Set(posts.map(post => post.data.category).filter(Bool
       })}
     </ol>
 
-    <nav id="pagination" class="mt-12 flex items-center justify-center gap-5 font-mono text-zinc-400 dark:text-zinc-500">
+    <!-- Pagination -->
+    <nav id="pagination" class="mt-12 flex items-center justify-center gap-5 font-serif text-stone-400 dark:text-stone-500">
       <button id="prev-page" class="text-xl hover:text-accent dark:hover:text-accent-dark transition-colors disabled:opacity-30 disabled:cursor-not-allowed" disabled>
         ‹
       </button>
-      <div class="flex items-center gap-2 tabular-nums text-xs">
-        <input id="page-input" type="text" value="1" class="w-8 text-center bg-transparent border-b border-transparent hover:border-zinc-300 focus:border-zinc-900 dark:focus:border-zinc-100 focus:outline-none text-zinc-900 dark:text-zinc-100 transition-colors py-0.5" />
-        <span class="text-zinc-300 dark:text-zinc-700">/</span>
+      <div class="flex items-center gap-2 tabular-nums text-sm">
+        <input id="page-input" type="text" value="1" class="w-8 text-center bg-transparent border-b border-transparent hover:border-stone-300 focus:border-stone-900 dark:focus:border-stone-100 focus:outline-none text-stone-900 dark:text-stone-100 transition-colors py-0.5" />
+        <span class="text-stone-300 dark:text-stone-700">/</span>
         <span id="page-total">1</span>
       </div>
       <button id="next-page" class="text-xl hover:text-accent dark:hover:text-accent-dark transition-colors disabled:opacity-30 disabled:cursor-not-allowed" disabled>
@@ -128,7 +132,7 @@ const categories = [...new Set(posts.map(post => post.data.category).filter(Bool
   }
 
   const ACTIVE = ['text-accent', 'dark:text-accent-dark', 'font-semibold'];
-  const INACTIVE = ['text-zinc-400', 'dark:text-zinc-500', 'hover:text-zinc-900', 'dark:hover:text-zinc-100'];
+  const INACTIVE = ['text-stone-400', 'dark:text-stone-500', 'hover:text-stone-900', 'dark:hover:text-stone-100'];
 
   buttons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -142,7 +146,6 @@ const categories = [...new Set(posts.map(post => post.data.category).filter(Bool
       currentCategory = btn.getAttribute('data-target') || 'all';
       currentPage = 1;
       renderPosts();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
 
