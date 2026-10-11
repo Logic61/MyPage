@@ -22,15 +22,14 @@ const categories = [...new Set(posts.map(post => post.data.category).filter((cat
         <div class="frontispiece-body">
           <div class="frontispiece-title">
             <h1>Shane Lorien</h1>
+            <blockquote class="home-motto">
+              <p class="frontispiece-quote">{isEn ? 'What virtue the moonlight? Death, then rebirth.' : <><span>夜光何德？</span><span>死则又育？</span></>}</p>
+            </blockquote>
             <div class="home-actions">
               <a class="text-link" href={`${prefix}/blog`}>{isEn ? 'Read the blog' : '阅读博客'}<Icon name="mdi:arrow-right" /></a>
               <a class="text-link" href={`${prefix}/projects`}>{isEn ? 'Explore projects' : '查看项目'}<Icon name="mdi:arrow-right" /></a>
             </div>
           </div>
-          <blockquote class="home-motto">
-            <p class="frontispiece-quote">{isEn ? 'What virtue the moonlight? Death, then rebirth.' : <><span>夜光何德？</span><span>死则又育？</span></>}</p>
-            <cite class="motto-seal">{isEn ? 'Tianwen' : '天问'}</cite>
-          </blockquote>
         </div>
         <figure class="frontispiece-author">
           <img src={`${base}/avatar.jpg`} alt={isEn ? 'Shane Lorien’s avatar' : 'Shane Lorien 的头像'} width="144" height="144" class="home-avatar" />

@@ -47,20 +47,19 @@ body { font-family: var(--font-serif); font-size: 18px; }
 .text-link { font-size: 15px; }
 .book-frontispiece { grid-template-columns: 42px minmax(0, 1fr) 144px; gap: 36px; align-items: center; padding: 30px 0 38px; border-bottom: 4px double var(--rule); }
 .frontispiece-label { align-self: stretch; display: flex; justify-content: center; writing-mode: vertical-rl; border-right: 1px solid var(--line); padding-right: 18px; font-size: 20px; letter-spacing: .28em; }
-.frontispiece-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 28px; align-items: center; }
+.frontispiece-body { min-width: 0; }
 .home-intro h1 { font-family: var(--font-serif); font-size: clamp(44px, 4.8vw, 66px); line-height: 1.15; font-weight: 700; letter-spacing: -1px; }
 .home-actions { gap: 24px; margin-top: 30px; }
 .home-actions .text-link { font-family: var(--font-serif); font-size: 18px; }
-.home-motto { display: flex; flex-direction: column; align-items: center; gap: 14px; margin: 0; color: var(--ink); }
-.frontispiece-quote { display: flex; flex-direction: row-reverse; gap: 12px; font-size: 27px; letter-spacing: .14em; line-height: 1.5; }
-.frontispiece-quote span { writing-mode: vertical-rl; }
-.motto-seal { border: 1px solid var(--accent); padding: 3px 7px; color: var(--accent); font-size: 13px; font-style: normal; font-weight: 700; letter-spacing: .18em; line-height: 1.5; }
+.home-motto { margin: 18px 0 0; color: var(--body); }
+.frontispiece-quote { font-size: 24px; letter-spacing: .12em; line-height: 1.7; }
+.frontispiece-quote span + span { margin-left: .7em; }
 .frontispiece-author { margin: 0; text-align: center; }
 .home-avatar { display: block; width: 144px; height: 144px; border: 4px solid var(--page); outline: 1px solid var(--rule); border-radius: 2px; box-shadow: none; margin: 0; }
 .frontispiece-author figcaption { margin-top: 18px; }
 .frontispiece-author .text-link { font-family: var(--font-serif); font-size: 16px; }
 .frontispiece-en .frontispiece-label { letter-spacing: .04em; }
-.frontispiece-en .frontispiece-quote { display: block; width: 160px; font-size: 24px; line-height: 1.5; letter-spacing: 0; }
+.frontispiece-en .frontispiece-quote { max-width: 480px; font-size: 23px; line-height: 1.5; letter-spacing: 0; }
 .frontispiece-en h1 { font-size: 56px; }
 .home-columns { gap: 36px; margin-top: 32px; }
 .home-aside { border-left: 3px double var(--rule); padding-left: 28px; }
@@ -122,11 +121,10 @@ body { font-family: var(--font-serif); font-size: 18px; }
 @media (max-width: 1100px) {
   .site-shell { padding-inline: 32px; }
   .book-frontispiece { grid-template-columns: 32px minmax(0, 1fr) 116px; gap: 24px; }
-  .frontispiece-body { gap: 20px; }
   .frontispiece-label { padding-right: 12px; }
   .home-avatar { width: 116px; height: 116px; }
   .home-intro h1, .frontispiece-en h1 { font-size: 48px; }
-  .frontispiece-en .frontispiece-quote { width: 125px; font-size: 21px; }
+  .frontispiece-en .frontispiece-quote { font-size: 21px; }
   .home-columns { gap: 32px; }
   .home-aside { padding-left: 22px; }
 }
@@ -138,17 +136,15 @@ body { font-family: var(--font-serif); font-size: 18px; }
   .nav-links { border-bottom: 0; }
   .book-frontispiece { grid-template-columns: minmax(0, 1fr) 80px; gap: 20px 16px; padding: 8px 0 28px; }
   .frontispiece-label { grid-column: 1 / -1; writing-mode: horizontal-tb; border-right: 0; border-bottom: 1px solid var(--line); padding: 0 0 12px; justify-content: flex-start; font-size: 17px; letter-spacing: .2em; }
-  .frontispiece-body { grid-column: 1 / -1; grid-row: 2; grid-template-columns: minmax(0, 1fr) 76px; gap: 12px; }
+  .frontispiece-body { grid-column: 1 / -1; grid-row: 2; }
   .home-intro h1, .frontispiece-en h1 { font-size: 42px; }
-  .frontispiece-quote { gap: 8px; font-size: 21px; }
-  .home-motto { gap: 10px; }
+  .frontispiece-quote { font-size: 20px; }
+  .home-motto { margin-top: 12px; }
   .home-actions { flex-direction: column; align-items: flex-start; gap: 10px; margin-top: 20px; }
   .home-actions .text-link { font-size: 17px; }
   .frontispiece-author { grid-column: 1 / -1; grid-row: 3; display: flex; gap: 18px; align-items: center; }
   .home-avatar { display: block; width: 72px; height: 72px; }
   .frontispiece-author figcaption { margin: 0; }
-  .frontispiece-en .frontispiece-body { grid-template-columns: 1fr; gap: 20px; }
-  .frontispiece-en .home-motto { align-items: flex-start; }
   .frontispiece-en .frontispiece-quote { width: auto; font-size: 22px; }
   .home-aside { border-left: 0; border-top: 1px solid var(--rule); padding: 24px 0 0; }
   .section-top h2, .home-aside h2 { font-size: 23px; }
