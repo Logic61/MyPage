@@ -1,0 +1,7 @@
+---
+import { Image } from 'astro:assets';
+import landscape from '../assets/heritage-landscape.png';
+---
+<div class="page-landscape" aria-hidden="true">
+  <Image src={landscape} alt="" width={1440} height={1920} format="webp" quality={80} loading="eager" decoding="async" />
+</div>

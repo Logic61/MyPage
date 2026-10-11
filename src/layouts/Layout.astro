@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import LandscapeBackground from '../components/LandscapeBackground.astro';
 interface Props { title?: string; description?: string; }
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const isEn = Astro.url.pathname.slice(base.length).startsWith('/en');
@@ -25,6 +26,7 @@ const {
     </script>
   </head>
   <body>
+    <LandscapeBackground />
     <a class="skip-link" href="#main-content">{isEn ? 'Skip to content' : '跳至正文'}</a>
     <slot />
   </body>

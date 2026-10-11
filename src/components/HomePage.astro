@@ -5,8 +5,6 @@ import Footer from './Footer.astro';
 import PostRow from './PostRow.astro';
 import { getCollection } from 'astro:content';
 import { Icon } from 'astro-icon/components';
-import { Image } from 'astro:assets';
-import landscape from '../assets/heritage-landscape.png';
 interface Props { isEn?: boolean; }
 const { isEn = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -19,36 +17,39 @@ const categories = [...new Set(posts.map(post => post.data.category).filter((cat
   <div class="site-shell">
     <Navigation />
     <main id="main-content" class="site-content">
-      <header class="home-intro">
-        <div>
-          <h1>Shane Lorien</h1>
-          <p class="home-motto"><span class="motto-seal" aria-hidden="true">天问</span><span>{isEn ? 'What virtue the moonlight? Death, then rebirth.' : '夜光何德？死则又育？'}</span></p>
-          <p class="home-description">{isEn ? 'Notes on mathematics, computer science, and the things I read.' : '记录数学与计算机，也记录阅读中的思考。'}</p>
-          <div class="home-actions">
-            <a class="button button-primary" href={`${prefix}/blog`}>{isEn ? 'Read the blog' : '阅读博客'}<Icon name="mdi:arrow-right" /></a>
-            <a class="button" href={`${prefix}/projects`}>{isEn ? 'Explore projects' : '查看项目'}</a>
+      <header class:list={['home-intro', 'book-frontispiece', { 'frontispiece-en': isEn }]}>
+        <p class="frontispiece-label">{isEn ? 'Collected notes' : '随笔与札记'}</p>
+        <div class="frontispiece-body">
+          <div class="frontispiece-title">
+            <h1>Shane Lorien</h1>
+            <div class="home-actions">
+              <a class="text-link" href={`${prefix}/blog`}>{isEn ? 'Read the blog' : '阅读博客'}<Icon name="mdi:arrow-right" /></a>
+              <a class="text-link" href={`${prefix}/projects`}>{isEn ? 'Explore projects' : '查看项目'}<Icon name="mdi:arrow-right" /></a>
+            </div>
           </div>
+          <blockquote class="home-motto">
+            <p class="frontispiece-quote">{isEn ? 'What virtue the moonlight? Death, then rebirth.' : <><span>夜光何德？</span><span>死则又育？</span></>}</p>
+            <cite class="motto-seal">{isEn ? 'Tianwen' : '天问'}</cite>
+          </blockquote>
         </div>
-        <figure class="home-landscape">
-          <div class="landscape-print">
-            <Image src={landscape} alt={isEn ? 'An ink landscape of mountains, a river, and drifting mist.' : '山峦、江流与云气的水墨插图'} width={680} height={907} format="webp" loading="eager" decoding="async" />
-          </div>
-          <div class="landscape-verse" aria-hidden="true"><span>日月安属？</span><span>列星安陈？</span></div>
+        <figure class="frontispiece-author">
+          <img src={`${base}/avatar.jpg`} alt={isEn ? 'Shane Lorien’s avatar' : 'Shane Lorien 的头像'} width="144" height="144" class="home-avatar" />
+          <figcaption><a class="text-link" href={`${prefix}/cv`}>{isEn ? 'About the author' : '关于作者'}</a></figcaption>
         </figure>
       </header>
       <div class="home-columns">
         <section aria-labelledby="latest-heading">
           <div class="section-top">
-            <h2 id="latest-heading">{isEn ? 'Latest writing' : '最近文章'}</h2>
+            <h2 id="latest-heading">{isEn ? 'Latest writing' : '近作'}</h2>
             <a class="text-link" href={`${prefix}/blog`}>{isEn ? 'View all' : '查看全部'}<Icon name="mdi:arrow-right" /></a>
           </div>
-          <ul class="post-list">
+          <ol class="post-list home-posts">
             {posts.slice(0, 4).map(post => <PostRow post={post} isEn={isEn} heading="h3" />)}
-          </ul>
+          </ol>
           {!posts.length && <p class="empty-state">{isEn ? 'New articles are on the way.' : '文章正在整理中。'}</p>}
         </section>
         <aside class="home-aside">
-          <h2>{isEn ? 'Browse by topic' : '按主题阅读'}</h2>
+          <h2>{isEn ? 'Contents by topic' : '分类目录'}</h2>
           <nav class="topic-links" aria-label={isEn ? 'Article categories' : '文章分类'}>
             {categories.map(category => (
               <a href={`${prefix}/blog?category=${encodeURIComponent(category)}`}>
