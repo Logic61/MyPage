@@ -32,7 +32,7 @@
   color: #2b2019;
 }
 
-/* 修复 TailwindCSS 的默认样式导致 MathJax 公式换行的问题 */
+/* 修复 TailwindCSS 预置样式：svg 的 display:block 会让行内公式换行并破坏基线对齐 */
 mjx-container svg {
   display: inline !important;
 }
@@ -40,9 +40,6 @@ mjx-container[display="true"] {
   display: block !important;
   text-align: center;
   margin: 1rem 0;
-}
-mjx-container:not([display="true"]) {
-  display: inline-block !important;
 }
 
 html {

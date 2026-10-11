@@ -133,9 +133,10 @@ button:disabled { cursor: default; }
 .article-body img { max-width: 100%; height: auto; border-radius: 8px; margin-inline: auto; }
 .article-body pre { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
 .article-body table { display: block; overflow-x: auto; font-size: 16px; }
-.article-body mjx-container svg { display: inline !important; max-width: none; }
-.article-body mjx-container[display="true"] { display: block !important; text-align: center; max-width: 100%; overflow-x: auto; overflow-y: hidden; padding: 8px 0; margin: 1.4em 0; }
-.article-body mjx-container:not([display="true"]) { display: inline-block !important; max-width: 100%; overflow-x: auto; vertical-align: middle; }
+/* 行内公式按 MathJax 基线对齐后，整体再微升一点以贴合中文行的视觉重心（数值可按需调整） */
+.article-body mjx-container:not([display="true"]) > svg { transform: translateY(-0.08em); }
+/* 行间公式超出列宽时横向滚动查看，不做缩放 */
+.article-body mjx-container[display="true"] { display: block !important; text-align: center; margin: 1.4em 0; padding: 8px 0; overflow-x: auto; overflow-y: hidden; }
 .toc { position: sticky; top: 32px; max-height: calc(100dvh - 64px); overflow-y: auto; scrollbar-width: thin; font-size: 15px; padding-top: 3px; }
 .toc h2, .mobile-toc summary { font-size: 16px; font-weight: 650; color: var(--ink); margin-bottom: 16px; }
 .toc-links { display: flex; flex-direction: column; border-left: 1px solid var(--line); }
