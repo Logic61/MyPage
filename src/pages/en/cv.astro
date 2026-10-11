@@ -1,54 +1,36 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import CvHeader from '../../components/CvHeader.astro';
 import Navigation from '../../components/Navigation.astro';
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-const pdfHref = `${basePath}/cv.pdf`;
 ---
 
 <Layout title="Guanyu Chen - Curriculum Vitae">
-  <main class="max-w-3xl mx-auto px-6 sm:px-10 py-12 sm:py-16 text-stone-800 dark:text-stone-200 leading-relaxed transition-colors duration-300 min-h-screen">
+  <div class="site-shell">
 
     <Navigation />
 
-    <!-- Header: centered, single-row identity with horizontal contact list -->
-    <header class="text-center mb-14 pb-8 border-b border-stone-200 dark:border-stone-800">
-      <h1 class="font-serif text-4xl sm:text-5xl font-semibold text-stone-900 dark:text-stone-100">Guanyu Chen</h1>
-      <ul class="font-serif text-sm text-stone-500 dark:text-stone-500 mt-7 flex justify-center flex-wrap gap-x-3 gap-y-1">
-        <li>Peking University</li>
-        <li aria-hidden="true">·</li>
-        <li>B.E. Computer Science · since 2025</li>
-        <li aria-hidden="true">·</li>
-        <li><a href="mailto:logic.dreemurr@gmail.com" class="hover:text-accent dark:hover:text-accent-dark transition-colors">logic.dreemurr@gmail.com</a></li>
-        <li aria-hidden="true">·</li>
-        <li><a href="https://github.com/logic61" target="_blank" rel="noopener noreferrer" class="hover:text-accent dark:hover:text-accent-dark transition-colors">github.com/logic61</a></li>
-      </ul>
-      <div class="mt-6">
-        <a href={pdfHref} download class="inline-flex items-center gap-2 font-serif text-sm text-stone-600 dark:text-stone-400 border border-stone-300 dark:border-stone-700 px-3.5 py-1.5 rounded-sm hover:text-accent dark:hover:text-accent-dark hover:border-accent dark:hover:border-accent-dark transition-colors">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.5v7M6 8.5L3 5.5M6 8.5L9 5.5M2 10.5h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Download PDF
-        </a>
-      </div>
-    </header>
+    <main id="main-content" class="site-content cv-document">
+    <CvHeader isEn={true} />
 
-    <div class="space-y-9">
+    <div class="cv-sections">
 
       <!-- Exploring -->
       <section>
-        <h2 class="section-heading"><span class="section-num">I.</span>Research Interests</h2>
-        <p class="text-[15px] text-stone-700 dark:text-stone-300">
+        <h2 class="section-heading">Research Interests</h2>
+        <p class="cv-note">
           Currently exploring.
         </p>
       </section>
 
       <!-- Education -->
       <section>
-        <h2 class="section-heading"><span class="section-num">II.</span>Education</h2>
+        <h2 class="section-heading">Education</h2>
         <ul class="cv-list">
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title">Xiamen Foreign Language School</span>
-              <span class="cv-date">2022.09 — 2025.06</span>
+              <span class="cv-date">2022.09 - 2025.06</span>
             </div>
             <p class="cv-sub">High School</p>
             <ul class="cv-bullets">
@@ -58,7 +40,7 @@ const pdfHref = `${basePath}/cv.pdf`;
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title">Peking University</span>
-              <span class="cv-date">2025.09 — Present</span>
+              <span class="cv-date">2025.09 - Present</span>
             </div>
             <p class="cv-sub">School of Information Science and Technology · B.E. Computer Science and Technology</p>
             <ul class="cv-bullets">
@@ -70,15 +52,15 @@ const pdfHref = `${basePath}/cv.pdf`;
 
       <!-- Selected Projects & Research -->
       <section>
-        <h2 class="section-heading"><span class="section-num">III.</span>Selected Projects &amp; Research</h2>
+        <h2 class="section-heading">Selected Projects &amp; Research</h2>
         <ul class="cv-list">
 
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title"><a href="https://github.com/ruguo0119/dog-emotion-recognition" target="_blank" rel="noopener noreferrer" class="cv-link">Dog Emotion Recognition</a></span>
-              <span class="cv-date">2026 —</span>
+              <span class="cv-date">2026 -</span>
             </div>
-            <p class="cv-sub">Research · Python · PyTorch <span class="cv-meta">— Peking University Innovation + Workstation</span></p>
+            <p class="cv-sub">Research · Python · PyTorch <span class="cv-meta">- Peking University Innovation + Workstation</span></p>
             <ul class="cv-bullets">
               <li>Multimodal recognition of canine intent from postural and vocal features.</li>
               <li>Proposal defence passed; project ongoing.</li>
@@ -90,7 +72,7 @@ const pdfHref = `${basePath}/cv.pdf`;
               <span class="cv-title"><a href="https://github.com/Logic61/PKU-Planner" target="_blank" rel="noopener noreferrer" class="cv-link">PKU-Planner</a></span>
               <span class="cv-date">2025</span>
             </div>
-            <p class="cv-sub">Software · C++ · Qt <span class="cv-meta">— Independent</span></p>
+            <p class="cv-sub">Software · C++ · Qt <span class="cv-meta">- Independent</span></p>
             <ul class="cv-bullets">
               <li>Desktop assistant for course and deadline tracking, tailored to the Peking University teaching portal; supports portal import and screenshot-based course recognition.</li>
               <li>Visual urgency indication drives task presentation; integrates one-click AI-generated personalised suggestions.</li>
@@ -102,7 +84,7 @@ const pdfHref = `${basePath}/cv.pdf`;
               <span class="cv-title"><a href="https://github.com/Logic61/Obsidian-to-Hexo" target="_blank" rel="noopener noreferrer" class="cv-link">Obsidian-to-Hexo</a></span>
               <span class="cv-date">2025</span>
             </div>
-            <p class="cv-sub">Tooling · Python <span class="cv-meta">— Independent</span></p>
+            <p class="cv-sub">Tooling · Python <span class="cv-meta">- Independent</span></p>
             <ul class="cv-bullets">
               <li>Automation tool for migrating Obsidian Markdown notes to a Hexo blog.</li>
               <li>Parses Obsidian-specific Markdown syntax, normalises frontmatter, and writes to Hexo's posts directory; supports batch backup and publishing.</li>
@@ -114,7 +96,7 @@ const pdfHref = `${basePath}/cv.pdf`;
 
       <!-- Technical Skills -->
       <section>
-        <h2 class="section-heading"><span class="section-num">IV.</span>Technical Skills</h2>
+        <h2 class="section-heading">Technical Skills</h2>
         <dl class="cv-skills">
           <div class="cv-skill-row">
             <dt class="cv-skill-key">Languages</dt>
@@ -137,12 +119,12 @@ const pdfHref = `${basePath}/cv.pdf`;
 
       <!-- Hobbies -->
       <section>
-        <h2 class="section-heading"><span class="section-num">V.</span>Hobbies</h2>
+        <h2 class="section-heading">Hobbies</h2>
         <ul class="cv-list">
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title">Peking University Daoyin Team</span>
-              <span class="cv-date">2025.09 — Present</span>
+              <span class="cv-date">2025.09 - Present</span>
             </div>
             <p class="cv-sub">Member · Wu Qin Xi event representative</p>
           </li>
@@ -165,60 +147,11 @@ const pdfHref = `${basePath}/cv.pdf`;
 
     </div>
 
-    <footer class="mt-12 pt-4 border-t border-stone-200 dark:border-stone-800 font-serif text-xs text-stone-400 dark:text-stone-600 flex justify-between flex-wrap gap-2">
+    <footer class="cv-footer">
       <span>Last updated Sep 2026</span>
       <span>Beijing, China</span>
     </footer>
 
   </main>
+  </div>
 </Layout>
-
-<style>
-  @reference "../../styles/global.css";
-
-  .section-heading {
-    @apply font-serif text-base font-semibold text-stone-800 dark:text-stone-200 pb-1.5 mb-3 border-b border-stone-300 dark:border-stone-700 flex items-baseline gap-3;
-  }
-  .section-num {
-    @apply font-serif italic text-sm text-accent dark:text-accent-dark;
-  }
-  .cv-list {
-    @apply space-y-5;
-  }
-  .cv-entry {
-    @apply text-[15px];
-  }
-  .cv-head {
-    @apply flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1;
-  }
-  .cv-title {
-    @apply font-medium text-stone-900 dark:text-stone-100;
-  }
-  .cv-date {
-    @apply font-serif text-sm text-stone-500 dark:text-stone-500 tabular-nums shrink-0;
-  }
-  .cv-sub {
-    @apply italic text-stone-600 dark:text-stone-400 mt-0.5 text-[14px];
-  }
-  .cv-meta {
-    @apply not-italic text-stone-500 dark:text-stone-500;
-  }
-  .cv-bullets {
-    @apply mt-1.5 space-y-0.5 text-stone-700 dark:text-stone-300 text-[14px] pl-5 list-outside list-disc marker:text-stone-400 dark:marker:text-stone-600;
-  }
-  .cv-link {
-    @apply hover:text-accent dark:hover:text-accent-dark hover:underline underline-offset-4 decoration-accent/50 dark:decoration-accent-dark/50 transition-colors;
-  }
-  .cv-skills {
-    @apply text-[14px];
-  }
-  .cv-skill-row {
-    @apply grid grid-cols-[8rem_1fr] gap-x-4 py-1 border-b border-dashed border-stone-200 dark:border-stone-800;
-  }
-  .cv-skill-row:last-child {
-    @apply border-b-0;
-  }
-  .cv-skill-key {
-    @apply font-serif text-sm font-semibold text-stone-600 dark:text-stone-400 self-baseline;
-  }
-</style>

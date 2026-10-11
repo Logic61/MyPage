@@ -1,0 +1,98 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Navigation from './Navigation.astro';
+import Footer from './Footer.astro';
+import PostRow from './PostRow.astro';
+import { getCollection } from 'astro:content';
+import { Icon } from 'astro-icon/components';
+interface Props { isEn?: boolean; }
+const { isEn = false } = Astro.props;
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const categories = [...new Set(posts.map(post => post.data.category).filter((category): category is string => !!category))];
+---
+<Layout title={`${isEn ? 'Blog' : '博客'} - Shane Lorien`}>
+  <div class="site-shell">
+    <Navigation />
+    <main id="main-content" class="site-content">
+      <div class="blog-layout">
+        <header class="page-heading">
+          <h1>{isEn ? 'Blog' : '博客'}</h1>
+          <p>{isEn ? 'Mathematics, computer science, and reading.' : '数学、计算机，以及阅读中的思考。'}</p>
+        </header>
+        <nav class="category-filter" id="category-filter" aria-label={isEn ? 'Filter by category' : '按分类筛选文章'}>
+          <button class="category-btn" data-target="all" aria-pressed="true">{isEn ? 'All' : '全部'} <span class="topic-count">{posts.length}</span></button>
+          {categories.map(category => <button class="category-btn" data-target={category} aria-pressed="false">{category}</button>)}
+        </nav>
+        <ul id="post-list" class="post-list">
+          {posts.map(post => <PostRow post={post} isEn={isEn} />)}
+        </ul>
+        {!posts.length && <p class="empty-state">{isEn ? 'New articles are on the way.' : '文章正在整理中。'}</p>}
+        <nav id="pagination" class="pagination" aria-label={isEn ? 'Pagination' : '文章分页'}>
+          <button id="prev-page" aria-label={isEn ? 'Previous page' : '上一页'} disabled><Icon name="mdi:chevron-left" /></button>
+          <label>
+            <span>{isEn ? 'Page' : '第'}</span>
+            <input id="page-input" type="text" inputmode="numeric" value="1" aria-label={isEn ? 'Page number' : '页码'} />
+            <span>/ <span id="page-total">1</span></span>
+          </label>
+          <button id="next-page" aria-label={isEn ? 'Next page' : '下一页'} disabled><Icon name="mdi:chevron-right" /></button>
+        </nav>
+      </div>
+    </main>
+    <Footer />
+  </div>
+</Layout>
+<script>
+  const posts = Array.from(document.querySelectorAll<HTMLElement>('#post-list .post-item'));
+  const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.category-btn'));
+  const prev = document.getElementById('prev-page') as HTMLButtonElement;
+  const next = document.getElementById('next-page') as HTMLButtonElement;
+  const input = document.getElementById('page-input') as HTMLInputElement;
+  const total = document.getElementById('page-total')!;
+  const pagination = document.getElementById('pagination')!;
+  let page = 1;
+  let category = 'all';
+  const filtered = () => posts.filter(post => category === 'all' || post.dataset.category === category);
+  const render = () => {
+    const items = filtered();
+    const pages = Math.max(1, Math.ceil(items.length / 10));
+    page = Math.min(pages, Math.max(1, page));
+    const visible = new Set(items.slice((page - 1) * 10, page * 10));
+    posts.forEach(post => { post.hidden = !visible.has(post); });
+    buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.target === category)));
+    input.value = String(page);
+    total.textContent = String(pages);
+    prev.disabled = page === 1;
+    next.disabled = page === pages;
+    pagination.hidden = pages <= 1;
+  };
+  const readCategory = () => {
+    const value = new URL(location.href).searchParams.get('category');
+    category = buttons.some(button => button.dataset.target === value) ? value! : 'all';
+    page = 1;
+    render();
+  };
+  buttons.forEach(button => button.addEventListener('click', () => {
+    category = button.dataset.target || 'all';
+    page = 1;
+    const url = new URL(location.href);
+    if (category === 'all') url.searchParams.delete('category');
+    else url.searchParams.set('category', category);
+    history.pushState(null, '', url);
+    render();
+  }));
+  const changePage = (value: number) => {
+    page = value;
+    render();
+    document.querySelector('.page-heading')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+  };
+  prev.addEventListener('click', () => changePage(page - 1));
+  next.addEventListener('click', () => changePage(page + 1));
+  input.addEventListener('change', () => {
+    const value = Number(input.value);
+    if (Number.isInteger(value) && value >= 1 && value <= Math.max(1, Math.ceil(filtered().length / 10))) changePage(value);
+    else input.value = String(page);
+  });
+  window.addEventListener('popstate', readCategory);
+  readCategory();
+</script>

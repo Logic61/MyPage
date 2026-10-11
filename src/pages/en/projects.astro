@@ -4,11 +4,6 @@ import Navigation from '../../components/Navigation.astro';
 import Footer from '../../components/Footer.astro';
 import { Icon } from 'astro-icon/components';
 
-const LANG_COLORS: Record<string, string> = {
-  "C++": "#f34b7d",
-  "Python": "#3572A5",
-  "JavaScript": "#f1e05a",
-};
 
 const projects = [
   {
@@ -46,45 +41,30 @@ const projects = [
   }
 ];
 ---
-
 <Layout title="Projects - Shane Lorien">
-  <main class="max-w-5xl mx-auto px-6 sm:px-10 py-10 sm:py-12 text-stone-900 dark:text-stone-100 leading-relaxed min-h-[100dvh] flex flex-col transition-colors duration-300">
+  <div class="site-shell">
     <Navigation />
-
-    <header class="pb-10 sm:pb-12">
-      <h1 class="font-serif font-medium text-5xl sm:text-6xl tracking-tight text-stone-900 dark:text-stone-50">Projects</h1>
-      <p class="mt-4 font-serif text-sm text-stone-400 dark:text-stone-500">Selected open-source repositories and academic experiments.</p>
-    </header>
-
-    <!-- hairline grid: gap-px renders the table lines -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-px bg-stone-200 dark:bg-stone-800 border border-stone-200 dark:border-stone-800">
-      {projects.map(proj => (
-        <section class="group flex flex-col p-6 sm:p-7 bg-paper dark:bg-night hover:bg-stone-50 dark:hover:bg-stone-900/60 transition-colors">
-          <div class="flex items-center justify-between gap-3 mb-3">
-            <h2 class="font-serif text-xl font-semibold text-stone-900 dark:text-stone-100 group-hover:text-accent dark:group-hover:text-accent-dark transition-colors">
-              {proj.name}
-            </h2>
-            <a href={proj.github} target="_blank" rel="noopener noreferrer" class="text-stone-300 dark:text-stone-600 hover:text-accent dark:hover:text-accent-dark transition-colors" aria-label="GitHub Repository">
-              <Icon name="mdi:github" class="w-5 h-5" />
-            </a>
-          </div>
-          <p class="font-serif text-[15px] text-stone-600 dark:text-stone-300 mb-5">{proj.desc}</p>
-          <ul class="font-serif text-[15px] text-stone-500 dark:text-stone-400 space-y-2 flex-1">
-            {proj.points.map(pt => (
-              <li class="flex items-start gap-2.5">
-                <span class="text-accent dark:text-accent-dark select-none">·</span>
-                <span class="leading-relaxed">{pt}</span>
-              </li>
-            ))}
-          </ul>
-          <div class="mt-6 pt-4 border-t border-stone-100 dark:border-stone-800/70 flex items-center gap-2 font-serif text-sm text-stone-500 dark:text-stone-400">
-            <span class="w-2.5 h-2.5 rounded-full" style={`background-color: ${LANG_COLORS[proj.stack] || '#8b949e'}`}></span>
-            <span>{proj.stack}</span>
-          </div>
-        </section>
-      ))}
-    </div>
-
+    <main id="main-content" class="site-content">
+      <header class="page-heading">
+        <h1>Projects</h1>
+        <p>Selected open-source repositories and academic experiments.</p>
+      </header>
+      <div class="project-list">
+        {projects.map(proj => (
+          <section class="project">
+            <div>
+              <div class="project-title">
+                <h2>{proj.name}</h2>
+                <a class="icon-button" href={proj.github} target="_blank" rel="noopener noreferrer" aria-label={`GitHub: ${proj.name}`}><Icon name="mdi:arrow-top-right" /></a>
+              </div>
+              <p>{proj.desc}</p>
+              <div class="project-stack">{proj.stack}</div>
+            </div>
+            <ul>{proj.points.map(point => <li>{point}</li>)}</ul>
+          </section>
+        ))}
+      </div>
+    </main>
     <Footer />
-  </main>
+  </div>
 </Layout>

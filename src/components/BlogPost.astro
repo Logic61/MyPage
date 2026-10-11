@@ -1,0 +1,71 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import Navigation from './Navigation.astro';
+import Footer from './Footer.astro';
+import TableOfContents from './TableOfContents.astro';
+import { postDate, postDescription } from '../utils/posts';
+import { Icon } from 'astro-icon/components';
+interface Props { post: CollectionEntry<'blog'>; headings: { depth: number; slug: string; text: string }[]; isEn?: boolean; }
+const { post, headings, isEn = false } = Astro.props;
+const directory = headings.filter(heading => heading.depth <= 3);
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+<Layout title={`${post.data.title} - Shane Lorien`} description={postDescription(post) || undefined}>
+  <div class="site-shell">
+    <Navigation />
+    <main id="main-content" class="site-content">
+      <div id="top-sentinel" aria-hidden="true"></div>
+      <div class="reading-grid">
+        <article class="article">
+          <a class="back-link" href={`${base}${isEn ? '/en' : ''}/blog`}><Icon name="mdi:arrow-left" />{isEn ? 'Back to blog' : '返回博客列表'}</a>
+          <header class="article-header">
+            <div class="article-tags">
+              {post.data.category && <span class="article-category">{post.data.category}</span>}
+              {post.data.tags?.filter(tag => tag !== post.data.category).map(tag => <span>#{tag}</span>)}
+            </div>
+            <h1>{post.data.title}</h1>
+            <div class="article-meta">
+              <time datetime={post.data.pubDate.toISOString()}>{postDate(post.data.pubDate, isEn)}</time>
+              <span>{post.data.author}</span>
+            </div>
+          </header>
+          {directory.length > 0 && (
+            <details class="mobile-toc">
+              <summary>{isEn ? 'On this page' : '文章目录'}</summary>
+              <TableOfContents headings={directory} isEn={isEn} />
+            </details>
+          )}
+          <div class="prose article-body"><slot /></div>
+        </article>
+        {directory.length > 0 && (
+          <aside class="toc">
+            <h2>{isEn ? 'On this page' : '文章目录'}</h2>
+            <TableOfContents headings={directory} isEn={isEn} />
+          </aside>
+        )}
+      </div>
+    </main>
+    <Footer />
+    <button id="back-to-top" class="icon-button back-to-top" hidden aria-label={isEn ? 'Back to top' : '返回顶部'}><Icon name="mdi:arrow-up" /></button>
+  </div>
+</Layout>
+<script>
+  const back = document.getElementById('back-to-top')!;
+  const sentinel = document.getElementById('top-sentinel')!;
+  const observer = new IntersectionObserver(([entry]) => { back.hidden = entry.isIntersecting; }, { rootMargin: '300px 0px 0px 0px' });
+  observer.observe(sentinel);
+  back.addEventListener('click', () => window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }));
+  const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('.toc-links a'));
+  const ids = [...new Set(links.map(link => decodeURIComponent(link.hash.slice(1))))];
+  const highlight = (id: string) => links.forEach(link => {
+    if (decodeURIComponent(link.hash.slice(1)) === id) link.setAttribute('aria-current', 'location');
+    else link.removeAttribute('aria-current');
+  });
+  if (ids.length) highlight(ids[0]);
+  const headingObserver = new IntersectionObserver(entries => {
+    const visible = entries.filter(entry => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+    if (visible.length) highlight(visible[0].target.id);
+  }, { rootMargin: '-5% 0px -65% 0px' });
+  ids.forEach(id => { const heading = document.getElementById(id); if (heading) headingObserver.observe(heading); });
+</script>

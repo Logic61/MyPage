@@ -1,47 +1,31 @@
 @import "tailwindcss";
-@import "@fontsource-variable/eb-garamond/wght.css";
-@import "@fontsource-variable/eb-garamond/wght-italic.css";
-@import "@fontsource/noto-serif-sc/400.css";
-@import "@fontsource/noto-serif-sc/600.css";
+@import "./modern.css";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  --default-font-family: var(--font-serif);
-  --font-serif: 'EB Garamond Variable', 'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
+  --default-font-family: var(--font-sans);
+  --font-serif: var(--font-sans);
 
-  --color-paper: #faf7f0;
-  --color-paperdim: #e9e3d4;
-  --color-ink: #23201a;
-  --color-night: #171410;
-  --color-nightsoft: #211c15;
-  --color-accent: #8a1f1f;
-  --color-accent-hover: #6f1818;
-  --color-accent-dark: #d08a7d;
-  --color-accent-dark-hover: #e2a79a;
+  --color-paper: #f8fafd;
+  --color-paperdim: #c3cfdf;
+  --color-ink: #202a3b;
+  --color-night: #131923;
+  --color-nightsoft: #1a2230;
+  --color-accent: #3159b8;
+  --color-accent-hover: #234696;
+  --color-accent-dark: #95b7ff;
+  --color-accent-dark-hover: #bfd2ff;
 }
 
 ::selection {
   background: var(--color-accent);
-  color: #fdf6ec;
+  color: #f8fafd;
 }
 .dark ::selection {
   background: var(--color-accent-dark);
-  color: #241610;
-}
-
-/* 纸面颗粒质感 */
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-  opacity: 0.04;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-.dark body::after {
-  opacity: 0.05;
+  color: #152238;
 }
 
 /* 修复 TailwindCSS 的默认样式导致 MathJax 公式换行的问题 */
@@ -59,7 +43,7 @@ mjx-container:not([display="true"]) {
 
 html {
   scroll-behavior: smooth;
-  font-size: 17px;
+  font-size: 16px;
 }
 
 @media (prefers-reduced-motion: reduce) {

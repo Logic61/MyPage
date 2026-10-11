@@ -1,54 +1,36 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import CvHeader from '../components/CvHeader.astro';
 import Navigation from '../components/Navigation.astro';
 
-const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-const pdfHref = `${basePath}/cv.pdf`;
 ---
 
 <Layout title="陈冠宇 - Curriculum Vitae">
-  <main class="max-w-3xl mx-auto px-6 sm:px-10 py-12 sm:py-16 text-stone-800 dark:text-stone-200 leading-relaxed transition-colors duration-300 min-h-screen">
+  <div class="site-shell">
 
     <Navigation />
 
-    <!-- Header: centered, single-row identity with horizontal contact list -->
-    <header class="text-center mb-14 pb-8 border-b border-stone-200 dark:border-stone-800">
-      <h1 class="font-serif text-4xl sm:text-5xl font-semibold text-stone-900 dark:text-stone-100">陈冠宇</h1>
-      <ul class="font-serif text-sm text-stone-500 dark:text-stone-500 mt-7 flex justify-center flex-wrap gap-x-3 gap-y-1">
-        <li>北京大学</li>
-        <li aria-hidden="true">·</li>
-        <li>计算机科学与技术 · 2025级</li>
-        <li aria-hidden="true">·</li>
-        <li><a href="mailto:logic.dreemurr@gmail.com" class="hover:text-accent dark:hover:text-accent-dark transition-colors">logic.dreemurr@gmail.com</a></li>
-        <li aria-hidden="true">·</li>
-        <li><a href="https://github.com/logic61" target="_blank" rel="noopener noreferrer" class="hover:text-accent dark:hover:text-accent-dark transition-colors">github.com/logic61</a></li>
-      </ul>
-      <div class="mt-6">
-        <a href={pdfHref} download class="inline-flex items-center gap-2 font-serif text-sm text-stone-600 dark:text-stone-400 border border-stone-300 dark:border-stone-700 px-3.5 py-1.5 rounded-sm hover:text-accent dark:hover:text-accent-dark hover:border-accent dark:hover:border-accent-dark transition-colors">
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M6 1.5v7M6 8.5L3 5.5M6 8.5L9 5.5M2 10.5h8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          下载 PDF
-        </a>
-      </div>
-    </header>
+    <main id="main-content" class="site-content cv-document">
+    <CvHeader isEn={false} />
 
-    <div class="space-y-9">
+    <div class="cv-sections">
 
       <!-- 探索中 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">I.</span>研究兴趣</h2>
-        <p class="text-[15px] text-stone-700 dark:text-stone-300">
+        <h2 class="section-heading">研究兴趣</h2>
+        <p class="cv-note">
           仍在持续探索.
         </p>
       </section>
 
       <!-- 教育背景 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">II.</span>教育背景</h2>
+        <h2 class="section-heading">教育背景</h2>
         <ul class="cv-list">
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title">厦门外国语学校</span>
-              <span class="cv-date">2022.09 — 2025.06</span>
+              <span class="cv-date">2022.09 - 2025.06</span>
             </div>
             <p class="cv-sub">高中</p>
             <ul class="cv-bullets">
@@ -58,7 +40,7 @@ const pdfHref = `${basePath}/cv.pdf`;
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title">北京大学</span>
-              <span class="cv-date">2025.09 — 至今</span>
+              <span class="cv-date">2025.09 - 至今</span>
             </div>
             <p class="cv-sub">信息科学技术学院 · 本科 · 计算机科学与技术</p>
             <ul class="cv-bullets">
@@ -70,15 +52,15 @@ const pdfHref = `${basePath}/cv.pdf`;
 
       <!-- 项目与研究 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">III.</span>项目与研究</h2>
+        <h2 class="section-heading">项目与研究</h2>
         <ul class="cv-list">
 
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title"><a href="https://github.com/ruguo0119/dog-emotion-recognition" target="_blank" rel="noopener noreferrer" class="cv-link">犬类情绪识别</a></span>
-              <span class="cv-date">2026 —</span>
+              <span class="cv-date">2026 -</span>
             </div>
-            <p class="cv-sub">研究项目 · Python · PyTorch <span class="cv-meta">— 北京大学创新+工作站</span></p>
+            <p class="cv-sub">研究项目 · Python · PyTorch <span class="cv-meta">- 北京大学创新+工作站</span></p>
             <ul class="cv-bullets">
               <li>基于姿态与声纹特征对犬类意图进行多模态识别.</li>
               <li>已通过开题答辩，项目持续推进中.</li>
@@ -90,7 +72,7 @@ const pdfHref = `${basePath}/cv.pdf`;
               <span class="cv-title"><a href="https://github.com/Logic61/PKU-Planner" target="_blank" rel="noopener noreferrer" class="cv-link">PKU-Planner</a></span>
               <span class="cv-date">2025</span>
             </div>
-            <p class="cv-sub">软件项目 · C++ · Qt <span class="cv-meta">— 独立项目</span></p>
+            <p class="cv-sub">软件项目 · C++ · Qt <span class="cv-meta">- 独立项目</span></p>
             <ul class="cv-bullets">
               <li>面向北京大学教学网的课程与 DDL 桌面助手，支持教学网导入与截图识别课程.</li>
               <li>以视觉驱动的紧迫度提示展示任务；集成一键 AI 个性化建议.</li>
@@ -102,7 +84,7 @@ const pdfHref = `${basePath}/cv.pdf`;
               <span class="cv-title"><a href="https://github.com/Logic61/Obsidian-to-Hexo" target="_blank" rel="noopener noreferrer" class="cv-link">Obsidian-to-Hexo</a></span>
               <span class="cv-date">2025</span>
             </div>
-            <p class="cv-sub">工具 · Python <span class="cv-meta">— 独立项目</span></p>
+            <p class="cv-sub">工具 · Python <span class="cv-meta">- 独立项目</span></p>
             <ul class="cv-bullets">
               <li>将 Obsidian 笔记迁移至 Hexo 博客的自动化工具.</li>
               <li>解析 Obsidian 特有 Markdown 语法，整理 frontmatter 并写入 Hexo posts 目录，支持批量备份与发布.</li>
@@ -114,7 +96,7 @@ const pdfHref = `${basePath}/cv.pdf`;
 
       <!-- 技术能力 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">IV.</span>技术能力</h2>
+        <h2 class="section-heading">技术能力</h2>
         <dl class="cv-skills">
           <div class="cv-skill-row">
             <dt class="cv-skill-key">编程语言</dt>
@@ -137,12 +119,12 @@ const pdfHref = `${basePath}/cv.pdf`;
 
       <!-- 业余兴趣 -->
       <section>
-        <h2 class="section-heading"><span class="section-num">V.</span>业余兴趣</h2>
+        <h2 class="section-heading">业余兴趣</h2>
         <ul class="cv-list">
           <li class="cv-entry">
             <div class="cv-head">
               <span class="cv-title">北京大学导引队</span>
-              <span class="cv-date">2025.09 — 至今</span>
+              <span class="cv-date">2025.09 - 至今</span>
             </div>
             <p class="cv-sub">队员 · 五禽戏项目代表</p>
           </li>
@@ -165,60 +147,11 @@ const pdfHref = `${basePath}/cv.pdf`;
 
     </div>
 
-    <footer class="mt-12 pt-4 border-t border-stone-200 dark:border-stone-800 font-serif text-xs text-stone-400 dark:text-stone-600 flex justify-between flex-wrap gap-2">
+    <footer class="cv-footer">
       <span>最后更新 2026 年 9 月</span>
       <span>中国 · 北京</span>
     </footer>
 
   </main>
+  </div>
 </Layout>
-
-<style>
-  @reference "../styles/global.css";
-
-  .section-heading {
-    @apply font-serif text-base font-semibold text-stone-800 dark:text-stone-200 pb-1.5 mb-3 border-b border-stone-300 dark:border-stone-700 flex items-baseline gap-3;
-  }
-  .section-num {
-    @apply font-serif italic text-sm text-accent dark:text-accent-dark;
-  }
-  .cv-list {
-    @apply space-y-5;
-  }
-  .cv-entry {
-    @apply text-[15px];
-  }
-  .cv-head {
-    @apply flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1;
-  }
-  .cv-title {
-    @apply font-medium text-stone-900 dark:text-stone-100;
-  }
-  .cv-date {
-    @apply font-serif text-sm text-stone-500 dark:text-stone-500 tabular-nums shrink-0;
-  }
-  .cv-sub {
-    @apply text-stone-600 dark:text-stone-400 mt-0.5 text-[14px];
-  }
-  .cv-meta {
-    @apply text-stone-500 dark:text-stone-500;
-  }
-  .cv-bullets {
-    @apply mt-1.5 space-y-0.5 text-stone-700 dark:text-stone-300 text-[14px] pl-5 list-outside list-disc marker:text-stone-400 dark:marker:text-stone-600;
-  }
-  .cv-link {
-    @apply hover:text-accent dark:hover:text-accent-dark hover:underline underline-offset-4 decoration-accent/50 dark:decoration-accent-dark/50 transition-colors;
-  }
-  .cv-skills {
-    @apply text-[14px];
-  }
-  .cv-skill-row {
-    @apply grid grid-cols-[8rem_1fr] gap-x-4 py-1 border-b border-dashed border-stone-200 dark:border-stone-800;
-  }
-  .cv-skill-row:last-child {
-    @apply border-b-0;
-  }
-  .cv-skill-key {
-    @apply font-serif text-sm font-semibold text-stone-600 dark:text-stone-400 self-baseline;
-  }
-</style>

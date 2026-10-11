@@ -1,0 +1,7 @@
+---
+interface Props { headings: { depth: number; slug: string; text: string }[]; isEn?: boolean; }
+const { headings, isEn = false } = Astro.props;
+---
+<nav class="toc-links" aria-label={isEn ? 'On this page' : '文章目录'}>
+  {headings.map(heading => <a href={`#${heading.slug}`} data-depth={heading.depth}>{heading.text}</a>)}
+</nav>

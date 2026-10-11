@@ -1,0 +1,19 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import { postDescription, postDate } from '../utils/posts';
+interface Props { post: CollectionEntry<'blog'>; isEn?: boolean; heading?: 'h2' | 'h3'; }
+const { post, isEn = false, heading = 'h2' } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const description = postDescription(post);
+const Heading = heading;
+---
+<li class="post-item" data-category={post.data.category || ''}>
+  <a class="post-row" href={`${base}${isEn ? '/en' : ''}/blog/${post.id}`}>
+    <div class="post-meta">
+      {post.data.category && <span class="post-category">{post.data.category}</span>}
+      <time datetime={post.data.pubDate.toISOString()}>{postDate(post.data.pubDate, isEn)}</time>
+    </div>
+    <Heading>{post.data.title}</Heading>
+    {description && <p>{description}</p>}
+  </a>
+</li>
