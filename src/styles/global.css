@@ -1,31 +1,35 @@
 @import "tailwindcss";
+@import "@fontsource-variable/eb-garamond/wght.css";
+@import "@fontsource/noto-serif-sc/400.css";
+@import "@fontsource/noto-serif-sc/700.css";
 @import "./modern.css";
+@import "./heritage.css";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:is(.dark *));
 
 @theme {
   --font-sans: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif;
-  --default-font-family: var(--font-sans);
-  --font-serif: var(--font-sans);
+  --default-font-family: var(--font-serif);
+  --font-serif: 'EB Garamond Variable', 'Noto Serif SC', 'Songti SC', 'STSong', Georgia, serif;
 
-  --color-paper: #f8fafd;
-  --color-paperdim: #c3cfdf;
-  --color-ink: #202a3b;
-  --color-night: #131923;
-  --color-nightsoft: #1a2230;
-  --color-accent: #3159b8;
-  --color-accent-hover: #234696;
-  --color-accent-dark: #95b7ff;
-  --color-accent-dark-hover: #bfd2ff;
+  --color-paper: #eee6d4;
+  --color-paperdim: #d9cfb9;
+  --color-ink: #28271f;
+  --color-night: #211f19;
+  --color-nightsoft: #2b281f;
+  --color-accent: #993d31;
+  --color-accent-hover: #7c2d24;
+  --color-accent-dark: #de9a83;
+  --color-accent-dark-hover: #ecc0a4;
 }
 
 ::selection {
   background: var(--color-accent);
-  color: #f8fafd;
+  color: #faf3e3;
 }
 .dark ::selection {
   background: var(--color-accent-dark);
-  color: #152238;
+  color: #2b2019;
 }
 
 /* 修复 TailwindCSS 的默认样式导致 MathJax 公式换行的问题 */

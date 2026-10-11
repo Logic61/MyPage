@@ -5,6 +5,8 @@ import Footer from './Footer.astro';
 import PostRow from './PostRow.astro';
 import { getCollection } from 'astro:content';
 import { Icon } from 'astro-icon/components';
+import { Image } from 'astro:assets';
+import landscape from '../assets/heritage-landscape.png';
 interface Props { isEn?: boolean; }
 const { isEn = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
@@ -20,14 +22,19 @@ const categories = [...new Set(posts.map(post => post.data.category).filter((cat
       <header class="home-intro">
         <div>
           <h1>Shane Lorien</h1>
+          <p class="home-motto"><span class="motto-seal" aria-hidden="true">天问</span><span>{isEn ? 'What virtue the moonlight? Death, then rebirth.' : '夜光何德？死则又育？'}</span></p>
           <p class="home-description">{isEn ? 'Notes on mathematics, computer science, and the things I read.' : '记录数学与计算机，也记录阅读中的思考。'}</p>
-          <p class="home-motto">{isEn ? 'What virtue the moonlight? Death, then rebirth.' : '夜光何德？死则又育？'}</p>
           <div class="home-actions">
             <a class="button button-primary" href={`${prefix}/blog`}>{isEn ? 'Read the blog' : '阅读博客'}<Icon name="mdi:arrow-right" /></a>
             <a class="button" href={`${prefix}/projects`}>{isEn ? 'Explore projects' : '查看项目'}</a>
           </div>
         </div>
-        <img src={`${base}/avatar.jpg`} alt={isEn ? 'Shane Lorien’s avatar' : 'Shane Lorien 的头像'} width="144" height="144" class="home-avatar" />
+        <figure class="home-landscape">
+          <div class="landscape-print">
+            <Image src={landscape} alt={isEn ? 'An ink landscape of mountains, a river, and drifting mist.' : '山峦、江流与云气的水墨插图'} width={680} height={907} format="webp" loading="eager" decoding="async" />
+          </div>
+          <div class="landscape-verse" aria-hidden="true"><span>日月安属？</span><span>列星安陈？</span></div>
+        </figure>
       </header>
       <div class="home-columns">
         <section aria-labelledby="latest-heading">
