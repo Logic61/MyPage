@@ -16,7 +16,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     <Navigation />
     <main id="main-content" class="site-content">
       <div id="top-sentinel" aria-hidden="true"></div>
-      <div class="reading-grid">
+      <div class:list={['reading-grid', { 'reading-grid--single': directory.length === 0 }]}>
         <article class="article">
           <a class="back-link" href={`${base}${isEn ? '/en' : ''}/blog`}><Icon name="mdi:arrow-left" />{isEn ? 'Back to blog' : '返回博客列表'}</a>
           <header class="article-header">
