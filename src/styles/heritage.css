@@ -30,6 +30,9 @@ body { font-family: var(--font-serif); font-size: 18px; }
 .page-landscape { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
 .page-landscape img { width: 100%; height: 100%; object-fit: cover; object-position: center 42%; opacity: .42; mix-blend-mode: multiply; }
 .dark .page-landscape img { opacity: .25; mix-blend-mode: luminosity; }
+/* canvas version of the landscape: it paints its own paper, so it needs no blend */
+.page-ink canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.page-ink .ink-live { pointer-events: none; }
 .site-shell { position: relative; z-index: 1; padding: 32px 56px 0; background: var(--page); background: color-mix(in srgb, var(--page) 90%, transparent); border-inline: 1px solid var(--line); }
 .site-nav { margin-bottom: 32px; padding-bottom: 22px; border-bottom: 3px double var(--rule); }
 .brand { font-family: var(--font-serif); font-size: 27px; font-weight: 700; letter-spacing: -.3px; }
