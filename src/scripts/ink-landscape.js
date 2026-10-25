@@ -123,6 +123,14 @@ const TIERS = [
   },
 ];
 
+// 版心后面那层"淡山"。页芯是 90% 不透明的纸，只有 10% 透出来，
+// 所以这一层要在画布上画得比两侧重，透过去才刚好是淡淡一层，不会压住字。
+const CENTER = [
+  { cx: 0.300, w: 0.32, peak: 0.300, base: 0.560, skew: 1.02, sharp: 1.05, bumps: [[0.36, 0.28, 0.10]] },
+  { cx: 0.505, w: 0.36, peak: 0.245, base: 0.545, skew: 0.96, sharp: 1.02, bumps: [[0.64, 0.32, 0.10]] },
+  { cx: 0.705, w: 0.30, peak: 0.315, base: 0.565, skew: 1.04, sharp: 1.08, bumps: [] },
+];
+
 const MOON = { x: 0.952, y: 0.150, r: 0.029 };
 
 const BAMBOO = [
@@ -154,6 +162,7 @@ export function mountInkLandscape(options = {}) {
     scale: 1,
     wisps: [],
     birds: [],
+    page: { l: 0, r: 1440 },
     raf: 0,
     lastPaint: 0,
     visible: !document.hidden,
@@ -323,13 +332,16 @@ export function mountInkLandscape(options = {}) {
   }
 
   /* ── sky / moon / weather ─────────────────────────────────── */
-  function paintSky(c) {
+  function skyGradient(c) {
     const { paper } = state.palette;
     const g = c.createLinearGradient(0, 0, 0, state.H * 0.72);
     g.addColorStop(0, rgba(mix(paper, [255, 255, 255], 0.35), 1));
     g.addColorStop(0.6, rgba(paper, 1));
     g.addColorStop(1, rgba(paper, 1));
-    c.fillStyle = g;
+    return g;
+  }
+  function paintSky(c) {
+    c.fillStyle = skyGradient(c);
     c.fillRect(0, 0, state.W, state.H);
   }
 
@@ -648,6 +660,40 @@ export function mountInkLandscape(options = {}) {
     c.setTransform(baseCv.width / state.W, 0, 0, baseCv.height / state.H, 0, 0);
     paintSky(c);
 
+    // the centre range: heavy ink on the canvas, a whisper through the paper
+    const centreTone = { alpha: dark ? 0.78 : 0.82, dab: 260, k: dark ? 0.48 : 0.52 };
+    CENTER.forEach((m, ci) => {
+      const rng = rngFor(state.seed, 820 + ci * 5);
+      const mass = makeMassif(state.seed, 1520 + ci * 9, m);
+      paintMass(c, mass.pts, mass.base, centreTone, rng);
+    });
+    fogVeil(c, rngFor(state.seed, 833), 0.560, 0.20);
+
+    // …and keep it inside the paper panel: outside it fades back to bare paper
+    (() => {
+      const { l, r } = state.page;
+      const f = 130 * u();
+      const sky = skyGradient(c);
+      const restore = (x0, x1) => {
+        if (x1 <= x0) return;
+        c.fillStyle = sky;
+        c.fillRect(x0, 0, x1 - x0, state.H);
+      };
+      restore(0, l - f);
+      restore(r + f, state.W);
+      // feather back to the sky wash on both sides
+      const sfx = c.createLinearGradient(l - f, 0, l + f, 0);
+      sfx.addColorStop(0, rgba(state.palette.paper, 1));
+      sfx.addColorStop(1, rgba(state.palette.paper, 0));
+      c.fillStyle = sfx;
+      c.fillRect(l - f, 0, f * 2, state.H);
+      const sfr = c.createLinearGradient(r + f, 0, r - f, 0);
+      sfr.addColorStop(0, rgba(state.palette.paper, 1));
+      sfr.addColorStop(1, rgba(state.palette.paper, 0));
+      c.fillStyle = sfr;
+      c.fillRect(r - f, 0, f * 2, state.H);
+    })();
+
     const crests = [[], [], [], []];
     for (let t = 0; t < TIERS.length; t++) {
       const tier = TIERS[t];
@@ -764,6 +810,16 @@ export function mountInkLandscape(options = {}) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     state.W = 1440;
     state.H = Math.round(clamp(1440 * vh / Math.max(1, vw), 700, 3200));
+
+    // the typeset panel: the centre range is only allowed to show through it
+    const shell = document.querySelector('.site-shell');
+    if (shell) {
+      const r = shell.getBoundingClientRect();
+      state.page = {
+        l: clamp((r.left / vw) * state.W, 0, state.W),
+        r: clamp((r.right / vw) * state.W, 0, state.W),
+      };
+    }
 
     // base: up to 1.4x device pixels, capped for wide screens
     const bs = Math.min(dpr, 1.4);
