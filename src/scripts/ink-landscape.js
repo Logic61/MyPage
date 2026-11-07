@@ -165,6 +165,8 @@ export function mountInkLandscape(options = {}) {
     page: { l: 0, r: 1440 },
     raf: 0,
     lastPaint: 0,
+    lastTime: 0,
+    pointer: { x: 0, y: 0, active: false },
     visible: !document.hidden,
   };
 
@@ -764,11 +766,16 @@ export function mountInkLandscape(options = {}) {
         s: 7 + rng() * 6,
         ph: rng() * 6.28,
         sp: 0.003 + rng() * 0.003,
+        ox: 0,
+        oy: 0,
+        vx: 0,
+        vy: 0,
+        alarm: 0,
       });
     }
   }
 
-  function paintLive(t) {
+  function paintLive(t, dt = 0) {
     const c = liveCtx;
     const { W, H } = state;
     c.clearRect(0, 0, W, H);
@@ -785,20 +792,47 @@ export function mountInkLandscape(options = {}) {
     }
     c.globalAlpha = 1;
 
-    // birds, mostly over the right-hand ranges
+    // Birds keep their own spring offsets. A nearby pointer startles the flock;
+    // release lets each bird settle independently instead of snapping back.
     const tone = mix(paper, ink, 0.85);
+    const pointer = state.pointer;
     for (const b of state.birds) {
       const x = ((b.x - t * b.sp) % 1.4 + 1.4) % 1.4;
-      const px = x * W;
-      const py = (b.y + Math.sin(t * 0.32 + b.ph) * 0.004) * H;
-      const flap = Math.sin(t * 2.2 + b.ph);
+      let px = x * W;
+      let py = (b.y + Math.sin(t * 0.32 + b.ph) * 0.004) * H;
+      let tx = 0;
+      let ty = 0;
+      if (pointer.active) {
+        const dx = px - pointer.x;
+        const dy = py - pointer.y;
+        const distance = Math.hypot(dx, dy) || 1;
+        const radius = Math.max(95, 155 * (W / 1440));
+        if (distance < radius) {
+          const force = (1 - distance / radius) ** 2 * 46;
+          tx = dx / distance * force;
+          ty = dy / distance * force * .72;
+        }
+      }
+      if (dt > 0) {
+        b.vx += (tx - b.ox) * 62 * dt;
+        b.vy += (ty - b.oy) * 62 * dt;
+        const damping = Math.exp(-8.5 * dt);
+        b.vx *= damping;
+        b.vy *= damping;
+        b.ox += b.vx * dt;
+        b.oy += b.vy * dt;
+        b.alarm = clamp(Math.hypot(b.ox, b.oy) / 28, 0, 1);
+      }
+      px += b.ox;
+      py += b.oy;
+      const flap = Math.sin(t * (2.2 + b.alarm * 3.4) + b.ph);
       const s = b.s * (W / 1440) * 1.6;
       c.beginPath();
       c.moveTo(px - s, py + flap * s * 0.4);
       c.quadraticCurveTo(px - s * 0.42, py - s * (0.52 - flap * 0.22), px, py);
       c.quadraticCurveTo(px + s * 0.42, py - s * (0.52 - flap * 0.22), px + s, py + flap * s * 0.4);
       c.lineWidth = Math.max(0.8, 1.05 * (W / 1440));
-      c.strokeStyle = rgba(tone, 0.62);
+      c.strokeStyle = rgba(tone, 0.62 + b.alarm * .2);
       c.stroke();
     }
   }
@@ -844,13 +878,16 @@ export function mountInkLandscape(options = {}) {
     state.raf = 0;
     if (document.hidden || reduced.matches) return;
     if (now - state.lastPaint < 33) { state.raf = requestAnimationFrame(tick); return; }
+    const dt = state.lastTime ? Math.min((now - state.lastTime) / 1000, .05) : 1 / 30;
     state.lastPaint = now;
-    paintLive(now / 1000);
+    state.lastTime = now;
+    paintLive(now / 1000, dt);
     state.raf = requestAnimationFrame(tick);
   }
   function start() {
     if (state.raf || reduced.matches || document.hidden) return;
     state.lastPaint = 0;
+    state.lastTime = 0;
     state.raf = requestAnimationFrame(tick);
   }
   function stop() {
@@ -866,6 +903,21 @@ export function mountInkLandscape(options = {}) {
   };
   window.addEventListener('resize', onResize, { passive: true });
 
+  const onPointerMove = (event) => {
+    if (reduced.matches || (event.pointerType === 'touch' && !event.buttons)) return;
+    state.pointer.x = event.clientX / Math.max(1, window.innerWidth) * state.W;
+    state.pointer.y = event.clientY / Math.max(1, window.innerHeight) * state.H;
+    state.pointer.active = true;
+  };
+  const onPointerUp = (event) => {
+    if (event.pointerType === 'touch') state.pointer.active = false;
+  };
+  const onPointerLeave = () => { state.pointer.active = false; };
+  window.addEventListener('pointermove', onPointerMove, { passive: true });
+  window.addEventListener('pointerup', onPointerUp, { passive: true });
+  window.addEventListener('blur', onPointerLeave);
+  document.documentElement.addEventListener('pointerleave', onPointerLeave);
+
   const onVisibility = () => {
     if (document.hidden) stop();
     else start();
@@ -873,8 +925,14 @@ export function mountInkLandscape(options = {}) {
   document.addEventListener('visibilitychange', onVisibility);
 
   const onMotionChange = () => {
-    if (reduced.matches) { stop(); paintLive(0); }
-    else start();
+    if (reduced.matches) {
+      stop();
+      state.pointer.active = false;
+      for (const bird of state.birds) {
+        bird.ox = bird.oy = bird.vx = bird.vy = bird.alarm = 0;
+      }
+      paintLive(0);
+    } else start();
   };
   if (reduced.addEventListener) reduced.addEventListener('change', onMotionChange);
 
@@ -897,7 +955,12 @@ export function mountInkLandscape(options = {}) {
     destroy() {
       stop();
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('blur', onPointerLeave);
+      document.documentElement.removeEventListener('pointerleave', onPointerLeave);
       document.removeEventListener('visibilitychange', onVisibility);
+      if (reduced.removeEventListener) reduced.removeEventListener('change', onMotionChange);
       themeObserver.disconnect();
     },
   };
