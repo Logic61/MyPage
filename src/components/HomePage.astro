@@ -23,7 +23,7 @@ const categories = [...new Set(posts.map(post => post.data.category).filter((cat
           <div class="frontispiece-title">
             <h1>Shane Lorien</h1>
             <blockquote class="home-motto">
-              <p class="frontispiece-quote">{isEn ? 'What virtue the moonlight? Death, then rebirth.' : <><span>夜光何德？</span><span>死则又育？</span></>}</p>
+              <p class="frontispiece-quote">{isEn ? <><span>What virtue the moonlight?</span><span>Death, then rebirth.</span></> : <><span>夜光何德？</span><span>死则又育？</span></>}</p>
             </blockquote>
             <div class="home-actions">
               <a class="text-link" href={`${prefix}/blog`}>{isEn ? 'Read the blog' : '阅读博客'}<Icon name="mdi:arrow-right" /></a>

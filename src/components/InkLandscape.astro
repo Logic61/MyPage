@@ -1,0 +1,22 @@
+---
+/**
+ * 山影：页面背景的生成水墨。
+ *
+ * 两层 canvas 叠在内容之下：
+ *   [data-ink-base] 静态画面——远山、云海、月亮、左侧墨竹、一叶小舟；
+ *   [data-ink-live] 透明活动层——缓慢流动的雾与右上的飞鸟（标签页隐藏时暂停）。
+ *
+ * 配色取自站点自己的 CSS 变量（--page / --ink），所以亮色与深色主题下
+ * 都是同一套画，只是墨色反转。旧的静态图背景（LandscapeBackground.astro）
+ * 原样保留，方便随时切回。
+ */
+---
+<div class="page-landscape page-ink" aria-hidden="true">
+  <canvas class="ink-base" data-ink-base></canvas>
+  <canvas class="ink-live" data-ink-live></canvas>
+</div>
+
+<script>
+  import { mountInkLandscape } from '../scripts/ink-landscape.js';
+  mountInkLandscape();
+</script>
