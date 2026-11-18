@@ -8,15 +8,15 @@ import { Icon } from 'astro-icon/components';
 // 项目数据（之后你也可以把它们放进 src/content/projects 里让它完全自动化）
 const projects = [
   {
-    name: "AmazonChess",
-    stack: "C++",
-    desc: "北京大学计算概论A 2025秋大作业：亚马逊棋",
+    name: "燕园一处 · AWE PKU",
+    stack: "Python · MCP",
+    desc: "在本机运行的北大校园信息技能。",
     points: [
-      "实现基础棋盘逻辑、合法落子判定与障碍物检测",
-      "使用 C++ 编写核心博弈逻辑框架",
-      "良好的代码组织与模块化实现"
+      "检索教学网作业、公告和课表，查找校园活动并回到原文核验。",
+      "按评论数筛选树洞帖，分页读取评论，采集日报并核对覆盖范围。",
+      "网页工作台、CLI、MCP 和 HTTP 接口共用本机连接器。"
     ],
-    github: "https://github.com/Logic61/AmazonChess"
+    github: "https://github.com/Logic61/pku-campus-skill"
   },
   {
     name: "SurfSoul",
@@ -30,15 +30,15 @@ const projects = [
     github: "https://github.com/Logic61/SurfSoul"
   },
   {
-    name: "Carnival-game-suite",
-    stack: "JavaScript",
-    desc: "一系列基于网页的小游戏集合项目",
+    name: "PKU Planner",
+    stack: "C++ · Qt",
+    desc: "面向北大学生的课程与截止日期管理桌面应用。",
     points: [
-      "完整使用 JavaScript 构建网页端的交互逻辑",
-      "实现了基础的概率机制、事件监听和界面反馈",
-      "作为趣味性的前端开发与组件化练习"
+      "从教学网同步课表和任务，也能从课表截图中识别课程信息。",
+      "根据最近的截止日期给课程格子着色，悬停即可查看该课程的待办。",
+      "结合课表与截止日期生成个性化的 AI 学习建议。"
     ],
-    github: "https://github.com/Logic61/Carnival-game-suite"
+    github: "https://github.com/Logic61/PKU-Planner"
   }
 ];
 ---

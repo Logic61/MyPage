@@ -7,15 +7,15 @@ import { Icon } from 'astro-icon/components';
 
 const projects = [
   {
-    name: "AmazonChess",
-    stack: "C++",
-    desc: "PKU Intro to CS Fall 2025 Final Project: Game of the Amazons",
+    name: "AWE PKU",
+    stack: "Python · MCP",
+    desc: "A locally run agent skill for finding Peking University campus information.",
     points: [
-      "Implemented fundamental board logic, legal move validation, and obstacle detection",
-      "Built the core game logic and decision framework purely in C++",
-      "Maintained well-organized project structure and clean codebase"
+      "Searches assignments, announcements, and timetables, and checks campus events against their original listings.",
+      "Filters Treehole posts by comment count, reads comments page by page, and checks the coverage of daily digests.",
+      "Shares local connectors across the web workspace, CLI, MCP, and HTTP API."
     ],
-    github: "https://github.com/Logic61/AmazonChess"
+    github: "https://github.com/Logic61/pku-campus-skill"
   },
   {
     name: "SurfSoul",
@@ -29,15 +29,15 @@ const projects = [
     github: "https://github.com/Logic61/SurfSoul"
   },
   {
-    name: "Carnival-game-suite",
-    stack: "JavaScript",
-    desc: "A collection of web-based mini carnival games",
+    name: "PKU Planner",
+    stack: "C++ · Qt",
+    desc: "A desktop app for Peking University students to manage courses and deadlines.",
     points: [
-      "Built fully interactive web front-end logic using pure JavaScript",
-      "Implemented basic probability mechanics, event listeners, and UI feedback",
-      "Developed as a hands-on project to practice front-end componentization"
+      "Syncs timetables and deadlines from the teaching portal and extracts course details from timetable screenshots.",
+      "Color-codes timetable cells by the nearest deadline and shows pending tasks on hover.",
+      "Generates personalized AI study suggestions from the timetable and upcoming deadlines."
     ],
-    github: "https://github.com/Logic61/Carnival-game-suite"
+    github: "https://github.com/Logic61/PKU-Planner"
   }
 ];
 ---
