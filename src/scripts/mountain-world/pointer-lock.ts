@@ -86,7 +86,15 @@ export function createPointerLockRequest(options: PointerLockRequestOptions) {
 
   return {
     start() {
-      if (!options.isActive() || locked || pending) return;
+      if (!options.isActive() || locked) return;
+      if (pending) {
+        // A new, explicit gesture can renew interest in the sole native request.
+        // Otherwise cancel -> resume -> late failure would leave the caller waiting
+        // forever: start could not overlap the old request, and its result was stale.
+        // Do not issue another request or manufacture a later user activation.
+        if (pending.generation !== generation) pending.generation = ++generation;
+        return;
+      }
       issue(++generation, true);
     },
     onError() {

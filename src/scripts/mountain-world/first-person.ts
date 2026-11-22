@@ -145,9 +145,9 @@ export function createInteractionPicker(roots: THREE.Object3D[], interactions: I
     } finally { geometry.setDrawRange(savedStart, savedCount); }
   }
 
-  function pick(camera: THREE.Camera): Interaction | null {
+  function pick(camera: THREE.Camera, point: THREE.Vector2 = centre): Interaction | null {
     camera.updateMatrixWorld();
-    raycaster.setFromCamera(centre, camera);
+    raycaster.setFromCamera(point, camera);
     raycaster.far = maximumReach;
     let target: THREE.Intersection | null = null, targetOrder = Infinity;
     for (const { mesh, order } of targets) {

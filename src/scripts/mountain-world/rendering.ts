@@ -39,10 +39,13 @@ export function createStudyRenderer(renderer: THREE.WebGLRenderer, scene: THREE.
   const output = new OutputPass();
   composer.addPass(beauty); composer.addPass(ao); composer.addPass(bloom); composer.addPass(output);
 
-  // Mist and lamp glass should never become opaque silhouettes in the normal pass.
+  // Scenery and translucent details must not become opaque normal-pass silhouettes.
+  // Own point/line visibility too: GTAOPass only restores its cache on success.
   const transparent: THREE.Object3D[] = [];
   scene.traverse(object => {
-    if (object instanceof THREE.Sprite) { transparent.push(object); return; }
+    if (object.userData.ignoreAmbientOcclusion === true) { transparent.push(object); return; }
+    if (object instanceof THREE.Sprite || object instanceof THREE.Points || object instanceof THREE.Line
+      || ('isLine2' in object && object.isLine2 === true)) { transparent.push(object); return; }
     if (!(object instanceof THREE.Mesh)) return;
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     if (materials.every(material => material.transparent && material.opacity < 0.7)) transparent.push(object);
@@ -59,6 +62,7 @@ export function createStudyRenderer(renderer: THREE.WebGLRenderer, scene: THREE.
   let width = 1, height = 1, dynamicScale = 1;
   let appliedWidth = 0, appliedHeight = 0, appliedRatio = 0;
   let postprocessing = true;
+  const originalClearColor = new THREE.Color();
 
   function resize(w: number, h: number) {
     width = Math.max(1, w); height = Math.max(1, h);
@@ -79,11 +83,20 @@ export function createStudyRenderer(renderer: THREE.WebGLRenderer, scene: THREE.
   return {
     render(delta: number) {
       if (!postprocessing) { renderer.render(scene, camera); return; }
+      // Optional passes may throw before restoring their temporary scene state.
+      const overrideMaterial = scene.overrideMaterial;
+      const autoClear = renderer.autoClear, clearAlpha = renderer.getClearAlpha();
+      renderer.getClearColor(originalClearColor);
       try { composer.render(delta); }
       catch (error) {
         // A missing optional framebuffer format must not make the reading paths disappear.
         console.warn('Mountain study post-processing unavailable; using the direct scene.', error);
-        postprocessing = false; renderer.setRenderTarget(null); renderer.render(scene, camera);
+        postprocessing = false;
+        scene.overrideMaterial = overrideMaterial;
+        renderer.autoClear = autoClear;
+        renderer.setClearColor(originalClearColor, clearAlpha);
+        renderer.setRenderTarget(null);
+        renderer.render(scene, camera);
       }
     },
     resize,

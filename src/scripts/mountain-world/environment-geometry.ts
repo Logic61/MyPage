@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 export function seeded(seed: number) {
   let value = seed >>> 0;
@@ -11,7 +12,7 @@ export function rockNoise(x: number, y: number, z: number) {
     + Math.cos(x * 8.37 + y * 7.11 - z * 6.23) * .13;
 }
 
-/** A continuously sampled surface, used for the cave's inner/outer vault and walls. */
+/** A continuously sampled surface for solid roof skins, water and the island edge. */
 export function gridSurface(
   columns: number, rows: number,
   position: (u: number, v: number) => THREE.Vector3,
@@ -45,6 +46,26 @@ export function roundedBlock() {
     inner.add(offset); p.setXYZ(i, inner.x, inner.y, inner.z);
   }
   result.computeVertexNormals(); return result;
+}
+
+/** Architectural edges keep the same small bevel in metres, even on a long lintel or paving slab. */
+export function architecturalBlock(width: number, height: number, depth: number, bevel = .012) {
+  return new RoundedBoxGeometry(width, height, depth, 1, Math.min(bevel, height * .24, width * .24, depth * .24));
+}
+
+/** An open-bottom arch with a solid, bevelled reveal; local Z is the full wall depth. */
+export function archedFrame(outerHalf: number, thickness: number, spring: number, rise: number, depth: number) {
+  const innerHalf = outerHalf - thickness, shape = new THREE.Shape();
+  shape.moveTo(-outerHalf, 0); shape.lineTo(-outerHalf, spring);
+  shape.absellipse(0, spring, outerHalf, rise, Math.PI, 0, true);
+  shape.lineTo(outerHalf, 0); shape.lineTo(innerHalf, 0); shape.lineTo(innerHalf, spring);
+  shape.absellipse(0, spring, innerHalf, rise - thickness, 0, Math.PI, false);
+  shape.lineTo(-innerHalf, 0); shape.closePath();
+  const geometry = new THREE.ExtrudeGeometry(shape, {
+    depth, steps: 1, curveSegments: 28, bevelEnabled: true,
+    bevelSize: .006, bevelThickness: .006, bevelSegments: 1,
+  });
+  geometry.translate(0, 0, -depth / 2); return geometry;
 }
 
 export function naturalRock(seed: number, detail = 3) {
@@ -126,15 +147,21 @@ export function pineSpray(seed: number) {
   result.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); result.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); result.computeVertexNormals(); return result;
 }
 
-export function mountainRing(radius: number, base: number, height: number, seed: number) {
-  const r = seeded(seed), peaks = Array.from({ length: 15 }, (_, i) => ({ angle: i / 15 * Math.PI * 2, h: .35 + r() * .65, width: .1 + r() * .13 }));
-  return gridSurface(160, 2, (u, v) => {
-    const a = u * Math.PI * 2;
-    let top = 0;
-    for (const p of peaks) { const d = Math.atan2(Math.sin(a - p.angle), Math.cos(a - p.angle)); top = Math.max(top, Math.exp(-Math.pow(d / p.width, 2)) * p.h); }
-    const distance = radius + Math.sin(a * 11 + seed) * 3 + (1 - v) * 8;
-    return new THREE.Vector3(Math.sin(a) * distance, THREE.MathUtils.lerp(base - 35, base + height * top, v), Math.cos(a) * distance);
-  }, true);
+/** A thin, scalloped needle mass. Three offset layers read as pine boughs, not round foliage balls. */
+export function pineCrown(seed: number) {
+  const geometry = new THREE.SphereGeometry(1, 32, 8), positions = geometry.attributes.position;
+  const colors: number[] = [], dark = new THREE.Color('#496b4e'), light = new THREE.Color('#829665');
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i), angle = Math.atan2(z, x);
+    const edge = 1 + .12 * Math.sin(angle * 3 + seed) + .09 * Math.cos(angle * 5 - seed * .31)
+      + .035 * Math.sin(angle * 11 + seed * .73);
+    const yy = y * .19 + .035 * Math.sin(x * 4.2 + seed) * Math.cos(z * 3.6) * (1 - y * y);
+    positions.setXYZ(i, x * edge * (1 + .12 * Math.sin(z * 3.2 + seed)), yy, z * edge * .75);
+    const color = dark.clone().lerp(light, THREE.MathUtils.clamp(.34 + (y + 1) * .24 + Math.sin(x * 4 + z * 3 + seed) * .055, 0, 1));
+    colors.push(color.r, color.g, color.b);
+  }
+  geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.computeVertexNormals(); return geometry;
 }
 
 export function mistTexture() {

@@ -23,7 +23,7 @@ export function createFurnishingInk(isEn: boolean) {
     return result;
   }
 
-  function paper(ctx: CanvasRenderingContext2D, width: number, height: number, tint = '#e7dcc0') {
+  function paper(ctx: CanvasRenderingContext2D, width: number, height: number, tint = '#e8e3d1') {
     ctx.fillStyle = tint;
     ctx.fillRect(0, 0, width, height);
     for (let i = 0; i < 2200; i++) {
@@ -58,7 +58,7 @@ export function createFurnishingInk(isEn: boolean) {
     const y = Math.floor(index / 4) * 512;
     atlas.ctx.save();
     atlas.ctx.translate(x, y);
-    paper(atlas.ctx, 128, 512, index % 3 === 0 ? '#e3d1ab' : '#ece2ca');
+    paper(atlas.ctx, 128, 512, index % 3 === 0 ? '#e0d9c7' : '#eee9dc');
     atlas.ctx.strokeStyle = 'rgba(84,62,35,.48)';
     atlas.ctx.lineWidth = 1.5;
     atlas.ctx.strokeRect(13, 16, 102, 480);
@@ -76,7 +76,7 @@ export function createFurnishingInk(isEn: boolean) {
   const bookAtlas = texture(atlas.canvas);
 
   const edge = canvas(512, 64);
-  paper(edge.ctx, 512, 64, '#d7ccb1');
+  paper(edge.ctx, 512, 64, '#d9d4c3');
   for (let x = 1; x < 512; x += 3) {
     edge.ctx.strokeStyle = x % 9 === 1 ? 'rgba(102,83,48,.22)' : 'rgba(255,250,223,.40)';
     edge.ctx.lineWidth = x % 9 === 1 ? .6 : 1;

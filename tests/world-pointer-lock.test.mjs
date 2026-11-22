@@ -100,8 +100,7 @@ test('rapid clicks do not queue competing native Promise requests', async () => 
 test('a cancelled Promise cannot retry or change input mode, and a fresh gesture can start later', async () => {
   const first = deferred(), second = deferred();
   const h = harness((_raw, number) => number === 1 ? first.promise : second.promise);
-  h.controller.start(); h.controller.cancel(); h.controller.start();
-  assert.deepEqual(h.calls, [true], 'Do not overlap an unsettled native request.');
+  h.controller.start(); h.controller.cancel();
   first.reject(failure('NotSupportedError'));
   await nextTurn();
   assert.equal(h.fallbackCount(), 0);
@@ -114,9 +113,9 @@ test('a cancelled Promise cannot retry or change input mode, and a fresh gesture
   assert.equal(h.fallbackCount(), 0);
 });
 
-test('a cancelled event-only request cannot make its late error fail a new request', () => {
+test('a cancelled event-only request stays ignored unless a new gesture renews it', () => {
   const h = harness(() => undefined);
-  h.controller.start(); h.controller.cancel(); h.controller.start();
+  h.controller.start(); h.controller.cancel();
   assert.deepEqual(h.calls, [true]);
   h.controller.onError();
   assert.equal(h.fallbackCount(), 0);
@@ -124,6 +123,40 @@ test('a cancelled event-only request cannot make its late error fail a new reque
   assert.deepEqual(h.calls, [true, true]);
   h.controller.onError();
   assert.equal(h.fallbackCount(), 1);
+});
+
+test('an explicit resume while a Promise is pending reaches fallback instead of waiting forever', async () => {
+  const pending = deferred();
+  const h = harness(() => pending.promise);
+  h.controller.start(); h.controller.cancel(); h.controller.start();
+  assert.deepEqual(h.calls, [true], 'Renew intent without overlapping native requests.');
+  h.controller.onError();
+  assert.equal(h.fallbackCount(), 0, 'The generic event must still wait for its Promise.');
+  pending.reject(failure('NotAllowedError'));
+  await nextTurn();
+  assert.equal(h.fallbackCount(), 1);
+  assert.deepEqual(h.calls, [true], 'An activation failure never causes a retry.');
+});
+
+test('an explicit resume renews an event-only request without misattributing another request', () => {
+  const h = harness(() => undefined);
+  h.controller.start(); h.controller.cancel(); h.controller.start();
+  assert.deepEqual(h.calls, [true]);
+  h.controller.onError();
+  assert.equal(h.fallbackCount(), 1);
+  h.controller.start(); h.controller.onLocked();
+  assert.deepEqual(h.calls, [true, true]);
+  assert.equal(h.fallbackCount(), 1);
+});
+
+test('cancelling a renewed request again prevents its late retry and fallback', async () => {
+  const pending = deferred();
+  const h = harness(() => pending.promise);
+  h.controller.start(); h.controller.cancel(); h.controller.start(); h.controller.cancel();
+  pending.reject(failure('NotSupportedError'));
+  await nextTurn();
+  assert.deepEqual(h.calls, [true]);
+  assert.equal(h.fallbackCount(), 0);
 });
 
 test('lockchange is authoritative even if an old Promise rejects after a new request starts', async () => {

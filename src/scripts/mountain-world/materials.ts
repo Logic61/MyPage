@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export type SurfaceKind = 'stone' | 'darkStone' | 'ground' | 'wood' | 'bark' | 'paper' | 'cloth' | 'brass' | 'ceramic' | 'moss';
+export type SurfaceKind = 'stone' | 'darkStone' | 'ground' | 'wood' | 'paleWood' | 'plaster' | 'limestone' | 'roofTile' | 'bark' | 'paper' | 'cloth' | 'brass' | 'ceramic' | 'moss';
 
 export interface SurfaceOptions {
   /** Multiplies the baked albedo, like MeshStandardMaterial.color. */
@@ -43,10 +43,14 @@ const mix = (a: number, b: number, amount: number) => a + (b - a) * amount;
 const wrapDistance = (value: number) => value - Math.floor(value + 0.5);
 
 const definitions: Record<SurfaceKind, { seed: number; size: number; depth: number; metalness: number }> = {
-  stone:     { seed: 173, size: 1024, depth: 0.027, metalness: 0 },
-  darkStone: { seed: 173, size: 512, depth: 0.030, metalness: 0 },
+  stone:     { seed: 173, size: 1024, depth: 0.021, metalness: 0 },
+  darkStone: { seed: 173, size: 512, depth: 0.024, metalness: 0 },
   ground:    { seed: 397, size: 512, depth: 0.018, metalness: 0 },
   wood:      { seed: 821, size: 512, depth: 0.010, metalness: 0 },
+  paleWood:  { seed: 821, size: 512, depth: 0.006, metalness: 0 },
+  plaster:   { seed: 487, size: 256, depth: 0.0012, metalness: 0 },
+  limestone: { seed: 149, size: 512, depth: 0.0035, metalness: 0 },
+  roofTile:  { seed: 257, size: 512, depth: 0.003, metalness: 0 },
   bark:      { seed: 283, size: 512, depth: 0.032, metalness: 0 },
   paper:     { seed: 631, size: 512, depth: 0.0015, metalness: 0 },
   cloth:     { seed: 347, size: 512, depth: 0.003, metalness: 0 },
@@ -137,6 +141,31 @@ function generateTextures(kind: SurfaceKind): TextureSet {
     let r = 0.5, g = 0.5, b = 0.5, height = 0.5, roughness = 0.9, ao = 1, metal = 0;
 
     switch (kind) {
+      case 'plaster': {
+        // Millimetre relief and slow tonal variation leave a quiet wall at room scale.
+        const trowel = noise(waterFlow, u, v);
+        const pores = smooth(.78, .94, noise(grain, u, v));
+        const shade = .98 + (broad - .5) * .024 + (trowel - .5) * .015 + (micro - .5) * .009;
+        r = .915 * shade; g = .913 * shade; b = .875 * shade;
+        height = .5 + (detail - .5) * .035 + (micro - .5) * .024 - pores * .012;
+        roughness = .92 + (micro - .5) * .04; ao = 1 - pores * .018;
+        break;
+      }
+      case 'limestone': {
+        const vein = Math.sin(TAU * (v * 3 + broad * .13 + patch * .07));
+        const shade = .98 + (broad - .5) * .045 + (patch - .5) * .024 + vein * .008 + (micro - .5) * .012;
+        r = .735 * shade; g = .76 * shade; b = .735 * shade;
+        height = .5 + (detail - .5) * .04 + (micro - .5) * .025 + vein * .006;
+        roughness = .77 + (micro - .5) * .06;
+        break;
+      }
+      case 'roofTile': {
+        const shade = .98 + (broad - .5) * .10 + (patch - .5) * .05 + (micro - .5) * .025;
+        r = .255 * shade; g = .315 * shade; b = .325 * shade;
+        height = .5 + (detail - .5) * .045 + (micro - .5) * .03;
+        roughness = .68 + (patch - .5) * .08;
+        break;
+      }
       case 'stone':
       case 'darkStone': {
         const warpedU = u + (patch - 0.5) * 0.12 + (detail - 0.5) * 0.025;
@@ -154,12 +183,12 @@ function generateTextures(kind: SurfaceKind): TextureSet {
           * smooth(0.26, 0.65, detail);
         const mineral = smooth(0.71, 0.88, micro) * (0.25 + detail * 0.75);
         const damp = smooth(0.59, 0.86, noise(waterFlow, u, v) * 0.62 + broad * 0.38);
-        const shade = 0.84 + broad * 0.20 + patch * 0.11 + sediment * 0.05
-          + (detail - 0.5) * 0.08 + (micro - 0.5) * 0.065 - lamina * 0.035;
+        const shade = 0.88 + broad * 0.14 + patch * 0.08 + sediment * 0.035
+          + (detail - 0.5) * 0.055 + (micro - 0.5) * 0.035 - lamina * 0.025;
         const dark = kind === 'darkStone';
-        r = (dark ? 0.33 : 0.51) * shade;
-        g = (dark ? 0.385 : 0.55) * shade;
-        b = (dark ? 0.39 : 0.56) * shade;
+        r = (dark ? 0.29 : 0.50) * shade;
+        g = (dark ? 0.35 : 0.55) * shade;
+        b = (dark ? 0.355 : 0.545) * shade;
         r += mineral * 0.030; g += mineral * 0.029; b += mineral * 0.025;
         r *= 1 - split * 0.22 - damp * 0.14;
         g *= 1 - split * 0.20 - damp * 0.10;
@@ -178,16 +207,17 @@ function generateTextures(kind: SurfaceKind): TextureSet {
         const damp = smooth(0.53, 0.78, broad * 0.6 + patch * 0.4);
         const wear = smooth(0.25, 0.75, detail);
         const shade = 0.83 + broad * 0.22 + patch * 0.09 + wear * 0.055 + (grit - 0.5) * 0.045;
-        r = 0.58 * shade * (1 - damp * 0.18 - crack * 0.20);
-        g = 0.565 * shade * (1 - damp * 0.14 - crack * 0.19);
-        b = 0.505 * shade * (1 - damp * 0.17 - crack * 0.18);
+        r = 0.49 * shade * (1 - damp * 0.18 - crack * 0.20);
+        g = 0.51 * shade * (1 - damp * 0.14 - crack * 0.19);
+        b = 0.465 * shade * (1 - damp * 0.17 - crack * 0.18);
         height = 0.5 + (detail - 0.5) * 0.11 + (micro - 0.5) * 0.022
           + (grit - 0.5) * 0.008 - crack * 0.045;
         ao = 1 - crack * 0.21 - (1 - wear) * 0.04;
         roughness = 0.91 - damp * 0.30 - wear * 0.055;
         break;
       }
-      case 'wood': {
+      case 'wood':
+      case 'paleWood': {
         const fiber = noise(lengthwise, u + (patch - 0.5) * 0.022, v);
         const fibrils = smooth(0.65, 0.91, noise(lengthwise, u * 2 + (detail - 0.5) * 0.008, v));
         // A single small knot and quiet growth rings keep a large desktop calm.
@@ -202,13 +232,14 @@ function generateTextures(kind: SurfaceKind): TextureSet {
         const silvered = smooth(0.57, 0.86, broad * 0.7 + detail * 0.3) * 0.35;
         const shade = 0.94 + patch * 0.075 + (fiber - 0.5) * 0.045
           - latewood * 0.065 - knot * 0.13 - split * 0.11 - fibrils * 0.022;
-        r = mix(0.49 * shade, 0.455 * shade, silvered);
-        g = mix(0.41 * shade, 0.435 * shade, silvered);
-        b = mix(0.335 * shade, 0.395 * shade, silvered);
+        const pale = kind === 'paleWood';
+        r = mix((pale ? .69 : .38) * shade, (pale ? .65 : .36) * shade, silvered);
+        g = mix((pale ? .615 : .33) * shade, (pale ? .62 : .355) * shade, silvered);
+        b = mix((pale ? .49 : .285) * shade, (pale ? .54 : .325) * shade, silvered);
         height = 0.5 + latewood * 0.018 + (fiber - 0.5) * 0.035 + fibrils * 0.012
           + (detail - 0.5) * 0.012 - split * 0.065 - knot * 0.025;
         ao = 1 - split * 0.17 - knot * 0.045;
-        roughness = clamp(0.72 + fiber * 0.12 + silvered * 0.12 - latewood * 0.035, 0.62, 0.94);
+        roughness = clamp(0.63 + fiber * 0.10 + silvered * 0.12 - latewood * 0.035, 0.55, 0.88);
         break;
       }
       case 'bark': {
@@ -231,7 +262,7 @@ function generateTextures(kind: SurfaceKind): TextureSet {
         const fibers = noise(lengthwise, u, v) * 0.56 + noise(crosswise, u, v) * 0.44;
         const thread = smooth(0.64, 0.82, fibers);
         const shade = 0.96 + (broad - 0.5) * 0.055 + (fibers - 0.5) * 0.065 + thread * 0.025;
-        r = 0.905 * shade; g = 0.855 * shade; b = 0.745 * shade;
+        r = 0.91 * shade; g = 0.89 * shade; b = 0.82 * shade;
         height = 0.5 + (fibers - 0.5) * 0.08 + thread * 0.024 + (micro - 0.5) * 0.017;
         ao = 0.985 + fibers * 0.015;
         roughness = 0.93 + micro * 0.06;
@@ -244,7 +275,7 @@ function generateTextures(kind: SurfaceKind): TextureSet {
         const thread = over ? warp * 0.72 + weft * 0.28 : weft * 0.72 + warp * 0.28;
         const pore = (1 - warp) * (1 - weft);
         const shade = 0.91 + broad * 0.13 + (thread - 0.5) * 0.13 + (micro - 0.5) * 0.02;
-        r = 0.485 * shade; g = 0.57 * shade; b = 0.525 * shade;
+        r = 0.315 * shade; g = 0.41 * shade; b = 0.385 * shade;
         height = 0.45 + thread * 0.12 - pore * 0.035;
         ao = 1 - pore * 0.17;
         roughness = 0.92 + pore * 0.075;
@@ -464,9 +495,9 @@ export function createSurfaceLibrary(): SurfaceLibrary {
         mapping: useWorld ? 'world-triplanar' : 'uv',
         worldUnitsPerTile: useWorld ? 1 / options.worldScale! : undefined,
         repeat: repeat.toArray(),
-        rotateHorizontalProjection: useWorld && kind === 'wood',
+        rotateHorizontalProjection: useWorld && (kind === 'wood' || kind === 'paleWood'),
       };
-      if (useWorld) applyTriplanar(mat, options.worldScale!, repeat, kind === 'wood');
+      if (useWorld) applyTriplanar(mat, options.worldScale!, repeat, kind === 'wood' || kind === 'paleWood');
       ownMaterials.add(mat);
       return mat;
     },

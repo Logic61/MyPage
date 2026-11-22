@@ -28,6 +28,8 @@ export interface Furnishings {
   root: THREE.Group;
   colliders: Collider[];
   interactions: Interaction[];
+  /** Local decorative image loading; the scene is usable immediately with a canvas fallback. */
+  assetsReady: Promise<void>;
   update: (time: number, delta: number, selectedId: string | null) => void;
   dispose: () => void;
 }

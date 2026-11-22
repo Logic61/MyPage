@@ -1,6 +1,15 @@
 export type LookInput = 'locked' | 'drag' | 'touch';
 type Position = { x: number; y: number; z: number };
 
+/** CSS client coordinates, not drawing-buffer pixels, determine the visible mouse ray. */
+export function pointerToNDC(clientX: number, clientY: number, rect: { left: number; top: number; width: number; height: number }) {
+  if (![clientX, clientY, rect.left, rect.top, rect.width, rect.height].every(Number.isFinite)
+    || rect.width <= 0 || rect.height <= 0) return null;
+  const x = (clientX - rect.left) / rect.width, y = (clientY - rect.top) / rect.height;
+  if (x < 0 || x > 1 || y < 0 || y > 1) return null;
+  return { x: x * 2 - 1, y: 1 - y * 2 };
+}
+
 const PITCH_LIMIT = 1.4;
 const MOUSE_GAIN = 0.0021;
 const TOUCH_GAIN = 0.0035;

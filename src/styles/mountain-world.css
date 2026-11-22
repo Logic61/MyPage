@@ -24,6 +24,9 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-tools svg { width: 21px; height: 21px; }
 .mw-directory-button { display: flex; align-items: center; gap: 9px; padding: 9px 16px 9px 11px; font-size: 15px; letter-spacing: .1em; border-right: 1px solid var(--mw-rule); }
 .mw-tool-button { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: inherit; min-width: 39px; min-height: 40px; transition: color .2s; }
+.mw-lock-button { display: none; align-items: center; gap: 8px; min-height: 40px; padding: 7px 12px; border: 1px solid rgba(221,191,131,.35); border-radius: 3px; color: #e9d4ac; background: rgba(20,34,35,.7); font-size: 14px; white-space: nowrap; }
+.mw-lock-button svg { width: 18px; height: 18px; }
+.mountain-world[data-state="ready"][data-mode="exploring"][data-input-mode="pointer"] .mw-lock-button { display: inline-flex; }
 .mw-tools button:hover, .mw-tools a:hover { color: var(--mw-gold); }
 .mw-language { padding: 10px 2px 10px 7px; font-size: 13px; font-family: var(--font-sans,sans-serif); letter-spacing: .08em; }
 .mw-sound-waves { display: none; }
@@ -248,7 +251,19 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-settings select { background: #263c3b; color: #e2dfce; border: 1px solid #53635a; border-radius: 0; padding: 5px 25px 5px 9px; min-width: 112px; }
 .mw-settings input[type="range"] { max-width: 140px; width: 42%; accent-color: #d2bb8d; }
 .mw-settings input[type="checkbox"] { accent-color: #d2bb8d; width: 16px; height: 16px; margin-right: 0; }
-.mw-reticle { position: absolute; z-index: 3; left: 50%; top: 50%; width: 17px; height: 17px; transform: translate(-50%,-50%); display: grid; place-items: center; border: 1px solid transparent; border-radius: 50%; pointer-events: none; transition: border-color .18s,transform .18s; }
+.mw-reticle { position: absolute; z-index: 3; left: 50%; top: 50%; width: 17px; height: 17px; transform: translate(-50%,-50%); display: none; place-items: center; border: 1px solid transparent; border-radius: 50%; pointer-events: none; transition: border-color .18s,transform .18s; }
+.mountain-world[data-state="ready"][data-mode="exploring"]:is([data-input-mode="locked"],[data-input-mode="drag"],[data-input-mode="touch"]) .mw-reticle { display: grid; }
+.mountain-world[data-mode="exploring"]:is([data-input-mode="locked"],[data-input-mode="drag"]) #mountain-canvas { cursor: none; }
+.mountain-world[data-mode="exploring"][data-input-mode="pointer"] #mountain-canvas { cursor: default; }
+.mountain-world[data-mode="exploring"][data-input-mode="pointer"][data-aimed="true"] #mountain-canvas { cursor: pointer; }
+.mountain-world[data-mode="exploring"][data-input-mode="pending"] #mountain-canvas { cursor: progress; }
+.mountain-world[data-input-mode="pointer"] .mw-interact { pointer-events: none; transform: translate(-50%,0); }
+.mountain-world[data-input-mode="pointer"] .mw-interact::after { top: -6px; bottom: auto; border: 0; border-left: 1px solid rgba(232,200,144,.45); border-top: 1px solid rgba(232,200,144,.45); }
+.mountain-world:is([data-input-mode="pending"],[data-input-mode="none"]) .mw-interact { visibility: hidden; pointer-events: none; }
+.mw-look-pointer, .mw-look-pending { display: none; }
+.mountain-world:is([data-input-mode="pointer"],[data-input-mode="drag"]) .mw-look-pointer,
+.mountain-world[data-input-mode="pending"] .mw-look-pending { display: inline; }
+.mountain-world:is([data-input-mode="pointer"],[data-input-mode="drag"],[data-input-mode="pending"]) .mw-look-locked { display: none; }
 .mw-reticle > span { width: 3px; height: 3px; border-radius: 50%; background: rgba(247,241,218,.8); box-shadow: 0 0 2px 1px rgba(19,30,28,.5); }
 .mountain-world[data-aimed="true"] .mw-reticle { border-color: rgba(232,201,144,.7); transform: translate(-50%,-50%) scale(1.12); }
 .mountain-world[data-aimed="true"] .mw-reticle > span { background: #ffe1a4; }
@@ -266,7 +281,7 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mountain-world[data-mode="welcome"] .mw-hud,
 .mountain-world[data-mode="paused"] .mw-hud { opacity: 0; visibility: hidden; }
 .mountain-world[data-mode="transition"] .mw-hint { opacity: 0; }
-.mountain-world[data-touch="true"][data-mode="exploring"] .mw-thumbstick { display: block; }
+.mountain-world[data-state="ready"][data-touch="true"][data-mode="exploring"] .mw-thumbstick { display: block; }
 .mountain-world[data-touch="true"] .mw-hint-desktop { display: none !important; }
 .mountain-world[data-touch="true"] .mw-hint-touch { display: block !important; }
 .mountain-world[data-touch="false"] .mw-hint-touch { display: none !important; }
@@ -287,6 +302,9 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
   .mountain-world[data-touch="true"] .mw-hint { bottom: 130px; left: auto; right: 0; transform: none; max-width: 52vw; }
   .mountain-world .mw-interact { font-size: 14px; min-height: 44px; padding: 10px 14px; }
   .mw-tools { gap: 0; }
+  .mw-lock-button { padding: 7px 9px; }
+  .mw-lock-button span { display: none; }
+  .mountain-world[data-input-mode="pointer"] .mw-brand-type { display: none; }
   .mw-toast { bottom: 220px; }
 }
 @media (max-height: 620px) and (min-width: 601px) {

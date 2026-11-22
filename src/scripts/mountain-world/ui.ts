@@ -155,7 +155,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     toolbar.hidden = false;
     status.hidden = false;
     status.textContent = en ? 'Opening the page…' : '正在翻开这一页…';
-    title.textContent = kind === 'projects' ? (en ? 'Work & experiments' : '作品与实践') : kind === 'about' ? (en ? 'A letter from the host' : '一纸信笺') : (en ? 'Reading' : '灯下阅读');
+    title.textContent = kind === 'projects' ? (en ? 'Work & experiments' : '作品与实践') : kind === 'about' ? (en ? 'A letter from the host' : '一纸信笺') : (en ? 'Reading' : '庭畔阅读');
     eyebrow.textContent = kind === 'projects' ? (en ? 'ON THE WORKBENCH' : '工作案上') : kind === 'about' ? (en ? 'ABOUT & CURRICULUM VITAE' : '关于与简历') : (en ? 'A PAGE FROM THE STUDY' : '取一页，慢慢读');
     original.href = pageURL.href;
     scroll.scrollTop = 0;
@@ -303,7 +303,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
       if (screen && Number.isFinite(screen.x) && Number.isFinite(screen.y)) {
         const margin = Math.min(root.clientWidth / 2, Math.max(100, prompt.offsetWidth / 2 + 12));
         prompt.style.left = `${Math.max(margin, Math.min(root.clientWidth - margin, screen.x))}px`;
-        prompt.style.top = `${Math.max(130, Math.min(root.clientHeight - 145, screen.y - 16))}px`;
+        prompt.style.top = `${Math.max(110, Math.min(root.clientHeight - 145, screen.y + 24))}px`;
       } else { prompt.style.left = '50%'; prompt.style.top = 'calc(50% + 42px)'; }
     },
     showToast,

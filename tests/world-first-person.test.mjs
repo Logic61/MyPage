@@ -9,8 +9,8 @@ function referencePicker(roots, interactions) {
   roots.forEach(root => root.traverse(object => { if (object instanceof THREE.Mesh) meshes.push(object); }));
   interactions.forEach(item => item.meshes.forEach(root => root.traverse(object => owner.set(object, item))));
   ray.near = .03; ray.far = Math.max(0, ...interactions.map(item => item.radius));
-  return camera => {
-    camera.updateMatrixWorld(); ray.setFromCamera(centre, camera);
+  return (camera, point = centre) => {
+    camera.updateMatrixWorld(); ray.setFromCamera(point, camera);
     for (const hit of ray.intersectObjects(meshes, false)) {
       let visible = true;
       for (let p = hit.object; p; p = p.parent) if (!p.visible || p.userData.ignoreInteractionRay === true) visible = false;
@@ -68,6 +68,32 @@ test('turning away cannot activate a book that happens to remain nearby', () => 
   assert.equal(pick(), item);
   camera.rotation.y = Math.PI;
   assert.equal(pick(), null);
+});
+
+test('an off-centre mouse ray selects its own object with the same exact occlusion and reach rules', () => {
+  const root = new THREE.Group(), camera = new THREE.PerspectiveCamera(67, 1.5, .055, 100);
+  const material = new THREE.MeshStandardMaterial();
+  const centreBook = new THREE.Mesh(new THREE.BoxGeometry(.25, .6, .1), material);
+  centreBook.position.set(0, 0, -1.5); root.add(centreBook);
+  const sideBook = new THREE.Mesh(centreBook.geometry, material);
+  sideBook.position.set(.75, .2, -1.5); root.add(sideBook);
+  const blocker = new THREE.Mesh(new THREE.BoxGeometry(.3, .35, .08, 16, 16, 4), material);
+  blocker.position.copy(sideBook.position).multiplyScalar(.5); blocker.visible = false; root.add(blocker);
+  const central = { id: 'centre', radius: 2.2, meshes: [centreBook] };
+  const side = { id: 'side', radius: 2.2, meshes: [sideBook] };
+  const picker = createInteractionPicker([root], [central, side]), reference = referencePicker([root], [central, side]);
+  root.updateMatrixWorld(true); camera.updateMatrixWorld(true);
+  const projected = sideBook.position.clone().project(camera);
+  const point = new THREE.Vector2(projected.x, projected.y);
+  assert.equal(picker.pick(camera), central);
+  assert.equal(picker.pick(camera, point), side);
+  assert.equal(picker.pick(camera, point), reference(camera, point));
+  blocker.visible = true;
+  assert.equal(picker.pick(camera, point), null);
+  assert.equal(picker.pick(camera, point), reference(camera, point));
+  assert.equal(picker.pick(camera), central, 'The off-axis blocker does not block the centre ray.');
+  blocker.visible = false; side.radius = .9;
+  assert.equal(picker.pick(camera, point), null);
 });
 
 test('first-person movement follows camera yaw and diagonal input has no speed advantage', () => {

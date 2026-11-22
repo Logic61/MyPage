@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary, type SurfaceKind, type SurfaceOptions } from './materials';
 import { createFurnishingInk } from './furnishing-ink';
+import { createBenchCushionGeometry, createScreenArtwork } from './furnishing-design';
 import type { Collider, Furnishings, Interaction } from './types';
 
 /** Human-scale furnishings: all dimensions are metres; the common floor is y=.3. */
@@ -17,6 +18,8 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   const materials = new Set<THREE.Material>();
   const geometryCache = new Map<string, THREE.BufferGeometry>();
   const lettering = createFurnishingInk(isEn);
+  const artwork = createScreenArtwork();
+  let disposed = false;
   const focusMaterials: { id: string; material: THREE.MeshStandardMaterial }[] = [];
 
   function geometry(key: string, create: () => THREE.BufferGeometry) {
@@ -40,21 +43,21 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     if (id) { mat.emissive.set('#c49351'); mat.emissiveIntensity = 0; focusMaterials.push({ id, material: mat }); }
     return mat;
   }
-  const wood = surface('wood', { worldScale: .9, roughness: .88, normalScale: .55 });
-  const woodDark = surface('wood', { color: '#b9b2a8', worldScale: .9, roughness: 1, normalScale: .55 });
-  const woodEdge = surface('wood', { color: '#fff3dc', worldScale: .9, roughness: .8, normalScale: .42 });
+  const wood = surface('wood', { worldScale: .9, roughness: .72, normalScale: .42 });
+  const woodDark = surface('wood', { color: '#d3d9d5', worldScale: .9, roughness: .82, normalScale: .42 });
+  const woodEdge = surface('wood', { color: '#f2f0e9', worldScale: .9, roughness: .65, normalScale: .36 });
   const paper = surface('paper', { roughness: 1, normalScale: .35 });
   const paperEdge = surface('paper', { roughness: 1, normalScale: .25 });
   paperEdge.map = lettering.pageEdges;
-  const brass = surface('brass', { roughness: .85, metalness: .88, normalScale: .25, worldScale: 3 });
-  const brassDark = surface('brass', { color: '#d2d8ca', roughness: 1.3, metalness: .72, normalScale: .25, worldScale: 3 });
-  const ceramic = surface('ceramic', { roughness: 1, normalScale: .28, worldScale: 5 });
+  const brass = surface('brass', { roughness: .44, metalness: .92, normalScale: .18, worldScale: 3 });
+  const brassDark = surface('brass', { color: '#d2d8ca', roughness: .72, metalness: .82, normalScale: .18, worldScale: 3 });
+  const ceramic = surface('ceramic', { roughness: .36, normalScale: .18, worldScale: 5 });
   const inkstone = surface('darkStone', { color: '#b8bfbd', roughness: .85, normalScale: .25, worldScale: 4 });
   const ink = material({ color: '#182724', roughness: .23, metalness: .08 });
   const cord = material({ color: '#c5b38a', roughness: .97 });
   const red = material({ color: '#934b38', roughness: .64 });
   const wax = material({ color: '#9a4938', roughness: .46 });
-  const cloth = surface('cloth', { color: '#d6e1d6', roughness: 1, normalScale: .65, side: THREE.DoubleSide, worldScale: 2 });
+  const cloth = surface('cloth', { roughness: .96, normalScale: .48, side: THREE.DoubleSide, worldScale: 2 });
   const bindings = ['#cee2dc', '#e6c7ac', '#a4bce2', '#e4dbae', '#c7cfb3', '#e4bab0'].map(color =>
     surface('cloth', { color, roughness: 1, normalScale: .42 }));
   const tagMaterial = surface('paper', { normalScale: .22 });
@@ -187,7 +190,8 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
       coverLabel.rotation.y = side * Math.PI / 2;
     }
     bevel(result, binding, thickness, height, .012, 0, 0, depth / 2 - .004, .0015);
-    bookTag(result, title, Math.min(thickness * .70, .043), height * .77, 0, .005, depth / 2 + .0025);
+    // Some volumes have bare cloth spines: the shelf reads as books, not repeated ivory bars.
+    if (title % 3 !== 1) bookTag(result, title, Math.min(thickness * .62, .039), height * .68, 0, .012, depth / 2 + .0025);
     // Four stitched stations and their connecting thread are geometry, not a painted motif.
     for (const yy of [-.35, -.12, .12, .35]) {
       rod(result, cord, new THREE.Vector3(-thickness / 2 - .001, yy * height, depth / 2 - .011),
@@ -208,9 +212,38 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     parent.add(book); return thickness;
   }
 
-  // A smaller hanging scroll stays above the writing desk, on the actual rock wall.
-  const hangingScroll = group('north-wall-inscribed-scroll', -.5, -9.82);
-  hangingScroll.position.y = 2.65;
+  // A single circular landscape is the room's principal composition, with real depth and a silk face.
+  const screen = group('circular-landscape-screen', -.5, -9.36);
+  screen.position.y = 2.5;
+  const screenFrame = geometry('screen-deep-bevelled-wood-ring', () => {
+    const shape = new THREE.Shape(); shape.absarc(0, 0, 1.60, 0, Math.PI * 2, false);
+    const hole = new THREE.Path(); hole.absarc(0, 0, 1.46, 0, Math.PI * 2, true); shape.holes.push(hole);
+    const result = new THREE.ExtrudeGeometry(shape, { depth: .12, steps: 1, curveSegments: 80,
+      bevelEnabled: true, bevelThickness: .012, bevelSize: .008, bevelSegments: 3 });
+    result.translate(0, 0, -.06); return result;
+  });
+  mesh(screen, screenFrame, woodDark);
+  cylinder(screen, wood, 1.535, 1.535, .045, 0, 0, -.045, 96).rotation.x = Math.PI / 2;
+  torus(screen, woodEdge, 1.565, .012, 0, 0, .061, 96);
+  torus(screen, brass, 1.469, .0065, 0, 0, .074, 96);
+  const silk = surface('paper', { color: '#ffffff', roughness: .98, normalScale: .12 });
+  silk.name = 'non-emissive-landscape-silk'; silk.map = artwork.texture;
+  silk.userData.artworkSource = 'canvas-fallback';
+  mesh(screen, geometry('screen-silk-circle', () => new THREE.CircleGeometry(1.46, 96)), silk, 0, 0, .066, false);
+  for (const xx of [-.9, .9]) for (const yy of [-.9, .9]) {
+    cylinder(screen, woodDark, .045, .045, .45, xx, yy, -.285, 12).rotation.x = Math.PI / 2;
+  }
+  batchStatic(screen);
+  colliders.push({ x: -.5, z: -9.5, halfX: 1.64, halfZ: .26 });
+  const assetsReady = artwork.ready.then(texture => {
+    if (disposed) return;
+    silk.map = texture; silk.needsUpdate = true;
+    silk.userData.artworkSource = artwork.loaded ? 'generated-local-artwork' : 'canvas-fallback';
+  });
+
+  // The personal motto remains a secondary, smaller object on the west wall.
+  const hangingScroll = group('north-wall-inscribed-scroll', 4.4, -9.80);
+  hangingScroll.position.y = 2.55; hangingScroll.scale.setScalar(.60);
   bevel(hangingScroll, cloth, 1.15, 1.62, .016, 0, 0, -.018, .002);
   const scrollSheet = geometry('hanging-scroll-paper', () => {
     const result = new THREE.PlaneGeometry(.99, 1.45, 8, 20);
@@ -232,7 +265,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   bevel(wallLamp, woodDark, .16, .42, .065, 0, .02, 0);
   bevel(wallLamp, wood, .038, .045, .25, 0, .24, .10);
   const wallPaper = surface('paper', { roughness: 1, normalScale: .25 });
-  wallPaper.emissive.set('#ffbc6e'); wallPaper.emissiveIntensity = .9;
+  wallPaper.emissive.set('#ffcea0'); wallPaper.emissiveIntensity = .42;
   cylinder(wallLamp, wallPaper, .115, .115, .31, 0, .02, .23, 24);
   for (const yy of [-.145, .185]) {
     cylinder(wallLamp, woodDark, .128, .128, .024, 0, yy, .23, 24);
@@ -243,22 +276,22 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     cylinder(wallLamp, wood, .0032, .0032, .32, Math.sin(a) * .117, .02, .23 + Math.cos(a) * .117, 5);
   }
   cylinder(wallLamp, cord, .0035, .0035, .07, 0, .22, .23, 6);
-  const studyLight = new THREE.PointLight('#ffc58b', 8.5, 7.5, 2);
+  const studyLight = new THREE.PointLight('#ffe0b8', .9, 4.2, 2);
   studyLight.position.set(0, .02, .30); wallLamp.add(studyLight); batchStatic(wallLamp);
 
   // ---------------------------- The library ----------------------------
-  const shelf = group('library-carved-wood-shelf', -4, -6);
-  for (let i = 0; i < 7; i++) bevel(shelf, woodDark, .374, 1.98, .033, (i - 3) * .378, 1.16, -.245, .002);
+  const shelf = group('library-carved-wood-shelf', -5.55, -3.2); shelf.rotation.y = Math.PI / 2;
+  for (let i = 0; i < 3; i++) bevel(shelf, woodDark, .874, 1.98, .033, (i - 1) * .88, 1.16, -.245, .002);
   for (const xx of [-1.34, 1.34]) {
     bevel(shelf, wood, .085, 2.15, .48, xx, 1.10, 0);
     bevel(shelf, woodDark, .17, .11, .54, xx, .055, 0);
     bevel(shelf, woodEdge, .018, 1.92, .012, xx - Math.sign(xx) * .026, 1.15, .247, .002);
-    for (const yy of [.19, .69, 1.19, 1.69, 2.14]) {
+    for (const yy of [.19, .72, 1.28, 1.79, 2.14]) {
       bevel(shelf, woodDark, .040, .042, .003, xx, yy, .244, .001);
       cylinder(shelf, brassDark, .004, .004, .004, xx, yy, .248, 8).rotation.x = Math.PI / 2;
     }
   }
-  const levels = [.18, .68, 1.18, 1.68];
+  const levels = [.18, .72, 1.28, 1.79];
   for (const yy of [...levels, 2.16]) {
     bevel(shelf, wood, 2.72, .048, .52, 0, yy, 0);
     bevel(shelf, woodEdge, 2.59, .009, .016, 0, yy + .006, .269, .0015);
@@ -269,41 +302,62 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
   bevel(shelf, woodDark, 2.84, .055, .59, 0, 2.208, 0);
   bevel(shelf, woodEdge, 2.78, .014, .56, 0, 2.241, 0, .002);
+  // The dividers follow three unequal bays; empty space is part of the composition.
+  bevel(shelf, wood, .044, .48, .46, -.32, .45, -.01);
+  bevel(shelf, wood, .044, .51, .46, -.48, 1.0, -.01);
+  bevel(shelf, wood, .044, .83, .46, .36, 1.72, -.01);
+  for (const xx of [.04, .82]) {
+    bevel(shelf, wood, .74, .435, .035, xx, .45, .222, .005);
+    bevel(shelf, woodDark, .62, .32, .008, xx, .45, .244, .003);
+    cylinder(shelf, brassDark, .014, .014, .012, xx - .25, .45, .252, 16).rotation.x = Math.PI / 2;
+    const pull = torus(shelf, brass, .021, .003, xx - .25, .432, .262, 24); pull.scale.y = .8;
+  }
   const shelfTitle = written('shelf', 'books');
-  bevel(shelf, woodDark, .24, .31, .03, .94, 1.98, .29);
-  label(shelf, shelfTitle, .14, .25, .94, 1.98, .306);
+  bevel(shelf, woodDark, .19, .27, .027, .98, 1.98, .284);
+  label(shelf, shelfTitle, .105, .218, .98, 1.98, .299);
   let pulledBook: THREE.Group | null = null;
   let pulledBookBaseZ = 0;
-  for (let row = 0; row < 4; row++) {
+  function bookCluster(row: number, start: number, count: number, firstTitle: number, moving = -1) {
     const bottom = levels[row] + .024;
-    let xx = -1.22;
-    const count = row === 2 ? 18 : row === 3 ? 15 : 21;
+    let xx = start;
     for (let i = 0; i < count; i++) {
-      const thickness = .046 + ((i * 5 + row * 3) % 5) * .008;
-      const height = .29 + ((i * 7 + row) % 5) * .02;
-      const depth = .215 + i % 3 * .013;
-      const book = boundBook(thickness, height, depth, i + row * 2, i + row * 4);
-      book.position.set(xx + thickness / 2, bottom + height / 2, .085 + Math.sin(i * 7.1 + row) * .009);
-      if (row === 2 && i === 14) {
+      const thickness = .046 + ((i * 3 + row) % 4) * .008;
+      const height = (row === 3 ? .255 : .29) + ((i * 2 + row) % 4) * .018;
+      const depth = .215 + i % 3 * .012;
+      const book = boundBook(thickness, height, depth, i + row * 2, firstTitle + i);
+      book.position.set(xx + thickness / 2, bottom + height / 2, .065 + Math.sin(i * 1.7 + row) * .009);
+      if (i === moving) {
         pulledBook = book; book.name = 'book-that-slides-out'; pulledBookBaseZ = book.position.z;
       }
-      shelf.add(book); xx += thickness + .012;
-    }
-    let stackY = bottom;
-    if (row !== 3) for (let i = 0; i < 3; i++) stackY += lyingBook(shelf, .70, stackY, .036, row * 3 + i, .025 * (i - 1)) + .002;
-    else {
-      const display = boundBook(.035, .35, .236, 2, 0);
-      display.rotation.y = -Math.PI / 2 + .10;
-      display.position.set(.36, bottom + .175, .06);
-      shelf.add(display);
+      shelf.add(book); xx += thickness + .011;
     }
   }
+  function bookStack(row: number, x: number, count: number, firstTitle: number) {
+    let bottom = levels[row] + .024;
+    for (let i = 0; i < count; i++) bottom += lyingBook(shelf, x, bottom, .035, firstTitle + i, (i - 1) * .025) + .002;
+    return bottom;
+  }
+  bookCluster(0, -1.23, 7, 0);
+  bookCluster(1, -1.21, 7, 5);
+  bookStack(1, .82, 3, 10);
+  lathe(shelf, ceramic, 'shelf-shallow-bowl', [[.035,0],[.04,.008],[.092,.055],[.096,.066],[.091,.07],[.078,.052],[.035,.015],[0,.012]],
+    -.04, levels[1] + .024, .035);
+  bookStack(2, -.95, 4, 2);
+  bookCluster(2, -.31, 7, 8, 3);
+  lathe(shelf, ceramic, 'celadon-meiping-vase', [[.05,0],[.06,.012],[.073,.065],[.095,.165],[.081,.238],[.036,.285],[.035,.328],
+    [.040,.332],[.040,.340],[.030,.340],[.028,.292],[.071,.235],[.084,.17],[.060,.055],[.043,.016],[0,.016]],
+    .84, levels[2] + .024, .01, 40);
+  const display = boundBook(.034, .28, .234, 1, 0);
+  display.rotation.y = -Math.PI / 2 + .10;
+  display.position.set(-.99, levels[3] + .164, .065); shelf.add(display);
+  bookCluster(3, -.33, 5, 3);
+  bookStack(3, .65, 2, 11);
   batchStatic(shelf, pulledBook ? [pulledBook] : []);
   if (pulledBook) batchStatic(pulledBook);
-  colliders.push({ x: -4, z: -6, halfX: 1.43, halfZ: .32 });
+  colliders.push({ x: -5.55, z: -3.2, halfX: .32, halfZ: 1.43 });
   let bookOpen = false;
   interactions.push({ id: 'books', kind: 'books', label: '取一卷书', labelEn: 'Browse the library',
-    position: new THREE.Vector3(-4, 1.76, -5.76), approach: new THREE.Vector3(-4, .3, -4.55),
+    position: new THREE.Vector3(-5.31, 1.76, -3.2), approach: new THREE.Vector3(-3.7, .3, -3.2),
     radius: 2.15, meshes: [shelf], activate: () => { bookOpen = true; } });
 
   /** Framed top, breadboard ends, inset panels, mortise pegs, and shaped apron brackets. */
@@ -351,6 +405,13 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   // ---------------------- Writing desk and open book ----------------------
   const desk = group('writing-desk', 0, -7);
   writingTable(desk, 2.95, 1.25);
+  // One generous woven field gathers the writing tools; the tea and letter have their own space.
+  bevel(desk, cloth, 1.74, .003, .89, -.06, .7815, -.015, .0005);
+  const stitch = material({ color: '#a4aca0', roughness: .96 });
+  for (const xx of [-.91, .79]) rod(desk, stitch,
+    new THREE.Vector3(xx, .7833, -.435), new THREE.Vector3(xx, .7833, .405), .00065, 4);
+  for (const zz of [-.435, .405]) rod(desk, stitch,
+    new THREE.Vector3(-.91, .7833, zz), new THREE.Vector3(.79, .7833, zz), .00065, 4);
   const notebook = new THREE.Group();
   notebook.name = 'open-handwritten-notebook';
   notebook.position.set(-.38, .786, .08); notebook.rotation.y = -.10; desk.add(notebook);
@@ -382,6 +443,29 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   for (let i = 0; i < 4; i++) cylinder(notebook, red, .0008, .0008, .026, .077 + i * .0026, -.005, .270, 4).rotation.x = .38;
 
   const tableY = .78;
+  const deskLamp = new THREE.Group();
+  deskLamp.name = 'curved-stem-silk-desk-lamp'; deskLamp.position.set(-1.17, tableY, -.42); desk.add(deskLamp);
+  lathe(deskLamp, woodDark, 'desk-lamp-low-base', [[0,0],[.125,0],[.139,.012],[.135,.025],[.11,.033],[0,.033]], 0, 0, 0, 40);
+  torus(deskLamp, brassDark, .123, .0026, 0, .025, 0, 48).rotation.x = Math.PI / 2;
+  tube(deskLamp, brassDark, 'desk-lamp-curved-stem', [new THREE.Vector3(-.065,.025,0), new THREE.Vector3(-.11,.23,0),
+    new THREE.Vector3(-.095,.55,0), new THREE.Vector3(.07,.62,0), new THREE.Vector3(.10,.575,0)], .009, 32);
+  const deskShade = surface('paper', { roughness: .94, normalScale: .22, side: THREE.DoubleSide });
+  deskShade.emissive.set('#ffe1bd'); deskShade.emissiveIntensity = .24;
+  lathe(deskLamp, deskShade, 'desk-lamp-silk-shade', [[.112,0],[.131,.015],[.145,.06],[.143,.19],[.123,.29],[.103,.31]], .10,.258,0,40);
+  for (const yy of [.257, .57]) {
+    const r = yy < .3 ? .114 : .106;
+    cylinder(deskLamp, woodDark, r, r, .014, .10, yy, 0, 40);
+    torus(deskLamp, brassDark, r, .0025, .10, yy + .008, 0, 48).rotation.x = Math.PI / 2;
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = i * Math.PI / 3;
+    tube(deskLamp, woodEdge, `desk-lamp-silk-seam:${i}`, [new THREE.Vector3(.10 + Math.sin(a) * .112,.265,Math.cos(a) * .112),
+      new THREE.Vector3(.10 + Math.sin(a) * .146,.34,Math.cos(a) * .146),
+      new THREE.Vector3(.10 + Math.sin(a) * .143,.45,Math.cos(a) * .143),
+      new THREE.Vector3(.10 + Math.sin(a) * .104,.565,Math.cos(a) * .104)], .0016, 16);
+  }
+  const deskLight = new THREE.PointLight('#ffe0bb', .75, 2.5, 2);
+  deskLight.position.set(.10,.40,.01); deskLamp.add(deskLight);
   // Hollow ceramic forms have real rims, feet, and interiors at first-person distance.
   lathe(desk, ceramic, 'brush-pot-profile', [[.045,0],[.054,.008],[.057,.136],[.055,.145],[.050,.145],[.050,.012],[0,.012]], .48, tableY, -.35);
   for (let i = 0; i < 3; i++) {
@@ -405,6 +489,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   cylinder(restingBrush, woodEdge, .0038, .0048, .25, 0, 0, 0, 12);
   cylinder(restingBrush, brassDark, .0046, .0046, .018, 0, -.125, 0, 10);
   cylinder(restingBrush, ink, .0045, .0006, .047, 0, -.157, 0, 12);
+  const teaMat = bevel(desk, cloth, .32, .002, .27, -1.03, tableY + .001, .28, .0004); teaMat.rotation.y = -.08;
   lathe(desk, ceramic, 'tea-saucer-profile', [[0,0],[.045,0],[.087,.008],[.090,.015],[.085,.019],[.046,.009],[0,.007]], -1.03, tableY + .002, .28);
   lathe(desk, ceramic, 'tea-cup-profile', [[.028,0],[.030,.008],[.047,.021],[.062,.065],[.062,.069],[.058,.070],[.054,.062],[.040,.022],[.025,.014],[0,.014]], -1.03, tableY + .012, .28);
   const tea = material({ color: '#593b20', roughness: .13, metalness: .12 });
@@ -463,7 +548,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     meshes: [letter], activate: () => { letterOpen = true; } });
 
   // ----------------------- The instrument workbench -----------------------
-  const workbench = group('project-workbench', 3.65, -8.2); writingTable(workbench, 2.3, 1.1);
+  const workbench = group('project-workbench', 5, -2.8); workbench.rotation.y = -Math.PI / 2; writingTable(workbench, 2.3, 1.1);
   const instrumentBase = new THREE.Group(); instrumentBase.name = 'armillary-pedestal'; instrumentBase.position.set(-.15, 0, -.03); workbench.add(instrumentBase);
   bevel(instrumentBase, woodDark, .55, .042, .48, 0, .805, 0);
   bevel(instrumentBase, woodEdge, .51, .012, .44, 0, .832, 0, .002);
@@ -517,97 +602,104 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   for (let i = 0; i < 3; i++) bookHeight += lyingBook(workbench,-.86,bookHeight,-.03,8+i,(i-1)*.05)+.002;
   batchStatic(workbench,[armillary,instrumentBase,projectCard]); batchStatic(instrumentBase); batchStatic(projectCard);
   batchStatic(armillary,[outerRing,middle,inner]); batchStatic(outerRing); batchStatic(middle); batchStatic(inner);
-  colliders.push({ x: 3.65, z: -8.2, halfX: 1.16, halfZ: .565 });
+  colliders.push({ x: 5, z: -2.8, halfX: .565, halfZ: 1.16 });
   let instrumentImpulse = 0;
   interactions.push({ id:'projects',kind:'projects',label:'拨动浑天仪',labelEn:'Explore the workbench',
-    position:new THREE.Vector3(3.5,1.685,-8.23),approach:new THREE.Vector3(3.5,.3,-6.45),radius:2.45,
+    position:new THREE.Vector3(5.03,1.685,-2.95),approach:new THREE.Vector3(3.15,.3,-2.8),radius:2.45,
     meshes:[armillary,instrumentBase,projectCard],activate:()=>{instrumentImpulse=2.7;} });
 
-  // ------------------------- Bamboo paper lantern -------------------------
+  // ------------------------- Six-sided silk lantern -------------------------
   const lamp = group('courtyard-paper-lantern', -3, 3);
-  bevel(lamp,woodDark,.48,.09,.44,-.53,.045,0,.014);
-  cylinder(lamp,wood,.035,.048,2.34,-.53,1.22,0,16);
-  bevel(lamp,woodDark,.79,.052,.055,-.16,2.34,0);
-  rod(lamp,woodEdge,new THREE.Vector3(-.53,2.05,0),new THREE.Vector3(-.15,2.315,0),.021,10);
-  for(const yy of [2.21,2.27,2.33]) torus(lamp,cord,.038,.0025,-.53,yy,0,24).rotation.x=Math.PI/2;
-  const lantern = new THREE.Group(); lantern.name='hanging-lantern';lantern.position.set(.15,2.34,0);lamp.add(lantern);
-  cylinder(lantern,cord,.0035,.0035,.23,0,-.115,0,8);
-  const hook=torus(lantern,brassDark,.019,.003,0,-.225,0,28);hook.scale.y=1.4;
-  const lanternPaper=surface('paper',{normalScale:.55,roughness:1});lanternPaper.emissive.set('#ffbb76');lanternPaper.emissiveIntensity=.7;
-  const lanternProfile: number[][]=[];
-  for(let i=0;i<=20;i++){const t=i/20;lanternProfile.push([.102+Math.sin(t*Math.PI)*.087,-.25+t*.5]);}
-  lathe(lantern,lanternPaper,'lantern-pleated-paper',lanternProfile,0,-.535,0,48);
-  for(let i=0;i<16;i++){
-    const a=i/16*Math.PI*2;
-    const points=lanternProfile.map(([r,y])=>new THREE.Vector3(Math.sin(a)*(r+.0018),y-.535,Math.cos(a)*(r+.0018)));
-    tube(lantern,woodEdge,`lantern-bamboo-rib:${i}`,points,.0021,24);
+  bevel(lamp, woodDark, .48, .09, .44, -.53, .045, 0, .014);
+  bevel(lamp, wood, .37, .028, .34, -.53, .102, 0, .009);
+  cylinder(lamp, wood, .030, .047, 1.96, -.53, 1.10, 0, 20);
+  tube(lamp, wood, 'lantern-curved-crook', [new THREE.Vector3(-.53,2.05,0), new THREE.Vector3(-.51,2.30,0),
+    new THREE.Vector3(-.35,2.43,0), new THREE.Vector3(-.06,2.43,0), new THREE.Vector3(.15,2.34,0)], .030, 36);
+  for (const yy of [1.97, 2.015]) torus(lamp, brassDark, .032, .0025, -.53, yy, 0, 28).rotation.x = Math.PI / 2;
+  const lantern = new THREE.Group(); lantern.name = 'hanging-lantern'; lantern.position.set(.15,2.34,0); lamp.add(lantern);
+  cylinder(lantern, cord, .0035, .0035, .23, 0,-.115,0,8);
+  const hook = torus(lantern,brassDark,.019,.003,0,-.225,0,28); hook.scale.y = 1.4;
+  const lanternPaper = surface('paper', { normalScale: .28, roughness: .98, side: THREE.DoubleSide });
+  lanternPaper.emissive.set('#ffd3a0'); lanternPaper.emissiveIntensity = .7;
+  const lanternPanels = geometry('lantern-six-silk-panels', () => {
+    const positions: number[] = [], uvs: number[] = [], indices: number[] = [];
+    for (let i = 0; i < 6; i++) {
+      const a = Math.PI / 6 + i * Math.PI / 3, b = a + Math.PI / 3;
+      const base = positions.length / 3;
+      positions.push(Math.sin(a) * .158,-.75,Math.cos(a) * .158, Math.sin(b) * .158,-.75,Math.cos(b) * .158,
+        Math.sin(a) * .178,-.32,Math.cos(a) * .178, Math.sin(b) * .178,-.32,Math.cos(b) * .178);
+      uvs.push(0,0,1,0,0,1,1,1); indices.push(base,base+1,base+2,base+2,base+1,base+3);
+    }
+    const result = new THREE.BufferGeometry();
+    result.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+    result.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2)); result.setIndex(indices); result.computeVertexNormals(); return result;
+  });
+  mesh(lantern, lanternPanels, lanternPaper);
+  cylinder(lantern, woodDark, .073, .244, .094, 0,-.267,0,6).rotation.y = Math.PI / 6;
+  cylinder(lantern, woodDark, .187, .185, .024, 0,-.325,0,6).rotation.y = Math.PI / 6;
+  cylinder(lantern, woodDark, .171, .181, .032, 0,-.765,0,6).rotation.y = Math.PI / 6;
+  for (let i = 0; i < 6; i++) {
+    const a = Math.PI / 6 + i * Math.PI / 3, b = a + Math.PI / 3;
+    rod(lantern, woodEdge, new THREE.Vector3(Math.sin(a)*.162,-.75,Math.cos(a)*.162),
+      new THREE.Vector3(Math.sin(a)*.182,-.32,Math.cos(a)*.182), .008, 8);
+    for (const [r,y] of [[.186,-.338],[.175,-.748]]) rod(lantern, brassDark,
+      new THREE.Vector3(Math.sin(a)*r,y,Math.cos(a)*r), new THREE.Vector3(Math.sin(b)*r,y,Math.cos(b)*r), .0023, 6);
   }
-  for(const t of [.12,.32,.5,.68,.88]){
-    const r=.102+Math.sin(t*Math.PI)*.087;
-    torus(lantern,woodDark,r+.0025,.0018,0,-.785+t*.5,0,48).rotation.x=Math.PI/2;
-  }
-  for(const yy of [-.277,-.793]){
-    cylinder(lantern,woodDark,.112,.112,.018,0,yy,0,32);
-    torus(lantern,brassDark,.107,.0025,0,yy+.010,0,40).rotation.x=Math.PI/2;
-    for(let i=0;i<16;i++){const a=i/16*Math.PI*2;cylinder(lantern,cord,.0017,.0017,.025,Math.sin(a)*.109,yy,Math.cos(a)*.109,5);}
-  }
-  const glyph=label(lantern,written('lamp','lantern'),.078,.127,0,-.53,.1915);glyph.rotation.x=-.015;
-  cylinder(lantern,red,.006,.006,.075,0,-.84,0,12);
-  for(let i=0;i<9;i++)cylinder(lantern,red,.0012,.0006,.105,(i-4)*.0023,-.922,Math.sin(i)*.002,5);
-  cylinder(lantern,cord,.0018,.0018,.34,.125,-.93,.01,6);
-  lathe(lantern,brassDark,'lantern-pull-bead',[[.002,0],[.008,.006],[.009,.018],[.005,.028],[.002,.03]],.125,-1.115,.01,16);
-  const lampLight=new THREE.PointLight('#ffbe80',5.8,6.5,2);lampLight.position.set(0,-.535,0);lantern.add(lampLight);
-  batchStatic(lamp,[lantern]);batchStatic(lantern);
-  colliders.push({x:-3.53,z:3,halfX:.25,halfZ:.23},{x:-2.85,z:3,halfX:.20,halfZ:.20});
+  const glyph = label(lantern, written('lamp','lantern'), .042,.066,0,-.52,.1477); glyph.rotation.x = .040;
+  const knot = torus(lantern, red, .010, .0023, 0,-.798,0,24); knot.scale.x = .65;
+  cylinder(lantern, cord, .0018,.0018,.29,.125,-.91,.01,6);
+  lathe(lantern, brassDark, 'lantern-pull-bead', [[.002,0],[.008,.006],[.009,.018],[.005,.028],[.002,.03]],.125,-1.075,.01,16);
+  const lampLight = new THREE.PointLight('#ffd2a0',5.8,6.5,2); lampLight.position.set(0,-.535,0); lantern.add(lampLight);
+  batchStatic(lamp,[lantern]); batchStatic(lantern);
+  colliders.push({x:-3.53,z:3,halfX:.25,halfZ:.23},{x:-2.85,z:3,halfX:.28,halfZ:.28});
   let lampOn=true,lampAmount=1;
   interactions.push({id:'lantern',kind:'lantern',label:'拨一盏灯',labelEn:'Switch the lantern',
     position:new THREE.Vector3(-2.85,2.105,3),approach:new THREE.Vector3(-1.65,.3,2.8),radius:1.95,
     meshes:[lantern],activate:()=>{lampOn=!lampOn;} });
 
   // --------------------------- Overlook bench ---------------------------
-  const bench=group('overlook-carved-bench',10,5);
-  for(const xx of [-1.07,1.07]){
-    for(const zz of [-.235,.235]){
+  const bench = group('overlook-carved-bench',10,5);
+  for (const xx of [-1.07,1.07]) {
+    for (const zz of [-.235,.235]) {
       bevel(bench,wood,.082,.44,.085,xx,.22,zz);
       bevel(bench,woodDark,.11,.038,.11,xx,.026,zz);
     }
     bevel(bench,wood,.052,.043,.55,xx,.17,0);
-    bevel(bench,wood,.072,.68,.078,xx,.77,.245);
-    bevel(bench,wood,.063,.29,.064,xx,.625,-.235);
-    bevel(bench,woodEdge,.11,.042,.61,xx,.79,0);
-    rod(bench,wood,new THREE.Vector3(xx,.60,.235),new THREE.Vector3(xx,.765,-.13),.018,8);
+    bevel(bench,wood,.064,.61,.069,xx,.745,.265);
+    bevel(bench,wood,.055,.29,.061,xx,.625,-.235);
+    tube(bench,woodEdge,`bench-swept-arm:${xx}`,[new THREE.Vector3(xx,.78,-.27),new THREE.Vector3(xx,.795,-.15),
+      new THREE.Vector3(xx,.83,.04),new THREE.Vector3(xx,.91,.27)],.026,24);
+    rod(bench,wood,new THREE.Vector3(xx,.60,.235),new THREE.Vector3(xx,.765,-.13),.016,8);
   }
-  for(let i=0;i<3;i++)bevel(bench,wood,2.46,.065,.185,0,.4475,(i-1)*.20,.009);
-  for(const zz of [-.235,.235])bevel(bench,woodDark,2.2,.072,.038,0,.374,zz);
-  bevel(bench,woodDark,2.45,.085,.080,0,1.08,.245);
-  bevel(bench,wood,2.21,.052,.050,0,.66,.245);
-  for(let i=0;i<9;i++){
-    bevel(bench,wood,.034,.365,.037,(i-4)*.237,.868,.245,.004);
-    for(const yy of [.68,1.04])cylinder(bench,brassDark,.0035,.0035,.003,(i-4)*.237,yy,.224,8).rotation.x=Math.PI/2;
+  for (let i=0;i<3;i++) bevel(bench,wood,2.46,.065,.185,0,.4475,(i-1)*.20,.009);
+  for (const zz of [-.235,.235]) bevel(bench,woodDark,2.2,.072,.038,0,.374,zz);
+  tube(bench,woodDark,'bench-curved-crest',[new THREE.Vector3(-1.20,1.03,.24),new THREE.Vector3(-.65,1.13,.31),
+    new THREE.Vector3(0,1.17,.34),new THREE.Vector3(.65,1.13,.31),new THREE.Vector3(1.20,1.03,.24)],.035,48);
+  tube(bench,wood,'bench-lower-bow',[new THREE.Vector3(-1.07,.67,.25),new THREE.Vector3(0,.72,.30),
+    new THREE.Vector3(1.07,.67,.25)],.021,32);
+  for (let i=0;i<5;i++) {
+    const x=(i-2)*.43, f=1-(x/1.2)**2;
+    tube(bench,wood,`bench-shaped-splat:${i}`,[new THREE.Vector3(x,.69,.28),new THREE.Vector3(x,.84,.31),
+      new THREE.Vector3(x,1.02+f*.12,.24+f*.09)],.014,20);
   }
   bevel(bench,wood,2.14,.043,.045,0,.17,0);
-  bevel(bench,woodDark,.49,.205,.021,0,.875,.213,.004);
-  const benchPlaque=label(bench,written('bench','bench'),.12,.18,0,.875,.201);benchPlaque.rotation.y=Math.PI;
-  const clothGeometry=geometry('draped-bench-cloth',()=>{
-    const result=new THREE.PlaneGeometry(.52,.67,12,20),p=result.attributes.position;
-    for(let i=0;i<p.count;i++){
-      const x=p.getX(i),v=p.getY(i),over=Math.max(0,-v-.14);
-      p.setXYZ(i,x,.008-over*1.65+Math.sin(x*31)*over*.12,v);
-    }
-    result.computeVertexNormals();return result;
-  });
-  const benchCloth=mesh(bench,clothGeometry,cloth,.68,.48,-.085);benchCloth.rotation.y=.04;
-  for(const xx of [.425,.935])tube(bench,cord,`bench-hem:${xx}`,[new THREE.Vector3(xx,.490,.23),new THREE.Vector3(xx,.490,-.10),new THREE.Vector3(xx,.483,-.23),new THREE.Vector3(xx,.18,-.42)],.0015,16);
+  bevel(bench,woodDark,.31,.205,.021,0,.875,.294,.004);
+  const benchPlaque=label(bench,written('bench','bench'),.12,.18,0,.875,.282);benchPlaque.rotation.y=Math.PI;
+  const cushion = geometry('bench-tailored-cushion',()=>createBenchCushionGeometry(2.03,.435,.036));
+  mesh(bench,cushion,cloth,0,.500,-.01);
+  // A single fine welt follows the cushion; no loose cloth intrudes into the walkable terrace.
+  for (const zz of [-.2275,.2075]) rod(bench,stitch,new THREE.Vector3(-1.012,.500,zz),new THREE.Vector3(1.012,.500,zz),.0016,5);
+  for (const xx of [-1.014,1.014]) rod(bench,stitch,new THREE.Vector3(xx,.500,-.225),new THREE.Vector3(xx,.500,.205),.0016,5);
   batchStatic(bench);
-  colliders.push({x:10,z:5,halfX:1.24,halfZ:.36});
+  colliders.push({x:10,z:5,halfX:1.24,halfZ:.40});
   interactions.push({id:'bench',kind:'bench',label:'坐看山色',labelEn:'Pause by the mountains',
     position:new THREE.Vector3(10,1.175,5.201),approach:new THREE.Vector3(10,.3,3.65),radius:2.05,meshes:[bench],
     // Actual seat contact point, NOT a standing capsule foot. Add only the seated eye offset.
-    sitPosition:new THREE.Vector3(10,.78,4.88),sitYaw:0});
+    sitPosition:new THREE.Vector3(10,.824,4.88),sitYaw:0});
 
-  let disposed = false, instrumentAngle = 0;
+  let instrumentAngle = 0;
   return {
-    root, colliders, interactions,
+    root, colliders, interactions, assetsReady,
     update(time, delta, selectedId) {
       if (disposed) return;
       const dt = Math.min(Math.max(delta, 0), .08);
@@ -646,6 +738,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
       for (const geo of geometries) geo.dispose();
       for (const mat of materials) mat.dispose();
       lettering.dispose();
+      artwork.dispose();
       if (ownsLibrary) library.dispose();
       geometries.clear(); materials.clear(); geometryCache.clear();
     },

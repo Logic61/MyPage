@@ -5,12 +5,12 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 export function createStudyLighting(scene: THREE.Scene, coarse = false) {
   RectAreaLightUniformsLib.init();
   const lights: THREE.Light[] = [];
-  const sky = new THREE.HemisphereLight(0xb6cbd0, 0x605747, 0.58);
+  const sky = new THREE.HemisphereLight(0xd5e8f2, 0xa0ad99, 0.85);
   scene.add(sky); lights.push(sky);
 
-  const sun = new THREE.DirectionalLight(0xffe4bf, 2.8);
-  sun.name = 'Late afternoon through the mountain pines';
-  sun.position.set(-11, 17, 12);
+  const sun = new THREE.DirectionalLight(0xffefd4, 2.25);
+  sun.name = 'Clear morning over the open courtyard';
+  sun.position.set(-9, 15, 11);
   sun.target.position.set(0, 0, -2);
   sun.castShadow = true;
   sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
@@ -19,23 +19,27 @@ export function createStudyLighting(scene: THREE.Scene, coarse = false) {
   sun.shadow.normalBias = 0.035;
   scene.add(sun, sun.target); lights.push(sun);
 
-  const doorway = new THREE.RectAreaLight(0xb6d1d8, 2.1, 3.7, 3.1);
-  doorway.name = 'Sky bounced through the cave entrance';
-  doorway.position.set(0, 2.25, -0.7); doorway.lookAt(0, 1.4, -8);
+  const doorway = new THREE.RectAreaLight(0xe4edf0, 1.65, 9.2, 2.4);
+  doorway.name = 'Broad courtyard sky over the north study';
+  doorway.position.set(0, 3.3, -5.3); doorway.lookAt(0, 1.5, -9.6);
   scene.add(doorway); lights.push(doorway);
 
-  const deskBounce = new THREE.RectAreaLight(0xffd59f, 3.1, 3.8, 2.0);
-  deskBounce.name = 'Warm reflected light above the writing desk';
-  deskBounce.position.set(-0.5, 3.7, -6.9); deskBounce.lookAt(0, 0.8, -4.4);
-  scene.add(deskBounce); lights.push(deskBounce);
-
-  const shelfBounce = new THREE.RectAreaLight(0xe6d1ac, 1.5, 2.6, 1.4);
-  shelfBounce.position.set(-2.0, 2.5, -3.7); shelfBounce.lookAt(-5, 1.4, -6.6);
+  const shelfBounce = new THREE.RectAreaLight(0xe8eee6, 1.6, 3.8, 2.2);
+  shelfBounce.name = 'Open-court sky in the library wing';
+  shelfBounce.position.set(-2.95, 2.7, -3.2); shelfBounce.lookAt(-5.9, 1.4, -3.2);
   scene.add(shelfBounce); lights.push(shelfBounce);
 
-  const sideSky = new THREE.RectAreaLight(0xc5d7d9, 1.7, 2.4, 2.8);
-  sideSky.position.set(5.9, 2, -4.5); sideSky.lookAt(0, 1.3, -5.3);
+  const sideSky = new THREE.RectAreaLight(0xe4edf0, 1.6, 3.8, 2.2);
+  sideSky.name = 'Open-court sky in the instrument wing';
+  sideSky.position.set(2.95, 2.7, -2.8); sideSky.lookAt(5.9, 1.4, -2.8);
   scene.add(sideSky); lights.push(sideSky);
+
+  // A broad, quiet wash gives the silk painting and its timber rim a readable
+  // silhouette. The picture remains a reflective surface, not a glowing portal.
+  const paintingWash = new THREE.RectAreaLight(0xfff2d8, 1.7, 3.5, 2.1);
+  paintingWash.name = 'Soft reflected light over the circular silk painting';
+  paintingWash.position.set(-0.4, 3.45, -7.8); paintingWash.lookAt(-0.5, 2.45, -9.4);
+  scene.add(paintingWash); lights.push(paintingWash);
 
   return {
     sun,
@@ -47,8 +51,8 @@ export function createStudyLighting(scene: THREE.Scene, coarse = false) {
 export function createSkyTexture(): THREE.DataTexture {
   const width = 256, height = 128;
   const data = new Float32Array(width * height * 4);
-  const zenith = new THREE.Color(0x91b5c1), horizon = new THREE.Color(0xd3c8ac), ground = new THREE.Color(0x626a62);
-  const sunDirection = new THREE.Vector3(-11, 17, 12).normalize();
+  const zenith = new THREE.Color(0x9ccce8), horizon = new THREE.Color(0xe1ecea), ground = new THREE.Color(0x8e9d88);
+  const sunDirection = new THREE.Vector3(-9, 15, 11).normalize();
   const direction = new THREE.Vector3(), color = new THREE.Color();
   for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
     const theta = (y + 0.5) / height * Math.PI, phi = (x + 0.5) / width * Math.PI * 2;

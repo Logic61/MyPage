@@ -1,8 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LookController, DragLookGesture, StanceTransition } from '../src/scripts/mountain-world/look-controls.ts';
+import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from '../src/scripts/mountain-world/look-controls.ts';
 
 const close = (actual, expected, tolerance = 1e-9) => assert.ok(Math.abs(actual - expected) < tolerance, `${actual} ≈ ${expected}`);
+
+test('free-pointer picking uses the displayed canvas rectangle and rejects positions outside it', () => {
+  const rect = { left: 120, top: 80, width: 960, height: 540 };
+  assert.deepEqual(pointerToNDC(600, 350, rect), { x: 0, y: 0 });
+  assert.deepEqual(pointerToNDC(840, 215, rect), { x: .5, y: .5 });
+  assert.deepEqual(pointerToNDC(120, 620, rect), { x: -1, y: -1 });
+  for (const [x, y] of [[119, 350], [1081, 350], [600, 79], [600, 621], [NaN, 350]]) {
+    assert.equal(pointerToNDC(x, y, rect), null);
+  }
+  assert.equal(pointerToNDC(600, 350, { ...rect, width: 0 }), null);
+  // Render resolution / device pixel ratio never enter this conversion.
+  assert.deepEqual(pointerToNDC(840, 215, { ...rect, width: 1920 }), { x: -.25, y: .5 });
+});
 
 test('equal mouse distance produces equal turns at different frame and polling rates', () => {
   for (const [frames, polls] of [[30, 125], [60, 1000], [144, 500], [240, 1000]]) {
