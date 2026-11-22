@@ -58,7 +58,6 @@ const destinations = [
 
     <section class="mw-entry" data-world-entry aria-labelledby="mw-entry-title" hidden>
       <div class="mw-entry-card">
-        <p class="mw-eyebrow">{isEn ? 'A WALK THROUGH THE COURTYARD' : '一座云庭 · 随意走走'}</p>
         <h1 id="mw-entry-title" data-world-entry-title>{isEn ? 'A quiet courtyard, above the clouds.' : '云庭有光，且坐片刻。'}</h1>
         <p class="mw-entry-copy" data-world-entry-copy>{isEn ? 'Follow the stone path into the courtyard. Find a book, and take in the mountains.' : '循着石径走进云庭，取一卷书，看看山色。'}</p>
         <div class="mw-entry-actions"><button type="button" class="mw-enter-button" data-world-enter><span data-world-enter-label>{isEn ? 'Enter the courtyard' : '走进云庭'}</span></button><button type="button" class="mw-read-button" data-world-action="directory">{isEn ? 'Browse the writing' : '先翻翻书'}</button></div>
@@ -95,6 +94,7 @@ const destinations = [
     </footer>
 
     <button type="button" class="mw-interact" data-world-interaction data-world-action="interact" aria-keyshortcuts="E" hidden><kbd>E</kbd><span data-world-interaction-label></span><span class="mw-interact-touch">{isEn ? 'Tap' : '轻触'}</span></button>
+    <button type="button" class="mw-stand" data-world-stand aria-keyshortcuts="E" hidden><kbd>E</kbd> {isEn ? 'Stand up' : '起身'}</button>
     <div class="mw-toast" data-world-toast role="status" hidden></div>
 
     <dialog class="mw-reader" data-world-reader aria-labelledby="mw-reader-title">

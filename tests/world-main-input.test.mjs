@@ -22,7 +22,7 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-async function world({ coarse = false, legacy = false, unavailable = false,
+async function world({ coarse = false, legacy = false, unavailable = false, bench = false, reduced = false,
   assetsReady = Promise.resolve(), backdropReady = Promise.resolve(), compileReady = Promise.resolve(),
   expectReady = true, expectFailure = false, hash = '', session = {},
   canWalk = () => true, nearest = point => point } = {}) {
@@ -61,7 +61,7 @@ async function world({ coarse = false, legacy = false, unavailable = false,
   document.getElementById = () => ({ textContent: JSON.stringify({ isEn: true, prefix: '', base: '/', posts: [] }) });
   document.exitPointerLock = () => { exitRequests++; };
   const controls = {};
-  for (const name of ['entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
+  for (const name of ['entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
     controls[name] = name === 'quality' ? new Select() : ['sensitivity', 'bob'].includes(name) ? new Input() : new Element();
     root.children.set(`[data-world-${name}]`, controls[name]);
   }
@@ -80,7 +80,7 @@ async function world({ coarse = false, legacy = false, unavailable = false,
   for (const [id, x] of [['centre', 0], ['side', .75]]) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(.25, .6, .1), new THREE.MeshStandardMaterial());
     meshes.add(mesh);
-    items.push({ id, kind: 'lantern', position: mesh.position, approach: new THREE.Vector3(),
+    items.push({ id, kind: bench && id === 'centre' ? 'bench' : 'lantern', position: mesh.position, approach: new THREE.Vector3(),
       label: id, labelEn: id, radius: 2.5, meshes: [mesh], activate: () => activated.push(id) });
   }
   const ui = {
@@ -119,7 +119,7 @@ async function world({ coarse = false, legacy = false, unavailable = false,
     exports: {}, require(name) { assert.ok(name in modules, `Unexpected runtime import: ${name}`); return modules[name]; },
     document, window, HTMLElement: Element, HTMLInputElement: Input, HTMLSelectElement: Select,
     performance: { now: () => now, timeOrigin: 1700000000000 },
-    matchMedia: query => ({ matches: query === '(pointer: coarse)' && coarse }),
+    matchMedia: query => ({ matches: (query === '(pointer: coarse)' && coarse) || (query.includes('reduced-motion') && reduced) }),
     requestAnimationFrame(callback) { const id = ++nextId; frames.set(id, callback); return id; },
     cancelAnimationFrame: id => frames.delete(id),
     ResizeObserver: class { observe() {} disconnect() { disposed('resize'); } }, AbortController,
@@ -161,6 +161,7 @@ async function world({ coarse = false, legacy = false, unavailable = false,
     for (const [index, item] of items.entries()) {
       item.position.set(index * .75, 0, -1.5).applyQuaternion(camera.quaternion).add(camera.position);
       item.approach.set(camera.position.x + index * .75, .3, camera.position.z);
+      if (item.kind === 'bench') { item.sitPosition = item.approach.clone().add(new THREE.Vector3(0,.52,-.4)); item.sitYaw = 1.25; }
     }
     meshes.updateMatrixWorld(true);
   }
@@ -316,6 +317,42 @@ test('a native state change awaiting its notification cannot click with a differ
   h.unlock(); assert.equal(h.root.dataset.inputMode, 'none');
 });
 
+test('sitting releases a walking lock, lets the mouse explore, and restores walking from E', async () => {
+  const h = await world({ bench: true });
+  h.enter(); await h.lock(); h.key('KeyE');
+  assert.equal(h.root.dataset.seated,'true');
+  assert.equal(h.exitRequests(),1); h.unlock();
+  assert.equal(h.root.dataset.mode,'exploring'); assert.equal(h.root.dataset.inputMode,'pointer');
+  for (let i=0;i<60;i++) h.step();
+  assert.ok(h.camera.rotation.y>1.20, 'releasing the lock must let the turn towards the view finish');
+  const yaw=h.camera.rotation.y;
+  h.pointer('pointerdown'); h.pointer('pointermove',{clientX:850}); h.pointer('pointerup',{clientX:850}); h.step(35);
+  assert.ok(h.camera.rotation.y<yaw-.1);
+  h.click(); assert.equal(h.root.dataset.seated,'true','an empty click is not a stand command');
+  h.pointer('pointerleave'); h.key('KeyE');
+  assert.equal(h.root.dataset.seated,undefined); assert.equal(h.requests.length,2);
+  await h.lock(); for (let i=0;i<28;i++) h.step();
+  assert.equal(h.root.dataset.inputMode,'locked'); assert.equal(h.camera.position.z,17.65);
+});
+
+test('a seated visitor can pause, resume, and use the stand control without pointing at a mesh', async () => {
+  const h=await world({bench:true,unavailable:true,reduced:true});
+  h.enter(); h.click(h.point('centre')); h.step(16);
+  assert.equal(h.root.dataset.seated,'true'); assert.equal(h.camera.rotation.y,1.25);
+  h.reader(true); h.reader(false); h.enter();
+  h.emit(h.controls.stand,'click'); h.step(320);
+  assert.equal(h.root.dataset.seated,undefined); assert.equal(h.root.dataset.inputMode,'pointer');
+  assert.equal(h.camera.position.z,17.65);
+});
+
+test('escaping a seated mouse lock keeps the seat and exposes its controls', async () => {
+  const h=await world({bench:true});
+  h.enter(); await h.lock(); h.key('KeyE'); h.unlock();
+  h.emit(h.controls.lock,'click'); await h.lock(); h.key('Escape'); h.unlock(); h.key('Escape');
+  assert.equal(h.root.dataset.mode,'exploring'); assert.equal(h.root.dataset.seated,'true');
+  assert.equal(h.root.dataset.inputMode,'pointer');
+});
+
 test('losing the graphics context disables interactions and refuses a late lock', async () => {
   const h = await world(); h.enter();
   h.pointer('webglcontextlost');
@@ -408,18 +445,18 @@ test('an optional backdrop failure preserves the painting wait and allows the fa
   h.emit(h.window, 'pagehide', { persisted: false }); assertReleasedOnce(h);
 });
 
-const courtyardStateKey = 'mountain-first-person-v3-cloud-court:/';
+const courtyardStateKey = 'mountain-first-person-v4-pine-court:/';
 test('the new layout ignores old coordinates, validates study links, and restores its own safe session', async () => {
   const old = JSON.stringify({ x: -5, z: -8, yaw: 1, pitch: .2 });
-  const h = await world({ session: { 'mountain-first-person-v2:/': old } });
-  assert.equal(h.camera.position.x, 1.3); assert.equal(h.camera.position.z, 11);
+  const h = await world({ session: { 'mountain-first-person-v3-cloud-court:/': old } });
+  assert.equal(h.camera.position.x, 0); assert.equal(h.camera.position.z, 17.65);
   h.actions.onReset();
   const saved = JSON.parse(h.sessionStore.getItem(courtyardStateKey));
-  assert.equal(saved.x, 1.3); assert.equal(saved.z, 11);
+  assert.equal(saved.x, 0); assert.equal(saved.z, 17.65);
   const fromArticle = await world({ hash: '#study' });
   assert.equal(fromArticle.camera.position.x, 0); assert.equal(fromArticle.camera.position.z, -4.6);
   const blockedArticle = await world({ hash: '#study', canWalk: (_x, z) => z !== -4.6 });
-  assert.equal(blockedArticle.camera.position.z, 11, 'An unsafe nearest result cannot replace the valid entrance.');
+  assert.equal(blockedArticle.camera.position.z, 17.65, 'An unsafe nearest result cannot replace the valid entrance.');
   const returning = await world({ hash: '#study', session: { [courtyardStateKey]: JSON.stringify({ x: 7, z: -4, yaw: .3, pitch: .1 }) } });
   assert.equal(returning.camera.position.x, 7); assert.equal(returning.camera.position.z, -4);
   assert.equal(returning.camera.rotation.y, .3); assert.equal(returning.camera.rotation.x, .1);

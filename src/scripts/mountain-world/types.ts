@@ -21,6 +21,7 @@ export interface Environment {
   colliders: Collider[];
   walkAreas: WalkArea[];
   roofOccluders: THREE.Object3D[];
+  assetsReady: Promise<void>;
   update: (time: number, delta: number, indoor: boolean) => void;
   dispose: () => void;
 }

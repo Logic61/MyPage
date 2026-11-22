@@ -213,7 +213,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
 
   // A single circular landscape is the room's principal composition, with real depth and a silk face.
-  const screen = group('circular-landscape-screen', -.5, -9.36);
+  const screen = group('circular-landscape-screen', 0, -9.36);
   screen.position.y = 2.5;
   const screenFrame = geometry('screen-deep-bevelled-wood-ring', () => {
     const shape = new THREE.Shape(); shape.absarc(0, 0, 1.60, 0, Math.PI * 2, false);
@@ -234,7 +234,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     cylinder(screen, woodDark, .045, .045, .45, xx, yy, -.285, 12).rotation.x = Math.PI / 2;
   }
   batchStatic(screen);
-  colliders.push({ x: -.5, z: -9.5, halfX: 1.64, halfZ: .26 });
+  colliders.push({ x: 0, z: -9.5, halfX: 1.64, halfZ: .26 });
   const assetsReady = artwork.ready.then(texture => {
     if (disposed) return;
     silk.map = texture; silk.needsUpdate = true;

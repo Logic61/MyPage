@@ -23,11 +23,11 @@ function describePlace(x: number, z: number) {
     return { name: '藏书小阁', nameEn: 'The library wing', indoor: true };
   if (x >= 3.2 && x <= 6.1 && z > -5.8 && z <= .6)
     return { name: '临庭观物', nameEn: 'The courtyard workroom', indoor: true };
-  if (x >= 6.1 && x <= 8.4 && z >= -8.2 && z <= 7.5)
+  if (Math.abs(x) >= 6.1 && Math.abs(x) <= 8.4 && z >= -8.2 && z <= 7.5)
     return { name: '临云长廊', nameEn: 'The cloudside gallery', indoor: false };
   if (x >= -3.2 && x <= 3.2 && z > -5.8 && z <= 8.4)
     return { name: '天光水庭', nameEn: 'The sunlit water court', indoor: false };
-  if (x > 8.4 && z >= -8.2 && z <= 8.5)
+  if (Math.abs(x) > 8.4 && z >= -8.2 && z <= 8.5)
     return { name: '松间露台', nameEn: 'The pine terrace', indoor: false };
   return { name: '云山石径', nameEn: 'The cloud mountain path', indoor: false };
 }
@@ -117,14 +117,15 @@ async function initializeWorld(root: HTMLElement) {
     camera.rotation.order = 'YXZ';
     const backdrop = createLandscapeBackdrop(scene); resources.unshift(() => backdrop.dispose());
     const surfaces = createSurfaceLibrary(); resources.unshift(() => surfaces.dispose());
-    const environment = createEnvironment(scene, surfaces); resources.unshift(() => environment.dispose());
+    const environment = createEnvironment(scene, surfaces, en); resources.unshift(() => environment.dispose());
     const furniture = createFurnishings(scene, en, surfaces); resources.unshift(() => furniture.dispose());
     const lighting = createStudyLighting(scene, coarse); resources.unshift(() => lighting.dispose());
     lighting.sun.shadow.autoUpdate = false; lighting.sun.shadow.needsUpdate = true;
     const pipeline = createStudyRenderer(renderer, scene, camera, coarse); resources.unshift(() => pipeline.dispose());
     const navigation = createNavigation(environment.walkAreas, [...environment.colliders, ...furniture.colliders]);
     const picker = createInteractionPicker([environment.root, furniture.root], furniture.interactions);
-    const entrance = { x: 1.3, z: 11 };
+    const entrance = { x: 0, z: 17.65 };
+    const arrivalPitch = .085;
     const spawn = navigation.canWalk(entrance.x, entrance.z) ? entrance : navigation.nearest(entrance, 3);
     if (!spawn || !navigation.canWalk(spawn.x, spawn.z)) throw new Error('The courtyard entrance has no safe walking position.');
     const position = new THREE.Vector3(spawn.x, FLOOR_HEIGHT, spawn.z);
@@ -133,14 +134,15 @@ async function initializeWorld(root: HTMLElement) {
     const joystick = new THREE.Vector2();
     // Layout changes invalidate old world coordinates, while language switches
     // still share the same safe place within this courtyard.
-    const stateKey = `mountain-first-person-v3-cloud-court:${config.base}`;
-    const look = new LookController();
-    const stance = new StanceTransition(reducedMotion ? 0.15 : 0.3);
+    const stateKey = `mountain-first-person-v4-pine-court:${config.base}`;
+    const look = new LookController(0, arrivalPitch);
+    const stance = new StanceTransition(.3);
     let sensitivity = 1, headBob = false;
     let mode: Mode = 'welcome';
     let route: Point[] = [], destination: Interaction | null = null;
     let aimed: Interaction | null = null, seatedAt: Interaction | null = null;
     let seatReturn: THREE.Vector3 | null = null;
+    let restoreWalkingLock = false, releasingForSeat = false, seatWantsLock = false, lastSeatUnlock = -Infinity;
     let selectedId: string | null = null, selectedUntil = 0;
     let elapsed = 0, walked = 0, interactionTimer = 0;
     let frame = 0, previousFrame = performance.now(), lastRender = 0, lastPick = -1, lastSave = 0;
@@ -155,6 +157,7 @@ async function initializeWorld(root: HTMLElement) {
     const entryTitle = root.querySelector<HTMLElement>('[data-world-entry-title]')!;
     const entryCopy = root.querySelector<HTMLElement>('[data-world-entry-copy]')!;
     const pauseButton = root.querySelector<HTMLButtonElement>('[data-world-pause]')!;
+    const standButton = root.querySelector<HTMLButtonElement>('[data-world-stand]');
     const lockButton = root.querySelector<HTMLButtonElement>('[data-world-lock]');
     const stick = root.querySelector<HTMLElement>('[data-world-stick]')!;
     const stickThumb = root.querySelector<HTMLElement>('[data-world-stick-thumb]')!;
@@ -168,6 +171,7 @@ async function initializeWorld(root: HTMLElement) {
         position.set(saved.x, FLOOR_HEIGHT, saved.z);
         look.snap(Number.isFinite(saved.yaw) ? saved.yaw : 0, Number.isFinite(saved.pitch) ? saved.pitch : -0.035);
       } else if (location.hash === '#study') {
+        look.snap(0, -.035);
         const inside = navigation.nearest({ x: 0, z: -4.6 }, 2);
         if (inside && navigation.canWalk(inside.x, inside.z)) position.set(inside.x, FLOOR_HEIGHT, inside.z);
       }
@@ -182,7 +186,7 @@ async function initializeWorld(root: HTMLElement) {
     pipeline.setQuality(qualitySelect.value as RenderQuality);
     const pointerLock = createPointerLockRequest({
       request: raw => raw ? canvas.requestPointerLock({ unadjustedMovement: true }) : canvas.requestPointerLock(),
-      isActive: () => alive && mode === 'exploring' && !ui.isOpen(),
+      isActive: () => alive && mode === 'exploring' && !ui.isOpen() && (!seatedAt || seatWantsLock),
       onFallback: () => {
         if (document.pointerLockElement === canvas) return;
         dragLook = true;
@@ -255,6 +259,7 @@ async function initializeWorld(root: HTMLElement) {
       }
       pauseButton.hidden = value !== 'exploring';
       if (value !== 'exploring') {
+        seatWantsLock = false;
         pointerLock.cancel(); look.suspend();
         clearMovement(); clearPointer();
       }
@@ -267,7 +272,8 @@ async function initializeWorld(root: HTMLElement) {
       enterButton.focus({ preventScroll: true });
     }
     function requestLock() {
-      if (mode !== 'exploring' || ui.isOpen()) return;
+      if (mode !== 'exploring' || ui.isOpen() || releasingForSeat) return;
+      if (seatedAt) seatWantsLock = true;
       clearDrag(); clearPointer(); canvas!.focus({ preventScroll: true });
       if (document.pointerLockElement === canvas) {
         dragLook = false; syncInputMode(); look.begin('locked', performance.now()); return;
@@ -280,16 +286,24 @@ async function initializeWorld(root: HTMLElement) {
     }
     function enter() {
       if (ui.isOpen()) return;
-      setMode('exploring'); requestLock();
+      setMode('exploring');
+      if (seatedAt) { dragLook = true; syncInputMode(); canvas!.focus({ preventScroll: true }); }
+      else requestLock();
     }
     function eyePosition() {
       return { x: position.x, y: seatedAt ? position.y + SEATED_EYE_HEIGHT : FLOOR_HEIGHT + EYE_HEIGHT, z: position.z };
     }
-    function standUp() {
+    function standUp(resumeMouse = false) {
       if (!seatedAt) return;
       position.copy(seatReturn || seatedAt.approach); position.y = FLOOR_HEIGHT;
-      seatedAt = null; seatReturn = null; look.cancelTurn();
-      stance.rebase(camera.position, eyePosition());
+      seatedAt = null; seatReturn = null; seatWantsLock = false; look.cancelTurn();
+      delete root.dataset.seated;
+      if (standButton) standButton.hidden = true;
+      clearAim();
+      if (reducedMotion) stance.reset();
+      else stance.rebase(camera.position, eyePosition());
+      if (resumeMouse && restoreWalkingLock && document.pointerLockElement !== canvas) requestLock();
+      restoreWalkingLock = false;
     }
     function face(item: Interaction) {
       // The displayed camera may still be between sitting and standing positions.
@@ -305,7 +319,7 @@ async function initializeWorld(root: HTMLElement) {
       camera.updateMatrixWorld();
     }
     function aimPoint() {
-      if (mode !== 'exploring' || ui.isOpen()) return null;
+      if (mode !== 'exploring' || ui.isOpen() || seatedAt) return null;
       // Loss of native lock is authoritative even before lockchange is dispatched.
       if (inputMode === 'locked') return document.pointerLockElement === canvas ? centre : null;
       if (document.pointerLockElement === canvas) return null;
@@ -320,12 +334,10 @@ async function initializeWorld(root: HTMLElement) {
     }
     function showInteraction() {
       aimDirty = false; lastPick = elapsed; aimed = findAimed();
-      const standingPrompt = seatedAt && aimPoint() !== null
-        ? { ...seatedAt, id: 'stand-up', label: '起身，继续走走', labelEn: 'Stand up and explore' } : null;
       const rect = inputMode === 'pointer' ? root.getBoundingClientRect() : null;
       const screen = rect ? { x: pointerClient.x - rect.left, y: pointerClient.y - rect.top } : undefined;
-      ui.setInteraction(standingPrompt || aimed, screen);
-      root.dataset.aimed = String(Boolean(standingPrompt || aimed));
+      ui.setInteraction(aimed, screen);
+      root.dataset.aimed = String(Boolean(aimed));
     }
     function activate(item: Interaction) {
       cancelRoute(); clearMovement(); selectedId = item.id; selectedUntil = elapsed + 1.35;
@@ -334,11 +346,16 @@ async function initializeWorld(root: HTMLElement) {
         ui.showToast(en ? 'A little light in the mountains.' : '山间一盏灯。');
       } else if (item.kind === 'bench') {
         seatReturn = position.clone();
-        seatedAt = item;
+        seatedAt = item; root.dataset.seated = 'true';
+        if (standButton) standButton.hidden = false;
+        restoreWalkingLock = document.pointerLockElement === canvas;
+        releasingForSeat = restoreWalkingLock; seatWantsLock = false; dragLook = true;
+        pointerLock.cancel(); look.suspend(); clearAim(); unlock(); syncInputMode();
         if (item.sitPosition) position.copy(item.sitPosition);
-        stance.rebase(camera.position, eyePosition());
-        if (!reducedMotion) look.turnTo(item.sitYaw ?? look.yaw, -0.045);
-        ui.showToast(en ? 'Watch the clouds. Move or press E to stand.' : '坐看云起。移动或按 E 即可起身。');
+        const view = item.sitYaw ?? look.yaw;
+        if (reducedMotion) { stance.reset(); look.snap(view,.05); }
+        else { stance.rebase(camera.position, eyePosition()); look.turnTo(view,.05); }
+        ui.showToast(en ? 'Drag to look around. Choose Stand up when you are ready.' : '拖动可环顾山色，想离座时点「起身」。');
       } else {
         setMode('transition'); unlock();
         interactionTimer = window.setTimeout(() => {
@@ -349,7 +366,6 @@ async function initializeWorld(root: HTMLElement) {
     }
     interactionAction = () => {
       if (!aimPoint()) return;
-      if (seatedAt) { standUp(); ui.showToast(en ? 'Back on the stone path.' : '起身，再走走。'); return; }
       const item = findAimed();
       if (item) activate(item);
     };
@@ -369,13 +385,13 @@ async function initializeWorld(root: HTMLElement) {
         setMode('paused'); ui.showToast(en ? 'There is no clear path from here. Return to the courtyard gate and try again.' : '这里暂时没有通路，可以先回到庭门。'); return;
       }
       route = path; destination = item; root.dataset.guided = 'true';
-      enter(); ui.showToast(en ? `Walking to ${item.labelEn.toLowerCase()}. Look around or use WASD to take control.` : `向${item.label}走去。移动鼠标或按 W A S D 即可接管。`);
+      enter(); ui.showToast(en ? `Walking to ${item.labelEn.toLowerCase()}. Look around or move to take control.` : `向${item.label}走去。转动视线或自行走动即可接管。`);
     };
     resetAction = () => {
       window.clearTimeout(interactionTimer);
       if (mode === 'transition') setMode('paused');
       standUp(); cancelRoute(); clearMovement();
-      position.set(spawn.x, FLOOR_HEIGHT, spawn.z); look.snap(0, -0.035); stance.reset();
+      position.set(spawn.x, FLOOR_HEIGHT, spawn.z); look.snap(0, arrivalPitch); stance.reset();
       updateCamera(1); save(); ui.showToast(en ? 'Back at the courtyard gate.' : '回到庭门，云庭就在眼前。');
     };
     function savePreferences() {
@@ -387,6 +403,9 @@ async function initializeWorld(root: HTMLElement) {
     sensitivityInput.addEventListener('input', () => { sensitivity = Number(sensitivityInput.value); savePreferences(); }, { signal });
     bobInput.addEventListener('change', () => { headBob = bobInput.checked && !reducedMotion; savePreferences(); }, { signal });
     enterButton.addEventListener('click', enter, { signal });
+    standButton?.addEventListener('click', () => {
+      if (mode === 'exploring' && seatedAt) { standUp(true); canvas!.focus({ preventScroll: true }); }
+    }, { signal });
     pauseButton.addEventListener('click', pause, { signal });
     lockButton?.addEventListener('click', requestLock, { signal });
     document.addEventListener('pointerlockchange', () => {
@@ -396,14 +415,20 @@ async function initializeWorld(root: HTMLElement) {
       if (locked) {
         pointerLock.onLocked();
         clearDrag(); clearPointer();
-        if (!alive || ui.isOpen() || mode !== 'exploring') {
+        if (!alive || ui.isOpen() || mode !== 'exploring' || (seatedAt && !seatWantsLock)) {
           look.suspend(); syncInputMode(); document.exitPointerLock(); return;
         }
         look.begin('locked', performance.now()); dragLook = false;
       } else {
-        pointerLock.cancel(); look.suspend(); clearDrag();
-        clearPointer();
-        if (wasLocked && mode === 'exploring') pause();
+        pointerLock.cancel();
+        if (seatedAt || releasingForSeat) {
+          if (wasLocked && !releasingForSeat) lastSeatUnlock = performance.now();
+          releasingForSeat = false; seatWantsLock = false; dragLook = true; look.end('locked');
+        } else {
+          look.suspend();
+          if (wasLocked && mode === 'exploring') pause();
+        }
+        clearDrag(); clearPointer();
       }
       syncInputMode();
     }, { signal });
@@ -476,11 +501,16 @@ async function initializeWorld(root: HTMLElement) {
     stick.addEventListener('lostpointercapture', endStick, { signal });
     window.addEventListener('keydown', event => {
       if (ui.isOpen() || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.code === 'Escape' && mode === 'exploring' && seatedAt && (document.pointerLockElement === canvas || performance.now() - lastSeatUnlock < 180)) {
+        if (document.pointerLockElement === canvas) unlock();
+        return;
+      }
       if (event.code === 'Escape') { if (mode === 'exploring' || mode === 'transition') pause(); return; }
       if (mode !== 'exploring') return;
       if (event.code === 'KeyM') { event.preventDefault(); ui.openContent('books'); return; }
-      if (event.code === 'KeyE') { event.preventDefault(); if (!event.repeat) interactionAction(); return; }
+      if (event.code === 'KeyE') { event.preventDefault(); if (!event.repeat) { if (seatedAt) standUp(true); else interactionAction(); } return; }
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(event.code)) {
+        if (seatedAt && ['KeyW','KeyA','KeyS','KeyD'].includes(event.code)) standUp(true);
         event.preventDefault(); keys.add(event.code); cancelRoute(); look.cancelTurn();
       }
     }, { signal });
@@ -516,7 +546,7 @@ async function initializeWorld(root: HTMLElement) {
     };
     // Painting and mountains share one deadline. Their existing fallbacks remain
     // usable, and their own callbacks may still install late images until disposal.
-    await waitForOptionalAsset(Promise.allSettled([furniture.assetsReady, backdrop.ready]), 1500);
+    await waitForOptionalAsset(Promise.allSettled([environment.assetsReady, furniture.assetsReady, backdrop.ready]), 1500);
     if (!alive || resourcesDisposed) return;
     await renderer.compileAsync(scene, camera);
     if (!alive || resourcesDisposed) return;
@@ -552,7 +582,11 @@ async function initializeWorld(root: HTMLElement) {
             movement = { x: dx / distance, z: dz / distance }; pace = Math.min(2, distance / delta);
             look.turnTo(Math.atan2(-dx, -dz), -0.035);
           } else {
-            if (destination) { face(destination); ui.showToast(en ? 'Look at the object and press E.' : '看向眼前物件，按 E 细看。'); }
+            if (destination) {
+              face(destination);
+              const prompt = touchInput ? (en ? 'Tap the object prompt to interact.' : '轻触物件提示即可互动。') : (en ? 'Look at the object and press E.' : '看向眼前物件，按 E 细看。');
+              ui.showToast(prompt);
+            }
             cancelRoute(); movement = { x: 0, z: 0 }; velocity.set(0, 0);
           }
         }
@@ -570,8 +604,9 @@ async function initializeWorld(root: HTMLElement) {
       }
       updateCamera(Math.min(0.05, Math.max(0, rawDelta)), speed);
       const place = describePlace(position.x, position.z), indoor = place.indoor;
-      environment.update(elapsed, delta, indoor);
-      backdrop.update(elapsed, delta);
+      const landscapeTime = reducedMotion ? 0 : elapsed;
+      environment.update(landscapeTime, reducedMotion ? 0 : delta, indoor);
+      backdrop.update(landscapeTime, delta);
       const highlighted = elapsed < selectedUntil ? selectedId : mode === 'exploring' ? aimed?.id ?? null : null;
       furniture.update(elapsed, delta, highlighted);
       if (elapsed < selectedUntil) lighting.sun.shadow.needsUpdate = true;
