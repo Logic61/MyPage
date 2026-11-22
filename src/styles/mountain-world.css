@@ -69,87 +69,6 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-fallback nav a { padding-bottom: 5px; border-bottom: 1px solid #bcaa81; font-size: 16px; }
 .mw-sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
 
-/* Reading happens on a real, selectable page, while the world keeps its place. */
-.mountain-world .mw-reader { --text: #292e29; --text-muted: #72776c; --border: #d8d2c3; --accent: #855039; --bg: #f2eddf; color-scheme: light; position: fixed; inset: 0; padding: 0; border: 1px solid rgba(235,220,185,.48); margin: auto; width: min(1000px,calc(100vw - 64px)); max-width: none; height: min(850px,calc(100dvh - 76px)); max-height: none; color: var(--mw-ink); background: var(--mw-paper); border-radius: 5px; box-shadow: 0 40px 120px rgba(0,0,0,.4); overflow: hidden; }
-.mw-reader::backdrop { background: rgba(9,21,25,.64); backdrop-filter: blur(7px); }
-.mw-reader-frame { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.mw-reader-header { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 20px; padding: 29px 40px 24px; border-bottom: 1px solid #d8d2c3; background: #f2eddf; }
-.mw-reader-header .mw-eyebrow { display: block; color: #93846a; font-size: 10px; margin-bottom: 9px; }
-.mw-reader-header h2 { margin: 0; font-weight: 400; font-size: 28px; letter-spacing: .1em; line-height: 1.3; color: #2d352e; }
-.mw-reader-close { display: flex; gap: 12px; align-items: center; align-self: center; color: #6f7668; border: 0; background: transparent; padding: 9px 0 9px 12px; font-size: 14px; flex: none; }
-.mw-reader-close svg { width: 22px; height: 22px; }
-.mw-reader-close:hover { color: #865137; }
-.mw-reader-toolbar { display: flex; flex: none; justify-content: space-between; gap: 15px; padding: 13px 40px; border-bottom: 1px solid #ded7c7; font-size: 13px; color: #766a55; }
-.mw-reader-toolbar button { padding: 0; border: 0; background: none; color: inherit; }
-.mw-reader-toolbar a:hover, .mw-reader-toolbar button:hover { color: #513d29; text-decoration: underline; text-underline-offset: 4px; }
-.mw-reader-scroll { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #b5b3a1 transparent; padding: 26px 40px 38px; }
-.mw-wayfinding { padding-bottom: 23px; margin-bottom: 24px; border-bottom: 1px solid #d8d2c3; }
-.mw-wayfinding > p { font-size: 13px; color: #868571; margin: 0 0 16px; letter-spacing: .08em; }
-.mw-destinations { display: grid; grid-template-columns: repeat(5,1fr); gap: 16px; }
-.mw-destinations button { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; border: 0; border-left: 1px solid #c8bda4; padding: 4px 0 4px 13px; text-align: left; color: #39443a; background: none; }
-.mw-destinations button strong { font-size: 15px; font-weight: 400; }
-.mw-destinations button span { color: #868571; font-size: 12px; }
-.mw-destinations button:hover { border-color: #9a6c38; color: #9a6c38; }
-.mw-catalogue-controls { display: flex; gap: 24px; align-items: center; }
-.mw-search { display: flex; align-items: center; gap: 11px; flex: 1; min-width: 0; }
-.mw-search svg { width: 20px; height: 20px; color: #858b7d; }
-.mw-search input { border: 0; border-bottom: 1px solid #cec9b9; border-radius: 0; background: transparent; width: 100%; padding: 10px 0; color: #30382e; font-size: 15px; min-width: 0; }
-.mw-search input::placeholder { color: #929282; }
-.mw-topic { position: relative; max-width: 170px; }
-.mw-topic select { appearance: none; border: 1px solid #d4cebd; background: transparent; border-radius: 2px; padding: 9px 32px 9px 12px; color: #6f715f; max-width: 100%; font-size: 14px; }
-.mw-topic svg { position: absolute; width: 16px; height: 16px; top: 50%; right: 9px; transform: translateY(-50%); pointer-events: none; }
-.mw-catalogue-count { color: #8a8b7a; font-size: 12px; margin: 20px 0 5px; letter-spacing: .04em; }
-.mw-posts { padding: 0; margin: 0; list-style: none; }
-.mw-posts > li { border-bottom: 1px solid #dcd5c4; }
-.mw-posts > li > a { display: grid; grid-template-columns: 1fr auto; column-gap: 20px; padding: 22px 4px 23px; transition: padding .2s; }
-.mw-posts > li > a:hover { padding-left: 12px; }
-.mw-post-topic { grid-column: 1; font-size: 11px; color: #998066; letter-spacing: .08em; margin-bottom: 8px; }
-.mw-posts h3 { grid-column: 1; margin: 0; font-size: 21px; font-weight: 400; line-height: 1.45; color: #2c392f; }
-.mw-posts p { grid-column: 1; margin: 8px 0 0; font-size: 14px; line-height: 1.7; color: #7d8172; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
-.mw-posts time { grid-column: 2; grid-row: 2; font-family: var(--font-sans,sans-serif); font-size: 11px; color: #919183; align-self: center; white-space: nowrap; }
-.mw-empty { padding: 45px 0; color: #7e8373; text-align: center; font-size: 15px; }
-.mw-reader-footer { flex: none; padding: 14px 40px; display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid #d8d2c3; font-size: 11px; letter-spacing: .06em; color: #949281; }
-.mw-reader-status { color: #767c6e; padding: 45px 0; font-size: 16px; line-height: 1.9; }
-.mw-reader-status a { color: #865137; text-decoration: underline; text-underline-offset: 4px; }
-.mountain-world .mw-article { color: #2c342e; font-size: 17px; line-height: 1.9; width: 100%; max-width: 770px; margin: 0 auto; padding: 8px 0 16px; overflow-wrap: anywhere; }
-.mountain-world .mw-article > article, .mountain-world .mw-article > main, .mountain-world .mw-article > div { width: 100%; max-width: none; margin: 0; padding: 0; background: transparent; box-shadow: none; border: 0; color: inherit; }
-.mountain-world .mw-article h1 { font-size: clamp(27px,3vw,39px); font-weight: 400; letter-spacing: .02em; line-height: 1.55; color: #2b352e; margin: 15px 0 13px; text-align: left; }
-.mountain-world .mw-article h2 { font-size: 25px; font-weight: 400; color: #2b352e; margin: 35px 0 16px; line-height: 1.6; }
-.mountain-world .mw-article h3 { font-size: 21px; font-weight: 400; color: #2b352e; margin: 27px 0 12px; }
-.mountain-world .mw-article .article-header { padding: 0 0 24px; margin: 0 0 25px; border-bottom: 1px solid #d8d2c3; }
-.mountain-world .mw-article .article-tags { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: #947a5e; }
-.mountain-world .mw-article .article-meta { font-size: 13px; color: #868574; display: flex; flex-wrap: wrap; gap: 12px; }
-.mountain-world .mw-article .article-body { color: #353c33; max-width: none; font-size: 17px; line-height: 1.95; }
-.mountain-world .mw-article p { margin: 14px 0; color: inherit; }
-.mountain-world .mw-article a { color: #845237; text-decoration: underline; text-underline-offset: 3px; }
-.mountain-world .mw-article ul, .mountain-world .mw-article ol { padding-left: 1.4em; margin: 15px 0; }
-.mountain-world .mw-article ul { list-style: disc; }
-.mountain-world .mw-article ol { list-style: decimal; }
-.mountain-world .mw-article li { margin: 8px 0; }
-.mountain-world .mw-article img { max-width: 100%; height: auto; margin: 25px auto; border-radius: 2px; }
-.mountain-world .mw-article blockquote { margin: 24px 0; padding: 1px 0 1px 20px; border-left: 2px solid #b7a582; color: #747768; }
-.mountain-world .mw-article pre { overflow: auto; padding: 20px; margin: 22px 0; font-size: 13px; line-height: 1.65; border-radius: 3px; background: #26332d !important; color: #ebe6d5 !important; }
-.mountain-world .mw-article :not(pre) > code { color: #6e4c36; background: #e4dece; padding: 2px 5px; border-radius: 2px; font-size: .87em; }
-.mountain-world .mw-article table { width: 100%; border-collapse: collapse; display: block; overflow-x: auto; font-size: 15px; margin: 22px 0; }
-.mountain-world .mw-article td, .mountain-world .mw-article th { padding: 10px 12px; border: 1px solid #d3cebe; text-align: left; }
-.mountain-world .mw-article mjx-container[display="true"] { overflow-x: auto; overflow-y: hidden; max-width: 100%; padding: 5px 0; }
-.mountain-world .mw-article .project-list { display: block; }
-.mountain-world .mw-article .project-folio { display: block; padding: 5px 0 25px; margin-bottom: 24px; background: none; border: 0; border-bottom: 1px solid #d8d2c3; border-radius: 0; }
-.mountain-world .mw-article .project-summary { border: 0; padding: 0; background: none; }
-.mountain-world .mw-article .project-notes { border: 0; padding: 14px 0 0; background: none; }
-.mountain-world .mw-article .project-glyph { display: none; }
-.mountain-world .mw-article .project-stack, .mountain-world .mw-article .project-notes-label { font-size: 12px; color: #8c826c; }
-.mountain-world .mw-article .project-repo { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; }
-.mountain-world .mw-article .project-repo svg { width: 18px; height: 18px; }
-.mountain-world .mw-article .cv-header, .mountain-world .mw-article .cv-sections { display: block; padding: 0; background: none; }
-.mountain-world .mw-article .cv-list { list-style: none; padding: 0; }
-.mountain-world .mw-article .cv-head { display: flex; align-items: baseline; justify-content: space-between; gap: 15px; }
-.mountain-world .mw-article .cv-date { font-size: 13px; color: #898676; white-space: nowrap; }
-.mountain-world .mw-article .cv-sub { color: #747b6d; font-size: 15px; }
-.mountain-world .mw-article .cv-bullets { font-size: 15px; }
-.mountain-world .mw-article .cv-skills { display: grid; gap: 12px; }
-.mountain-world .mw-article .cv-skill-row { display: grid; grid-template-columns: 130px 1fr; gap: 15px; }
-.mountain-world .mw-article .cv-footer { display: flex; justify-content: space-between; font-size: 12px; color: #898676; margin-top: 30px; }
 .mountain-world.mw-reading .mw-hud, .mountain-world.mw-reading .mw-interact { visibility: hidden; }
 
 @media (max-width: 900px) {
@@ -187,36 +106,6 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
   .mw-interact { font-size: 14px; padding: 10px 13px; }
   .mw-interact kbd { display: none; }
   .mw-interact-touch { display: inline; }
-  .mountain-world .mw-reader { width: 100vw; height: 100dvh; max-height: 100dvh; border: 0; border-radius: 0; }
-  .mw-reader-header { padding: max(22px,env(safe-area-inset-top)) 21px 20px; gap: 12px; }
-  .mw-reader-header h2 { font-size: 23px; }
-  .mw-reader-header .mw-eyebrow { font-size: 9px; }
-  .mw-reader-close { font-size: 12px; gap: 8px; padding-left: 4px; }
-  .mw-reader-close svg { width: 20px; height: 20px; }
-  .mw-reader-scroll { padding: 22px 23px 30px; }
-  .mw-reader-toolbar { padding: 13px 23px; font-size: 12px; }
-  .mw-reader-footer { padding: 14px 23px max(16px,env(safe-area-inset-bottom)); font-size: 10px; }
-  .mw-reader-footer span:last-child { display: none; }
-  .mw-destinations { grid-template-columns: repeat(3,1fr); gap: 17px 8px; }
-  .mw-destinations button { padding-left: 10px; }
-  .mw-destinations button strong { font-size: 14px; }
-  .mw-destinations button span { font-size: 11px; }
-  .mw-catalogue-controls { gap: 10px; align-items: flex-end; }
-  .mw-search { gap: 7px; }
-  .mw-search svg { width: 17px; }
-  .mw-search input { font-size: 14px; }
-  .mw-topic { max-width: 110px; }
-  .mw-topic select { font-size: 12px; padding-left: 8px; }
-  .mw-posts > li > a { display: block; padding: 21px 0; }
-  .mw-posts h3 { font-size: 20px; margin-top: 6px; }
-  .mw-posts p { font-size: 13px; }
-  .mw-posts time { display: block; margin-top: 12px; }
-  .mountain-world .mw-article, .mountain-world .mw-article .article-body { font-size: 16px; }
-  .mountain-world .mw-article h1 { font-size: 27px; }
-  .mountain-world .mw-article h2 { font-size: 23px; }
-  .mountain-world .mw-article .cv-head { display: block; }
-  .mountain-world .mw-article .cv-date { display: block; margin-top: 3px; }
-  .mountain-world .mw-article .cv-skill-row { grid-template-columns: 95px 1fr; gap: 10px; font-size: 15px; }
   .mw-fallback { padding: 24px; }
   .mw-fallback-copy { max-width: 340px; }
   .mw-fallback-copy > p:not(.mw-eyebrow) { font-size: 15px; }

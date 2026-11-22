@@ -67,14 +67,14 @@ export function createFurnishingInk(isEn: boolean) {
     }
     ctx.fillStyle='#2c302a'; ctx.textBaseline='middle'; ctx.textAlign='center';
     if (isEn) {
-      ctx.font='italic 90px "EB Garamond",Georgia,serif';
-      ctx.fillText('The host',390,205); ctx.fillText('of the study',390,309,640);
+      ctx.font='italic 112px "EB Garamond Variable",Georgia,serif';
+      ctx.fillText('Preface',390,260,640);
       ctx.font='42px Georgia,serif'; ctx.fillText('Guanyu Chen',390,452);
       ctx.font='27px Georgia,serif'; ctx.fillText('Curriculum vitae',390,515);
     } else {
       const brush='KaiTi,STKaiti,"Kaiti SC","Noto Serif SC",serif';
-      ctx.font='116px '+brush;
-      [...'山居自序'].forEach((char,i)=>ctx.fillText(char,489,120+i*136));
+      ctx.font='169px '+brush;
+      [...'自序'].forEach((char,i)=>ctx.fillText(char,490,206+i*195));
       ctx.font='46px '+brush; [...'陈冠宇'].forEach((char,i)=>ctx.fillText(char,306,342+i*57));
       ctx.font='28px '+font; [...'个人履历'].forEach((char,i)=>ctx.fillText(char,221,245+i*39));
     }

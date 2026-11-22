@@ -1,0 +1,91 @@
+---
+import FolioGlyph from './FolioGlyph.astro';
+import { getBlogPosts, postDate, postDescription, postSlug } from '../utils/posts';
+
+interface Props { isEn: boolean; }
+const { isEn } = Astro.props;
+const t = (zh: string, en: string) => isEn ? en : zh;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const prefix = base + (isEn ? '/en' : '');
+const posts = (await getBlogPosts(isEn)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const categoryOf = (post: typeof posts[number]) => post.data.category || t('手记', 'Notes');
+const categories = [...new Set(posts.map(categoryOf))];
+const tabs = [
+  { id: 'blog', label: t('博客', 'Blog') }, { id: 'projects', label: t('项目', 'Projects') },
+  { id: 'cv', label: t('简历', 'CV') },
+] as const;
+const places = [
+  { id: 'books', section: 'blog', glyph: 'blog', name: t('藏书架', 'Bookshelf'), place: t('西翼 · 博客', 'West wing · Writing') },
+  { id: 'projects', section: 'projects', glyph: 'projects', name: t('工作案', 'Workbench'), place: t('东翼 · 作品', 'East wing · Projects') },
+  { id: 'about', section: 'cv', glyph: 'cv', name: t('自序', 'Preface'), place: t('北厅东壁 · 简历', 'North hall · CV') },
+  { id: 'latest', section: 'blog', glyph: 'blog', name: t('案头手记', 'Writing desk'), place: t('北厅 · 近作', 'North hall · Recent writing') },
+  { id: 'bench', section: null, glyph: 'map', name: t('临崖小坐', 'Cliffside bench'), place: t('东亭 · 观山', 'East pavilion · Overlook') },
+] as const;
+---
+<dialog id="folio" aria-labelledby="folio-title" data-world-reader data-tab="blog" style={`--vellum:url("${base}/world/folio-paper.webp")`}>
+  <div class="parchment">
+    <div class="scroll-rod upper" aria-hidden="true"></div>
+    <div class="parchment-leaf">
+      <header class="folio-bar">
+        <nav aria-label={t('卷宗', 'Folio sections')}>
+          {tabs.map(tab => <a href={`${prefix}/${tab.id}/`} data-section-link={tab.id}><FolioGlyph name={tab.id}/><span>{tab.label}</span></a>)}
+          <button type="button" data-section-link="map"><FolioGlyph name="map"/><span>{t('地图', 'Map')}</span></button>
+        </nav>
+        <button type="button" id="close" data-world-action="close" aria-label={t('收卷，回到书斋', 'Roll up and return')}><span>{t('收卷','Close')}</span><i aria-hidden="true">×</i></button>
+      </header>
+      <h2 id="folio-title" class="mw-sr-only">{t('云庭书卷', 'Cloud Court folio')}</h2>
+      <div class="manuscript" data-catalogue="closed">
+        <aside class="folio-catalogue" data-reader-directory aria-label={t('藏书目录', 'Writing index')}>
+          <div class="catalogue-top"><h3 data-catalogue-title>{t('藏书目录', 'Contents')}</h3><button type="button" id="hide-contents">{t('回到正文', 'Return to text')}</button></div>
+          <div class="catalogue-tools">
+            <input id="find-writing" data-world-search type="search" autocomplete="off" placeholder={t('查找篇名', 'Find a title')} aria-label={t('查找篇名', 'Find a title')}/>
+            <select id="category" data-world-category aria-label={t('文章分类', 'Filter by subject')}><option value="">{t('全部分类', 'All subjects')}</option>{categories.map(c => <option value={c}>{c}</option>)}</select>
+          </div>
+          <div class="catalogue-list">
+            {posts.map(post => <div data-world-post><a href={`${prefix}/blog/${postSlug(post)}/`} data-world-article data-slug={postSlug(post)}
+              data-alias={isEn ? `${prefix}/blog/${post.id}/` : undefined} data-category={categoryOf(post)} data-description={postDescription(post)}
+              data-date={postDate(post.data.pubDate, isEn)} data-author={post.data.author}><span>{post.data.title}</span></a></div>)}
+            <p data-world-empty hidden>{t('没有找到匹配的文章。', 'No matching titles.')}</p>
+          </div>
+          <span class="mw-sr-only" data-world-count aria-live="polite"></span>
+        </aside>
+        <div class="folio-text-side">
+          <button type="button" id="show-contents" aria-expanded="false">{t('选篇 · 藏书目录', 'Choose a text')}</button>
+          <div id="folio-reading" data-reader-scroll tabindex="0" role="region" aria-label={t('卷轴正文', 'Manuscript text')}>
+            <div id="folio-document">
+              <header class="document-title"><p id="rubric"></p><h2 id="reading-title" data-reader-title></h2><p id="byline"></p></header>
+              <div id="folio-body" class="scroll-prose" data-reader-article></div>
+              <p data-reader-status role="status" hidden></p>
+              <nav id="reading-neighbours" aria-label={t('相邻文章', 'Adjacent articles')} hidden><button type="button" id="newer"></button><button type="button" id="older"></button></nav>
+              <a class="folio-original" data-reader-original href={`${prefix}/blog/`} target="_blank" rel="noopener noreferrer">{t('打开原页 ↗', 'Open original ↗')}</a>
+            </div>
+            <section id="folio-map" hidden>
+              <header class="document-title"><h2>{t('云庭平面图','Plan of the courtyard')}</h2></header>
+              <div class="map-layout">
+                <svg class="floorplan" viewBox="0 0 260 218" role="img" aria-label={t('北厅在上，石桥在下。金色标记为当前位置。','The north hall is at the top, the bridge at the foot. Gold marks your position.')}>
+                  <defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 6L6 0" stroke="currentColor" opacity=".17"/></pattern></defs>
+                  <g fill="none" stroke="currentColor">
+                    <path d="M93.4 23h73.2v25.2H93.4z M93.4 48.2h17.4v38.4H93.4z M149.2 48.2h17.4v38.4h-17.4z" fill="url(#hatch)"/>
+                    <path d="M93.4 48.2h-8v80.4h8m73.2-80.4h8v80.4h-8M92 86.6v46.8h27.5m21 0H168V86.6 M119 133.4v69h22v-69" />
+                    <path d="M111 48.2h38M119 133.4h22" stroke-width="2"/>
+                    <g fill="#a5ae9870"><rect x="106.2" y="105.8" width="7.9" height="12.4"/><rect x="145.9" y="105.8" width="7.9" height="12.4"/></g>
+                    <path d="m69 97 13 7.5v15L69 127l-13-7.5v-15z m122 0 13 7.5v15l-13 7.5-13-7.5v-15z"/>
+                    <circle cx="130" cy="32" r="3"/><path d="M123 43h14"/>
+                  </g>
+                  <g class="map-labels"><text x="130" y="17">N</text><text x="69" y="71">{t('藏书','Library')}</text><text x="193" y="71">{t('工作案','Workbench')}</text><text x="169" y="193">{t('石桥','Bridge')}</text></g>
+                  <g id="map-player" transform="translate(130 189)"><circle r="3.5"/><path d="M0-10l-3.2 5.8h6.4z"/></g>
+                </svg>
+                <div class="map-directory">{places.map(p => <div>
+                  {p.section ? <a href={`${prefix}/${p.section}/`} data-section-link={p.section} data-recent={p.id === 'latest' || undefined}><FolioGlyph name={p.glyph}/><span><strong>{p.name}</strong><small>{p.place}</small></span></a>
+                    : <span class="map-bench"><FolioGlyph name={p.glyph}/><span><strong>{p.name}</strong><small>{p.place}</small></span></span>}
+                  <button type="button" data-world-destination={p.id} aria-label={t('指路至','Guide me to ') + p.name}>{t('指路','Guide me')}</button>
+                </div>)}</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-rod lower" aria-hidden="true"></div>
+  </div>
+</dialog>

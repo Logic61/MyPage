@@ -273,7 +273,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
   mountScroll('North wall poetic inscription',-3.68,written('scroll'));
   const hostMount=mountScroll('North wall host biography scroll',3.68,hostPaper);
-  interactions.push({ id:'about', kind:'about', label:'展读山居自序', labelEn:'Read the host’s scroll',
+  interactions.push({ id:'about', kind:'about', label:'展读自序', labelEn:'Read the preface',
     position:new THREE.Vector3(3.68,2.22,-9.73), approach:new THREE.Vector3(3.68,.3,-7.46), radius:2.75, meshes:[hostMount] });
   const assetsReady=Promise.all([screenReady,lettering.portraitReady]).then(()=>{});
 

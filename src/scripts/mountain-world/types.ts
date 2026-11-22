@@ -34,18 +34,10 @@ export interface Furnishings {
   update: (time: number, delta: number, selectedId: string | null) => void;
   dispose: () => void;
 }
-export interface WorldPost {
-  title: string;
-  href: string;
-  category: string;
-  date: string;
-  description: string;
-}
 export interface WorldConfig {
   isEn: boolean;
   prefix: string;
   base: string;
-  posts: WorldPost[];
 }
 export interface WorldUI {
   updateWaymarks: (camera: THREE.PerspectiveCamera, items: Interaction[], aimed?: string) => void;
@@ -55,7 +47,7 @@ export interface WorldUI {
   setLocation: (name: string, nameEn: string) => void;
   setInteraction: (interaction: Interaction | null, screen?: { x: number; y: number }) => void;
   showToast: (text: string) => void;
-  openContent: (kind: InteractionKind) => void;
+  openContent: (kind: InteractionKind, catalogue?: boolean) => void;
   isOpen: () => boolean;
   dispose: () => void;
 }

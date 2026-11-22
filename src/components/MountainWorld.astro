@@ -1,7 +1,7 @@
 ---
 import { Icon } from 'astro-icon/components';
 import Layout from '../layouts/Layout.astro';
-import { getBlogPosts, postDate, postDescription, postSlug } from '../utils/posts';
+import CourtyardFolio from './CourtyardFolio.astro';
 import '../styles/mountain-world.css';
 import '../styles/mountain-folio.css';
 
@@ -9,28 +9,11 @@ interface Props { isEn?: boolean; }
 const { isEn = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const prefix = `${base}${isEn ? '/en' : ''}`;
-const posts = (await getBlogPosts(isEn))
-  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
-  .map(post => ({
-    title: post.data.title,
-    href: `${prefix}/blog/${postSlug(post)}`,
-    category: post.data.category || (isEn ? 'Notes' : '手记'),
-    date: postDate(post.data.pubDate, isEn),
-    description: postDescription(post),
-  }));
-const categories = [...new Set(posts.map(post => post.category))];
-const config = JSON.stringify({ isEn, prefix, base, posts }).replace(/</g, '\\u003c');
+const config = JSON.stringify({ isEn, prefix, base }).replace(/</g, '\\u003c');
 const languageHref = `${base}${isEn ? '' : '/en'}/`;
-const destinations = [
-  { id: 'books', title: isEn ? 'Bookshelf' : '藏书架', subtitle: isEn ? 'All writing' : '文章与分类' },
-  { id: 'latest', title: isEn ? 'Writing desk' : '案头手记', subtitle: isEn ? 'Recent writing' : '最近更新' },
-  { id: 'projects', title: isEn ? 'Workbench' : '工作案', subtitle: isEn ? 'Projects' : '作品与实践' },
-  { id: 'about', title: isEn ? 'The host’s scroll' : '山居自序', subtitle: isEn ? 'About & CV' : '关于与简历' },
-  { id: 'bench', title: isEn ? 'Cliffside bench' : '临崖小坐', subtitle: isEn ? 'Stay a while' : '看看远山' },
-];
 const marks = [
   {id:'books', icon:'book-open-page-variant-outline', label:isEn ? 'Writing' : '博客', primary:true},
-  {id:'about', icon:'script-text-outline', label:isEn ? 'Résumé' : '简历', primary:true},
+  {id:'about', icon:'script-text-outline', label:isEn ? 'Preface' : '自序', primary:true},
   {id:'projects', icon:'compass-rose', label:isEn ? 'Projects' : '作品', primary:true},
   {id:'latest', icon:'brush-variant', label:isEn ? 'Journal' : '手记'},
   {id:'lantern', icon:'lamp-outline', label:isEn ? 'Lantern' : '点灯'},
@@ -70,7 +53,7 @@ const marks = [
       <div class="mw-entry-card">
         <h1 id="mw-entry-title" data-world-entry-title>{isEn ? 'A quiet courtyard, above the clouds.' : '云庭有光，且坐片刻。'}</h1>
         <p class="mw-entry-copy" data-world-entry-copy>{isEn ? 'Follow the stone path into the courtyard. Find a book, and take in the mountains.' : '循着石径走进云庭，取一卷书，看看山色。'}</p>
-        <div class="mw-entry-actions"><button type="button" class="mw-enter-button" data-world-enter><span class="mw-gate-glyph" aria-hidden="true">⟶</span><span data-world-enter-label>{isEn ? 'Enter the courtyard' : '走进云庭'}</span></button><button type="button" class="mw-read-button" data-world-action="directory">{isEn ? 'Browse the writing' : '先翻翻书'}</button></div>
+        <div class="mw-entry-actions"><button type="button" class="mw-enter-button" data-world-enter><span class="mw-gate-glyph" aria-hidden="true">⟶</span><span data-world-enter-label>{isEn ? 'Enter the courtyard' : '走进云庭'}</span></button><button type="button" class="mw-read-button" data-world-action="browse">{isEn ? 'Browse the writing' : '先翻翻书'}</button></div>
         <p class="mw-entry-controls mw-hint-desktop"><span><kbd>W A S D</kbd> {isEn ? 'walk' : '行走'}</span><span>{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span><kbd>E</kbd> {isEn ? 'interact' : '细看'}</span><span><kbd>Esc</kbd> {isEn ? 'pause' : '暂停'}</span></p>
         <p class="mw-entry-controls mw-hint-touch">{isEn ? 'Left thumbstick to walk · drag on the right to look' : '左侧摇杆行走 · 右侧拖动环顾 · 看向物件后轻触提示'}</p>
         <details class="mw-settings"><summary>{isEn ? 'View & comfort' : '画面与操作'}</summary><div class="mw-settings-fields">
@@ -113,34 +96,7 @@ const marks = [
     <button type="button" class="mw-stand" data-world-stand aria-keyshortcuts="E" hidden><kbd>E</kbd> {isEn ? 'Stand up' : '起身'}</button>
     <div class="mw-toast" data-world-toast role="status" hidden></div>
 
-    <dialog class="mw-reader" style={`--folio-fibres:url("${base}/world/folio-paper.webp");--folio-painting:url("${base}/world/folio-pines.webp")`} data-world-reader aria-labelledby="mw-reader-title">
-      <div class="mw-reader-frame">
-        <div class="mw-scroll-rod mw-scroll-rod-top" aria-hidden="true"></div>
-        <header class="mw-reader-header">
-          <div><span class="mw-eyebrow" data-reader-eyebrow>{isEn ? 'FROM THE BOOKSHELF' : '书架之间'}</span><h2 id="mw-reader-title" tabindex="-1" data-reader-title>{isEn ? 'The collected pages' : '藏书与手记'}</h2></div>
-          <div class="mw-reader-toolbar" data-reader-toolbar hidden><button type="button" data-world-action="back">{isEn ? 'Contents' : '书目'}</button><a href={`${prefix}/blog`} data-reader-original target="_blank" rel="noopener noreferrer">{isEn ? 'Original page ↗' : '独立页 ↗'}</a></div>
-          <button type="button" class="mw-reader-close" data-world-action="close" aria-label={isEn ? 'Put the book down and return to the study' : '合上书，回到书斋'}><span>{isEn ? 'Close' : '合卷'}</span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
-        </header>
-        <div class="mw-reader-scroll" data-reader-scroll>
-          <section data-reader-directory>
-            <div class="mw-wayfinding">
-              <p>{isEn ? 'A few places to pause' : '去一个地方，慢慢看看'}</p>
-              <div class="mw-destinations">{destinations.map(place => <button type="button" data-world-destination={place.id}><strong>{place.title}</strong><span>{place.subtitle}</span></button>)}</div>
-            </div>
-            <div class="mw-catalogue-controls">
-              <label class="mw-search"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><span class="mw-sr-only">{isEn ? 'Search the writing' : '搜索文章'}</span><input type="search" data-world-search placeholder={isEn ? 'Find a title or a thought…' : '找一篇文章，或一个念头…'} autocomplete="off" /></label>
-              <label class="mw-topic"><span class="mw-sr-only">{isEn ? 'Topic' : '分类'}</span><select data-world-category><option value="">{isEn ? 'All topics' : '全部分类'}</option>{categories.map(category => <option value={category}>{category}</option>)}</select><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 8 5 5 5-5" /></svg></label>
-            </div>
-            <p class="mw-catalogue-count" data-world-count aria-live="polite">{isEn ? `${posts.length} pages` : `共 ${posts.length} 篇`}</p>
-            <ol class="mw-posts" data-world-posts>{posts.map((post, index) => <li data-world-post data-post-index={index} data-post-category={post.category}><a href={post.href} data-world-article><span class="mw-post-topic">{post.category}</span><h3>{post.title}</h3>{post.description && <p>{post.description}</p>}<time>{post.date}</time></a></li>)}</ol>
-            <p class="mw-empty" data-world-empty hidden>{isEn ? 'No matching pages. Try another word or topic.' : '暂时没有找到，换个词或分类试试。'}</p>
-          </section>
-          <div class="mw-article" data-reader-article hidden></div>
-          <p class="mw-reader-status" data-reader-status role="status" hidden></p>
-        </div>
-        <div class="mw-scroll-rod mw-scroll-rod-bottom" aria-hidden="true"></div>
-      </div>
-    </dialog>
+    <CourtyardFolio {isEn}/>
     <script is:inline type="application/json" id="mountain-world-config" set:html={config}></script>
   </div>
   <noscript><style is:inline>.mountain-world .mw-loading,.mountain-world .mw-hud{display:none}.mountain-world .mw-fallback[hidden]{display:flex!important}.mountain-world .mw-stage{display:none}</style></noscript>

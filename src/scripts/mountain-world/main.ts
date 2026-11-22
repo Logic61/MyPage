@@ -47,10 +47,11 @@ async function initializeWorld(root: HTMLElement) {
   let suspendAction = () => {}, resumeAction = () => {};
   let interactionAction = () => {}, resetAction = () => {};
   let navigateAction = (_id: string) => {}, readingAction = (_open: boolean) => {};
+  let visitorPose: () => { x: number; z: number; yaw: number } | null = () => null;
   const ui = createWorldUI(root, config, {
     onInteract: () => interactionAction(), onReset: () => resetAction(),
     onSound: () => ambience.toggle(), onNavigate: id => navigateAction(id),
-    onReadingChange: open => readingAction(open),
+    onReadingChange: open => readingAction(open), getPose: () => visitorPose(),
   });
   window.addEventListener('pagehide', event => {
     // BFCache restores this same document and its listeners, so retain its resources.
@@ -136,6 +137,7 @@ async function initializeWorld(root: HTMLElement) {
     // still share the same safe place within this courtyard.
     const stateKey = `mountain-first-person-v4-pine-court:${config.base}`;
     const look = new LookController(0, arrivalPitch);
+    visitorPose = () => ({ x: position.x, z: position.z, yaw: look.yaw });
     const stance = new StanceTransition(.3);
     let sensitivity = 1, headBob = false;
     let mode: Mode = 'welcome';
@@ -508,7 +510,7 @@ async function initializeWorld(root: HTMLElement) {
       }
       if (event.code === 'Escape') { if (mode === 'exploring' || mode === 'transition') pause(); return; }
       if (mode !== 'exploring') return;
-      if (event.code === 'KeyM') { event.preventDefault(); ui.openContent('books'); return; }
+      if (event.code === 'KeyM') { event.preventDefault(); ui.openContent('books', true); return; }
       if (event.code === 'KeyE') { event.preventDefault(); if (!event.repeat) { if (seatedAt) standUp(true); else interactionAction(); } return; }
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(event.code)) {
         if (seatedAt && ['KeyW','KeyA','KeyS','KeyD'].includes(event.code)) standUp(true);

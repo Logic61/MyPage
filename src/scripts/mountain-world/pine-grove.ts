@@ -91,8 +91,10 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
   }
   function pine(x: number,z: number,h: number,lean: number,seed: number, spread=1) {
     const rng=seeded(seed), base=new THREE.Vector3(x,.3,z), twist=(rng()-.5)*.80;
+    // Lift the crown above the eaves while retaining the bough spread and rooting space in each bed.
+    const height = h * 1.32;
     const trunkPoints = [[0,0,0],[-.12,.21,.06],[.37,.48,-.09],[.52,.65,.18],[.81,.84,-.04],[1,1,.065]]
-      .map(([u,v,w])=>base.clone().add(new THREE.Vector3(u*lean,v*h,w*h*.21)));
+      .map(([u,v,w])=>base.clone().add(new THREE.Vector3(u*lean,v*height,w*h*.21)));
     const trunk = new THREE.CatmullRomCurve3(trunkPoints);
     limb(trunkPoints,h*.042,.012,14);
     colliders.push({x:x+.10*lean,z,halfX:h*.05+Math.abs(lean)*.13,halfZ:h*.054});
