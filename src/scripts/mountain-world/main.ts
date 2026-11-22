@@ -109,7 +109,8 @@ async function initializeWorld(root: HTMLElement) {
     );
     if (!alive || resourcesDisposed) return;
     const coarse = matchMedia('(pointer: coarse)').matches;
-    const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
+    const reducedMotion = motionPreference.matches;
     root.dataset.touch = String(coarse);
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0xc7dfe6);
@@ -146,7 +147,7 @@ async function initializeWorld(root: HTMLElement) {
     let seatReturn: THREE.Vector3 | null = null;
     let restoreWalkingLock = false, releasingForSeat = false, seatWantsLock = false, lastSeatUnlock = -Infinity;
     let selectedId: string | null = null, selectedUntil = 0;
-    let elapsed = 0, walked = 0, interactionTimer = 0;
+    let elapsed = 0, landscapeTime = 0, walked = 0, interactionTimer = 0;
     let frame = 0, previousFrame = performance.now(), lastRender = 0, lastPick = -1, lastSave = 0;
     let frameSum = 0, frameSamples = 0, qualityAdjustments = 0;
     let hadPointerLock = false, dragLook = false, touchInput = coarse;
@@ -607,9 +608,11 @@ async function initializeWorld(root: HTMLElement) {
       }
       updateCamera(Math.min(0.05, Math.max(0, rawDelta)), speed);
       const place = describePlace(position.x, position.z), indoor = place.indoor;
-      const landscapeTime = reducedMotion ? 0 : elapsed;
-      environment.update(landscapeTime, reducedMotion ? 0 : delta, indoor);
-      backdrop.update(landscapeTime, delta);
+      // Clouds keep the same pace across frame rates. A preference change freezes the current view.
+      const landscapeDelta = motionPreference.matches || mode === 'reading' ? 0 : Math.min(.25, Math.max(0, rawDelta));
+      landscapeTime += landscapeDelta;
+      environment.update(landscapeTime, landscapeDelta, indoor);
+      backdrop.update(landscapeTime);
       const highlighted = elapsed < selectedUntil ? selectedId : mode === 'exploring' ? aimed?.id ?? null : null;
       furniture.update(elapsed, delta, highlighted);
       if (elapsed < selectedUntil) lighting.sun.shadow.needsUpdate = true;

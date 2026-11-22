@@ -26,9 +26,15 @@ The generated PNG is **2172 × 724 pixels**, exactly 3:1, and **2,116,399 bytes*
 
 `landscape-backdrop.ts` maps one image across 180 degrees of a 108 m radius cylinder and mirrors the geometry's U coordinates across the other half. Its height is `π × radius / 3` (about 113.1 m), preserving the 3:1 ratio along each half-circumference. The distant ridgeline is calibrated at 46% from the image top and placed at world y=11.5 m, so mountains remain visible through the windows and above the terrace rail. These dimensions keep the geometry within the default 230 m camera far plane.
 
-The local texture is sRGB with `flipY=true`, `repeat=[1,1]` and clamped UV sampling. Ordinary `MeshBasicMaterial` uses the same tone mapping as the rest of the scene. A separate linear alpha map softens the sky/cloud edges and mirror folds. A closed gradient sky sphere and two translucent cloud surfaces at y=-11 m and -17 m complete the background above and below the island.
+The local texture is sRGB with `flipY=true`, `repeat=[1,1]` and clamped UV sampling. Ordinary `MeshBasicMaterial` uses the same tone mapping as the rest of the scene. A separate linear alpha map softens the sky/cloud edges and mirror folds. The upper edge blends into the sky canopy. Two translucent surfaces at y=-11 m and -17 m carry a tileable cloud density field on independent wind currents. Their perimeter fades into the mountain painting.
 
-All background objects are excluded from interaction picking, physics and the ambient-occlusion depth pass. Geometry and a Canvas landscape fallback are available synchronously; the `ready` promise only replaces the colour map. Load failures keep the fallback, and resource disposal also covers textures that finish loading after the scene closes.
+All background objects are excluded from interaction picking, physics and the ambient-occlusion depth pass. Geometry, a gradient sky and a Canvas landscape are available from the first frame. The mountain and sky images load independently. Textures arriving after scene disposal are released.
+
+## Blue sky above the courtyard
+
+`cloud-court-sky.webp` is an original ImageGen painting created for MyPage on 2026-11-23. The brief called for an upward view with softly lit white cumulus, fine cirrus across the zenith and a pale outer sky to match the blue-green mountains. The 1254 × 1254 painting is delivered as a 108,300-byte sRGB WebP.
+
+The centre of the painting maps directly overhead. Angular distance from the zenith sets the sampling radius, which gives every azimuth the same centre texel and blends the lower part of the canopy into the horizon. The high clouds drift gently. Local mist rolls around the cliff below eye level. The cloud layers freeze in place while reading and when reduced motion is enabled.
 
 ## Courtyard architecture and vegetation
 

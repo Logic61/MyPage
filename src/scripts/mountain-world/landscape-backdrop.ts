@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 
-export const LANDSCAPE_PANORAMA_URL = `${(import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/, '')}/world/immortal-mountains-panorama.webp`;
+const artworkBase = `${(import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/, '')}/world`;
+export const LANDSCAPE_PANORAMA_URL = `${artworkBase}/immortal-mountains-panorama.webp`;
+export const SKY_CANOPY_URL = `${artworkBase}/cloud-court-sky.webp`;
 export const LANDSCAPE_FOG_COLOR = '#c7dfe6';
 
 export interface LandscapeBackdropOptions {
@@ -15,7 +17,7 @@ export interface LandscapeBackdropOptions {
 
 export interface LandscapeBackdrop {
   readonly root: THREE.Group;
-  /** All geometry and a visible fallback exist immediately; this only replaces the image map. */
+  /** All geometry and a visible fallback exist immediately; the two local paintings load independently. */
   readonly ready: Promise<void>;
   update(time: number, delta?: number): void;
   dispose(): void;
@@ -31,11 +33,10 @@ function canvas(width: number, height: number) {
   return { source: result, ctx: result.getContext('2d')! };
 }
 
-function configurePanorama(texture: THREE.Texture, name: string) {
+function configureArtwork(texture: THREE.Texture, name: string) {
   texture.name = name;
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.flipY = true;
-  // The geometry folds U at 180 degrees, so offline renderers need no special wrapping mode.
   texture.wrapS = THREE.ClampToEdgeWrapping;
   texture.wrapT = THREE.ClampToEdgeWrapping;
   texture.repeat.set(1, 1);
@@ -64,7 +65,7 @@ function fallbackPanorama() {
     mist.addColorStop(0, 'rgba(218,233,235,0)'); mist.addColorStop(1, 'rgba(218,233,235,.93)');
     ctx.fillStyle = mist; ctx.fillRect(0, base - 35, 1024, 90);
   }
-  return configurePanorama(new THREE.CanvasTexture(source), 'immortal-mountains-visible-fallback');
+  return configureArtwork(new THREE.CanvasTexture(source), 'immortal-mountains-visible-fallback');
 }
 
 /** Linear alpha makes sky, cloud and mirror-fold transitions visible to both WebGL and offline QA. */
@@ -92,32 +93,49 @@ function hash(x: number, y: number) {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967295;
 }
 
-function noise(x: number, y: number) {
+function periodicNoise(x: number, y: number, period: number) {
   const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const x0 = ix % period, x1 = (ix + 1) % period, y0 = iy % period, y1 = (iy + 1) % period;
   const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-  return THREE.MathUtils.lerp(THREE.MathUtils.lerp(hash(ix, iy), hash(ix + 1, iy), sx),
-    THREE.MathUtils.lerp(hash(ix, iy + 1), hash(ix + 1, iy + 1), sx), sy);
+  return THREE.MathUtils.lerp(THREE.MathUtils.lerp(hash(x0, y0), hash(x1, y0), sx),
+    THREE.MathUtils.lerp(hash(x0, y1), hash(x1, y1), sx), sy);
 }
 
-/** Broad banks and smaller eddies, generated once; no per-frame texture work or noise particles. */
+/** A repeating density field. Its two wind speeds reveal and conceal banks between the cliffs. */
 function cloudTexture() {
-  const size = 512, { source, ctx } = canvas(size, size), pixels = ctx.createImageData(size, size);
+  const size = 384, { source, ctx } = canvas(size, size), pixels = ctx.createImageData(size, size);
   for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-    const u = x / (size - 1), v = y / (size - 1), radial = Math.hypot(u - .5, v - .5) * 2;
-    const broad = noise(u * 5.8 + 7, v * 4.8 + 13);
-    const eddies = noise(u * 17 + broad * 2, v * 15 + 4) * .68 + noise(u * 43, v * 39 + 19) * .32;
-    const banks = .60 * broad + .40 * eddies;
-    const edge = 1 - THREE.MathUtils.smoothstep(radial, .72, .99);
-    const alpha = THREE.MathUtils.smoothstep(banks, .23, .78) * edge;
-    const shade = Math.round(224 + banks * 31), i = (y * size + x) * 4;
-    pixels.data[i] = shade - 5; pixels.data[i + 1] = shade - 1; pixels.data[i + 2] = shade;
-    pixels.data[i + 3] = Math.round(alpha * 255);
+    const u = (x + .5) / size, v = (y + .5) / size;
+    const broad = periodicNoise(u * 4 + .6, v * 4 + 2.1, 4);
+    const folds = periodicNoise(u * 9 + broad * 1.6, v * 9 + broad * .9 + 3, 9);
+    const curls = periodicNoise(u * 24 + folds * 1.7, v * 24 + broad + 5, 24);
+    const density = .5 * broad + .34 * folds + .16 * curls;
+    const light = THREE.MathUtils.smoothstep(density, .25, .75), i = (y * size + x) * 4;
+    pixels.data[i] = 179 + 75 * light; pixels.data[i + 1] = 202 + 51 * light; pixels.data[i + 2] = 216 + 35 * light;
+    pixels.data[i + 3] = Math.round(255 * THREE.MathUtils.smoothstep(density, .26, .72));
   }
   ctx.putImageData(pixels, 0, 0);
   const result = new THREE.CanvasTexture(source);
-  result.name = 'layered-cloud-sea-colour-and-alpha'; result.colorSpace = THREE.SRGBColorSpace;
-  result.flipY = true; result.anisotropy = 4;
+  result.name = 'windborne-cloud-sea'; result.colorSpace = THREE.SRGBColorSpace;
+  result.wrapS = result.wrapT = THREE.RepeatWrapping; result.anisotropy = 4;
   return result;
+}
+
+/** Project a square zenith painting radially. All longitudes meet at the same centre texel. */
+function skyCanopyGeometry(radius: number) {
+  const geometry = new THREE.SphereGeometry(radius, 72, 24, 0, Math.PI * 2, 0, Math.PI / 2);
+  const positions = geometry.attributes.position, uv = geometry.attributes.uv;
+  const colors = new Float32Array(positions.count * 4);
+  for (let i = 0; i < positions.count; i++) {
+    const x = positions.getX(i), z = positions.getZ(i);
+    const elevation = THREE.MathUtils.clamp(positions.getY(i) / radius, 0, 1);
+    const angle = Math.acos(elevation), length = Math.hypot(x, z);
+    const scale = length > .0001 ? .49 * angle / (Math.PI / 2) / length : 0;
+    uv.setXY(i, .5 + x * scale, .5 - z * scale);
+    colors.set([1, 1, 1, THREE.MathUtils.smoothstep(elevation, .12, .64)], i * 4);
+  }
+  geometry.setAttribute('color', new THREE.BufferAttribute(colors, 4));
+  return geometry;
 }
 
 /**
@@ -162,6 +180,10 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
     keepMaterial(new THREE.MeshBasicMaterial({ color: '#ffffff', vertexColors: true, side: THREE.BackSide,
       depthWrite: false, fog: false })), -1000);
   sky.frustumCulled = false;
+  const canopyMaterial = keepMaterial(new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true,
+    side: THREE.BackSide, depthWrite: false, fog: false, visible: false }));
+  const canopy = mesh('painted-blue-sky-and-white-clouds', keepGeometry(skyCanopyGeometry(radius + 54)), canopyMaterial, -990);
+  canopy.frustumCulled = false;
 
   const fallback = keepTexture(fallbackPanorama()), mask = keepTexture(panoramaMask());
   const panoramaMaterial = keepMaterial(new THREE.MeshBasicMaterial({ color: '#ffffff', map: fallback, alphaMap: mask,
@@ -182,38 +204,50 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
     radius, height, horizonY, imageHorizonFromTop: IMAGE_HORIZON_FROM_TOP,
   };
 
-  const clouds = keepTexture(cloudTexture());
   const cloudGeometry = keepGeometry(new THREE.PlaneGeometry((radius + 35) * 2, (radius + 35) * 2, 40, 40));
   cloudGeometry.rotateX(-Math.PI / 2);
-  const cloudPositions = cloudGeometry.attributes.position;
+  const cloudPositions = cloudGeometry.attributes.position, cloudUV = cloudGeometry.attributes.uv;
+  const cloudTint = new Float32Array(cloudPositions.count * 4);
   for (let i = 0; i < cloudPositions.count; i++) {
     const x = cloudPositions.getX(i), z = cloudPositions.getZ(i);
-    cloudPositions.setY(i, Math.sin(x * .037) * Math.cos(z * .029) * .45);
+    cloudPositions.setY(i, Math.sin(x * .037) * Math.cos(z * .029) * .85);
+    // Dissolve into the painted valley before grazing angles flatten the moving ridges into lines.
+    const edge = Math.hypot(cloudUV.getX(i) - .5, cloudUV.getY(i) - .5) * 2;
+    cloudTint.set([1, 1, 1, 1 - THREE.MathUtils.smoothstep(edge, .28, .67)], i * 4);
   }
-  cloudGeometry.computeVertexNormals();
-  const cloudLayers = [-11, -17].map((y, index) => {
-    const layer = mesh(`cloud-sea-depth-layer-${index + 1}`, cloudGeometry,
-      keepMaterial(new THREE.MeshBasicMaterial({ color: '#e3eef0', map: clouds, transparent: true,
-        opacity: cloudOpacity * (index ? .94 : 1), side: THREE.DoubleSide, depthWrite: false, fog: true })), -880 - index);
-    layer.position.y = y; layer.rotation.y = index * .83;
-    layer.scale.setScalar(index ? 1.10 : 1); return layer;
-  });
+  cloudGeometry.setAttribute('color', new THREE.BufferAttribute(cloudTint, 4));
+  const upperClouds = keepTexture(cloudTexture()), lowerClouds = keepTexture(upperClouds.clone());
+  upperClouds.repeat.set(3.75, 3.05); lowerClouds.repeat.set(2.6, 2.15);
+  for (const [index, map] of [upperClouds, lowerClouds].entries()) {
+    const material = keepMaterial(new THREE.MeshBasicMaterial({ map, transparent: true, vertexColors: true,
+      opacity: Math.min(1, cloudOpacity * (index ? .88 : 1.10)), depthWrite: false, fog: true }));
+    const layer = mesh(`cloud-sea-depth-layer-${index + 1}`, cloudGeometry, material, -880 - index);
+    layer.position.y = index ? -17 : -11; layer.rotation.y = index * .42;
+  }
 
-  const ready = Promise.resolve().then(() => new THREE.TextureLoader().loadAsync(LANDSCAPE_PANORAMA_URL)).then(texture => {
-    if (disposed) { texture.dispose(); return; }
-    keepTexture(configurePanorama(texture, 'generated-immortal-mountain-panorama-srgb'));
-    panoramaMaterial.map = texture; panoramaMaterial.needsUpdate = true;
-    panoramaMaterial.userData.artworkSource = 'generated-local-artwork';
-  }).catch(() => { /* Keep the complete visible fallback when the optional local artwork fails to load. */ });
+  const loader = new THREE.TextureLoader();
+  async function loadPainting(url: string, name: string, material: THREE.MeshBasicMaterial) {
+    try {
+      const texture = await loader.loadAsync(url);
+      if (disposed) { texture.dispose(); return; }
+      material.map = keepTexture(configureArtwork(texture, name));
+      material.visible = true; material.needsUpdate = true;
+      material.userData.artworkSource = 'generated-local-artwork';
+    } catch { /* The gradient sky and Canvas mountain landscape are available from the first frame. */ }
+  }
+  const ready = Promise.all([
+    loadPainting(LANDSCAPE_PANORAMA_URL, 'generated-immortal-mountain-panorama-srgb', panoramaMaterial),
+    loadPainting(SKY_CANOPY_URL, 'cloud-court-zenith-srgb', canopyMaterial),
+  ]).then(() => {});
 
   return {
     root, ready,
     update(time) {
       if (disposed) return;
-      for (let i = 0; i < cloudLayers.length; i++) {
-        cloudLayers[i].position.x = Math.sin(time * .009 + i * 2.1) * 1.2;
-        cloudLayers[i].position.z = Math.cos(time * .007 + i * 1.7) * .9;
-      }
+      // The far bank moves more slowly. Both textures wrap continuously while their perimeter stays feathered.
+      upperClouds.offset.set(-time * .016, time * .0048);
+      lowerClouds.offset.set(.27 - time * .006, .13 + time * .0031);
+      canopyMaterial.map?.offset.set(-.028 * Math.sin(time * .032), .013 * Math.sin(time * .025));
     },
     dispose() {
       if (disposed) return;

@@ -95,17 +95,18 @@
 | `lighting.ts` / `rendering.ts` | 日光、面光、灯具与环境反射，色调映射、GTAO、辉光、质量档位与后处理失败回退 |
 | `ui.ts` / `waymarks.ts` | 路标方位、标签避让与激活，目录搜索、同源正文读取、焦点与阅卷状态 |
 | `src/styles/mountain-folio.css` | 路标、观象台卷轴、书目与正文的响应式排版 |
-| `public/world/` | 本地生成的圆屏画与远山图片，以及来源和转换记录 |
+| `public/world/` | 本地生成的圆屏、远山、天顶云图及其制作记录 |
 
-建筑、家具和近景地形采用代码构造的真实几何，基础表面结合 CPU 纹理与 Canvas 文字图集。静态几何按材质合并或实例化。远山、圆屏与近景表面的美术资源随站点打包。
+建筑、家具和近景地形采用代码构造的真实几何，基础表面结合 CPU 纹理与 Canvas 文字图集。静态几何按材质合并或实例化。远山、天顶、圆屏与近景表面的美术资源随站点打包。
 
 - `cloud-crane-frieze.webp` 与 `pine-bough.webp` 分别用于梁枋彩画和带透明通道的松枝。
 - `court-stone.webp` 与 `lacquer-grain.webp` 分别用于院内石材和朱漆木纹。
 
 - `mountain-silk-landscape.webp`：保留的圆屏山水绢画，使用普通 sRGB 漫反射贴图；画面不自发光。
-- `immortal-mountains-panorama.webp`：3:1 仙山远景图，映射到环绕的远景几何；渐变天空球、云层与雾衔接画面的上、下边缘和近景台地。远景提供环境景深，不属于可行走地图，也不参与身体碰撞、物件拾取或 GTAO 深度处理。
+- `immortal-mountains-panorama.webp` 环绕台地呈现远山。`cloud-court-sky.webp` 将画心映在正头顶，向四周淡入远山上方的晴空。
+- 台地下方两层云海以不同速度平移。崖边的雾带随风起伏、收展，头顶的白云缓慢漂移。打开卷轴或启用系统的「减少动态效果」时，云雾停在当前位置。
 
-图片的生成方式、实际尺寸、提示词、无损 WebP 转换及投影方式见 [public/world/README.md](../public/world/README.md)。圆屏画与远山图是两个独立资产；维护时不要将其用途或来源混为一项。
+各张图片的来源、尺寸、WebP 编码和投影方式见[美术资源记录](../public/world/README.md)。
 
 ## 加载、渲染与释放
 

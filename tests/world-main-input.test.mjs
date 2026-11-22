@@ -28,7 +28,8 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   canWalk = () => true, nearest = point => point } = {}) {
   let now = 100, nextId = 0, readerOpen = false, actions, camera, exitRequests = 0;
   const frames = new Map(), timers = new Map(), requests = [], activated = [], errors = [], toasts = [];
-  const lifecycle = { compiles: 0, renders: 0, ready: 0, backdropUpdates: 0, environmentUpdates: [], disposed: {} };
+  const motionPreference = { matches: reduced };
+  const lifecycle = { compiles: 0, renders: 0, ready: 0, backdropUpdates: 0, landscapeTime: 0, environmentUpdates: [], disposed: {} };
   const disposed = name => { lifecycle.disposed[name] = (lifecycle.disposed[name] || 0) + 1; };
   const rect = { left: 80, top: 40, width: 1200, height: 800 };
   class Element {
@@ -98,7 +99,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     './look-controls': lookControls, './pointer-lock': pointerLock, './first-person': firstPerson,
     './landscape-backdrop': { createLandscapeBackdrop(scene) {
       const root = new THREE.Group(); root.name = 'test-backdrop'; root.userData.ignoreAmbientOcclusion = true; scene.add(root);
-      return { root, ready: backdropReady, update() { lifecycle.backdropUpdates++; }, dispose() { disposed('backdrop'); root.removeFromParent(); } };
+      return { root, ready: backdropReady, update(time) { lifecycle.backdropUpdates++; lifecycle.landscapeTime = time; }, dispose() { disposed('backdrop'); root.removeFromParent(); } };
     } },
     './materials': { createSurfaceLibrary: () => ({ dispose() { disposed('surfaces'); } }) },
     './environment': { createEnvironment(scene) { const root = new THREE.Group(); scene.add(root); return { root, walkAreas: [], colliders: [], update(_time, _delta, indoor) { lifecycle.environmentUpdates.push(indoor); }, dispose() { disposed('environment'); } }; } },
@@ -120,7 +121,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     exports: {}, require(name) { assert.ok(name in modules, `Unexpected runtime import: ${name}`); return modules[name]; },
     document, window, HTMLElement: Element, HTMLInputElement: Input, HTMLSelectElement: Select,
     performance: { now: () => now, timeOrigin: 1700000000000 },
-    matchMedia: query => ({ matches: (query === '(pointer: coarse)' && coarse) || (query.includes('reduced-motion') && reduced) }),
+    matchMedia: query => query.includes('reduced-motion') ? motionPreference : { matches: query === '(pointer: coarse)' && coarse },
     requestAnimationFrame(callback) { const id = ++nextId; frames.set(id, callback); return id; },
     cancelAnimationFrame: id => frames.delete(id),
     ResizeObserver: class { observe() {} disconnect() { disposed('resize'); } }, AbortController,
@@ -170,7 +171,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     assert.equal(root.dataset.state, 'ready');
     assert.equal(root.dataset.inputMode, 'none');
   }
-  return { root, canvas, document, window, controls, ui, requests, activated, toasts, camera, lifecycle, errors, sessionStore,
+  return { root, canvas, document, window, controls, ui, requests, activated, toasts, camera, lifecycle, errors, sessionStore, motionPreference,
     actions, step, emit, pointer, point, key, click, enter, fail, lock, unlock, reader,
     exitRequests: () => exitRequests, pendingTimers: () => timers.size, pendingFrames: () => frames.size };
 }
@@ -572,4 +573,17 @@ test('AO failure restores scene state and whole-background/particle visibility b
   assert.deepEqual(direct[1], direct[0]);
   pipeline.dispose(); originalOverride.dispose();
   scene.traverse(object => { if (object.geometry) object.geometry.dispose(); if (object.material) object.material.dispose(); });
+});
+
+test('the cloud clock freezes in place while reading or when the live motion preference changes', async () => {
+  const h = await world();
+  h.step(100);
+  const first = h.lifecycle.landscapeTime;
+  assert.ok(first > .04, 'Cloud drift uses real time even when physics limits its step');
+  h.motionPreference.matches = true;
+  h.step(120); assert.equal(h.lifecycle.landscapeTime, first);
+  h.reader(true); h.motionPreference.matches = false;
+  h.step(120); assert.equal(h.lifecycle.landscapeTime, first);
+  h.reader(false); h.step(120);
+  assert.ok(Math.abs(h.lifecycle.landscapeTime - first - .12) < 1e-6);
 });

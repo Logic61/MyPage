@@ -121,12 +121,17 @@ export function branchGeometry(points: THREE.Vector3[], startRadius: number, end
 }
 
 export function mistTexture() {
-  const size = 64, data = new Uint8Array(size * size * 4);
-  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-    const radius = Math.hypot((x + .5) / size * 2 - 1, (y + .5) / size * 2 - 1);
-    const a = Math.max(0, 1 - radius * radius), index = (y * size + x) * 4;
-    data[index] = data[index + 1] = data[index + 2] = 255; data[index + 3] = Math.round(a * a * a * 180);
+  const width = 160, height = 64, data = new Uint8Array(width * height * 4);
+  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+    const u = (x + .5) / width * 2 - 1, v = (y + .5) / height * 2 - 1;
+    const curl = rockNoise(u * 3.4, .8, v * 1.8);
+    const centre = .13 * Math.sin(u * 4.2) + .08 * Math.sin(u * 7 + 1.3);
+    const thickness = .64 + .16 * Math.sin(u * 5.6 + 2.2) + .11 * curl;
+    const feather = Math.max(0, 1 - u * u - ((v - centre) / thickness) ** 2);
+    const density = feather * feather * (.7 + curl * .27), i = (y * width + x) * 4;
+    data[i] = 244; data[i + 1] = 249; data[i + 2] = 252; data[i + 3] = Math.round(250 * density);
   }
-  const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat); texture.needsUpdate = true;
+  const texture = new THREE.DataTexture(data, width, height, THREE.RGBAFormat);
+  texture.name = 'wind-frayed-cliff-mist'; texture.colorSpace = THREE.SRGBColorSpace; texture.needsUpdate = true;
   texture.magFilter = THREE.LinearFilter; texture.minFilter = THREE.LinearFilter; return texture;
 }
