@@ -48,3 +48,17 @@ The gate, hall, galleries, paired pavilions and planted courts use original, met
 ### Pine bough prompt
 
 > Botanical game foliage texture on a genuinely transparent background. One isolated fine bough of a real Chinese mountain pine (Pinus hwangshanensis), a cutout for an elegant Chinese landscape in a Three.js game. A slender crooked, tapering reddish-grey woody twig starts at the middle left edge and grows to the right. Five to eight unequal upward-forking twigs along it. Each carries distinct irregular tufts of long paired ink-green fine needles, with a little warm sage light on the tips. Clearly visible open transparent gaps between the tufts and around every outside needle. Overall silhouette a narrow horizontal fan, broader in the middle, natural asymmetry. View slightly from above, legible branch structure, realistic botanical illustration with delicately painted tonal detail, diffuse soft daylight, soft jade and olive greens. Landscape 3:2 canvas, centered vertically, full bough with minimal margins at its left and right tips. Natural fine tapered tuft silhouettes, no field of solid overlapping leaves, no shadow on ground, no backdrop, no other branches, cones, text or border.
+
+## Hanging scroll, roof and pine surfaces
+
+The host’s hanging scroll and the article heading share `folio-pines.webp`, an original ImageGen painting made for MyPage. The art direction was a horizontal ink landscape on warm paper, with a weathered pine, a small tiled roof at the left, pale mountain washes and open paper to the right. The delivery file is 1280 px wide. The name, Chinese or English title and seal are drawn separately so visitors can read the appropriate inscription. The reader's paper grain (`folio-paper.webp`) is graded from Meridian Observatory's original generated vellum. The mounting takes inspiration from the silk borders and turned wooden roller of historical hanging scrolls. [Smithsonian National Museum of Asian Art, mounting Chinese paintings](https://archive.asia.si.edu/exhibitions/online/anportcon/mounting.htm)
+
+| Delivered maps | Origin and treatment |
+| --- | --- |
+| `pine-bark-color.webp`, `pine-bark-normal.webp`, `pine-bark-rough.webp` | Dimitrios Savva's photographic Pine Bark scan. The diffuse is lightly desaturated. The normal is in OpenGL format. [Poly Haven, Pine Bark](https://polyhaven.com/a/pine_bark) |
+| `fired-tile-grain.webp`, `fired-tile-rough.webp` | Stephan Seeliger's Roof Tiles scan, graded to modulate the green-grey ceramic. Overlaps, lips and tile ends are geometry. [Poly Haven, Roof Tiles](https://polyhaven.com/a/roof_tiles) |
+| `timber-normal.webp`, `timber-rough.webp` | Resampled from the Meridian Observatory copy of Wood Table Worn for the lacquered timber. [Poly Haven, Wood Table Worn](https://polyhaven.com/a/wood_table_worn) |
+| `limewash-color.webp`, `limewash-normal.webp` | Meridian Observatory's Beige Wall 001 maps, resized and graded for the courtyard lime plaster. [Poly Haven, Beige Wall 001](https://polyhaven.com/a/beige_wall_001) |
+| `flagstone-normal.webp` | Resized from the Meridian Observatory copy of Paving Stones 150. [ambientCG, Paving Stones 150](https://ambientcg.com/view?id=PavingStones150) |
+
+The source scans are CC0. The site serves these WebP maps locally. Colour maps use sRGB and normal and roughness maps use linear data. [Poly Haven licence](https://polyhaven.com/license), [ambientCG licence](https://docs.ambientcg.com/license/)

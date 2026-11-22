@@ -56,19 +56,32 @@ function needleBough() {
   const tex=new THREE.CanvasTexture(canvas); tex.name='Ink-green pine needle bough'; tex.colorSpace=THREE.SRGBColorSpace; tex.anisotropy=4; return tex;
 }
 
-export function buildPines(root: THREE.Group, bark: THREE.Material, colliders: Collider[], clock: Clock,
+export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, colliders: Collider[], clock: Clock,
   keep: (g: THREE.BufferGeometry) => THREE.BufferGeometry, ownTexture: (t: THREE.Texture) => void) {
   const map = needleBough(); ownTexture(map);
   const material = new THREE.MeshStandardMaterial({ name:'Layered mountain pine needles',map,roughness:.91,
-    side:THREE.DoubleSide,alphaTest:.22,alphaToCoverage:true,emissive:'#526955',emissiveIntensity:.34,emissiveMap:map });
+    side:THREE.DoubleSide,alphaTest:.28,alphaToCoverage:true,emissive:'#415346',emissiveIntensity:.10,emissiveMap:map });
   let disposed = false;
-  const url = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/,'')+'/world/pine-bough.webp';
-  const ready = new THREE.TextureLoader().loadAsync(url).then(texture => {
-    if (disposed) { texture.dispose(); return; }
-    texture.colorSpace=THREE.SRGBColorSpace; texture.anisotropy=4; ownTexture(texture);
-    material.map=material.emissiveMap=texture; material.needsUpdate=true;
-  }).catch(()=>{ /* Keep the hand-drawn needle silhouette until the asset is available. */ });
-  branchWind(material,clock,'x',.115);
+  const assetRoot = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/,'')+'/world/';
+  async function photograph(file: string, target: THREE.MeshStandardMaterial, channel: 'map' | 'normalMap' | 'roughnessMap') {
+    try {
+      const tex = await new THREE.TextureLoader().loadAsync(assetRoot + file);
+      if (disposed) { tex.dispose(); return; }
+      tex.colorSpace = channel === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      tex.anisotropy = 4;
+      if (target === bark) { tex.wrapS = tex.wrapT = THREE.RepeatWrapping; }
+      else { target.emissiveMap = tex; }
+      ownTexture(tex); target[channel] = tex; target.needsUpdate = true;
+    } catch { /* The generated surface and needle silhouette are immediately available. */ }
+  }
+  bark.name = 'Mountain pine bark plates'; bark.normalScale.setScalar(.70);
+  const ready = Promise.all([
+    photograph('pine-bough.webp', material, 'map'),
+    photograph('pine-bark-color.webp', bark, 'map'),
+    photograph('pine-bark-normal.webp', bark, 'normalMap'),
+    photograph('pine-bark-rough.webp', bark, 'roughnessMap'),
+  ]);
+  branchWind(material,clock,'x',.085);
   const fan = keep(gridSurface(8,4,(u,v) => new THREE.Vector3(u,(v-.105)*.49+.06*Math.sin(Math.PI*u),.12*(v-.105)+.09*u*Math.sin(u*Math.PI))));
   const transforms: THREE.Matrix4[] = [], colors: THREE.Color[] = [];
   const brush = new THREE.Object3D();
@@ -81,19 +94,25 @@ export function buildPines(root: THREE.Group, bark: THREE.Material, colliders: C
     const trunkPoints = [[0,0,0],[-.12,.21,.06],[.37,.48,-.09],[.52,.65,.18],[.81,.84,-.04],[1,1,.065]]
       .map(([u,v,w])=>base.clone().add(new THREE.Vector3(u*lean,v*h,w*h*.21)));
     const trunk = new THREE.CatmullRomCurve3(trunkPoints);
-    limb(trunkPoints,h*.042,.028,14);
+    limb(trunkPoints,h*.042,.012,14);
     colliders.push({x:x+.10*lean,z,halfX:h*.05+Math.abs(lean)*.13,halfZ:h*.054});
     for (let j=0;j<5;j++) {
       const a=j*2.39+twist, tip=base.clone().add(new THREE.Vector3(.73*Math.cos(a),-.04,.58*Math.sin(a)));
       limb([base.clone().add(new THREE.Vector3(0,h*.058,0)),base.clone().lerp(tip,.54),tip],h*.020,.015);
     }
     for (let i=0;i<10;i++) {
-      const t=.34+i*.069, foot=trunk.getPointAt(t), a=seed*.73+i*2.40+(rng()-.5)*.26;
+      const t=.30+i*.071+(rng()-.5)*.026, foot=trunk.getPointAt(t), a=seed*.73+i*2.40+(rng()-.5)*.82;
       const reach=h*(.40-i*.034)*spread*(.85+.28*rng()), dir=new THREE.Vector3(Math.cos(a),0,Math.sin(a));
-      const elbow=foot.clone().addScaledVector(dir,reach*.53); elbow.y-=h*(.045-.003*i);
+      const elbow=foot.clone().addScaledVector(dir,reach*.53); elbow.y-=h*(.077-.005*i);
       const end=foot.clone().addScaledVector(dir,reach); end.y+=h*.043;
-      const bough=new THREE.CatmullRomCurve3([foot,elbow,end]);
-      limb([foot,elbow,end],h*(.019-i*.0013),.012);
+      const knuckle=foot.clone().lerp(elbow,.48);
+      knuckle.add(new THREE.Vector3(-dir.z,.14,dir.x).multiplyScalar(reach*(rng()-.5)*.21));
+      const crotch=[foot,knuckle,elbow,end], bough=new THREE.CatmullRomCurve3(crotch);
+      limb(crotch,h*(.021-i*.0014),.012);
+      if (i===1 || i===4) {
+        const spur=bough.getPointAt(.43), tip=spur.clone().addScaledVector(dir,.27);
+        tip.y+=.26; limb([spur,spur.clone().lerp(tip,.52),tip],.039,.008,7);
+      }
       for (let j=0;j<4;j++) {
         const t0=.40+j*.17, origin=bough.getPointAt(t0), side=j%2?1:-1, angle=a+side*(.49+.42*rng());
         const length=(.36+.36*rng())*reach+.13, tip=origin.clone().add(new THREE.Vector3(Math.cos(angle)*length,.12+rng()*.1,Math.sin(angle)*length));
@@ -101,10 +120,27 @@ export function buildPines(root: THREE.Group, bark: THREE.Material, colliders: C
         for (let k=0;k<3;k++) {
           const start=origin.clone().lerp(tip,.33+k*.29);
           brush.position.copy(start); brush.rotation.set((k-1)*.76+(rng()-.5)*.34,-angle+(rng()-.5)*.86,(rng()-.38)*.3,'YXZ');
-          const s=(.62+length*.76)*(.90+.24*rng()); brush.scale.set(s,s,s*(1+.24*rng()));
+          const s=(.42+length*.89)*(1.08-k*.11)*(.83+.34*rng()); brush.scale.set(s,s*(.85+.20*rng()),s*(1+.24*rng()));
           brush.updateMatrix(); transforms.push(brush.matrix.clone());
-          colors.push(new THREE.Color().setScalar(.77+rng()*.31));
+          const sunward=.5+.5*Math.cos(angle+1.0);
+          colors.push(new THREE.Color('#829585').lerp(new THREE.Color('#c9c4a2'),.16+.33*sunward+.29*rng()));
         }
+      }
+    }
+    // A pine retains live shoots around its leader even where the lower branches have thinned.
+    for (let i = 0; i < 5; i++) {
+      const foot = trunk.getPointAt(.875 + .030 * i);
+      const angle = twist + i * 2.4;
+      const length = h * (.088 - .012 * i);
+      const tip = foot.clone().add(new THREE.Vector3(Math.cos(angle) * length, length * .63, Math.sin(angle) * length));
+      limb([foot, foot.clone().lerp(tip, .51), tip], .022, .004, 6);
+      for (const turn of [-.39, .28]) {
+        brush.position.copy(foot).lerp(tip, .60);
+        brush.rotation.set(turn, -angle + turn * .55, .39 + .055 * i, 'YXZ');
+        brush.scale.setScalar(length + .29);
+        brush.updateMatrix();
+        transforms.push(brush.matrix.clone());
+        colors.push(new THREE.Color('#b8bda2'));
       }
     }
   }

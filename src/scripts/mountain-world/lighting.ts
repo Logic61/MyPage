@@ -5,12 +5,12 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 export function createStudyLighting(scene: THREE.Scene, coarse = false) {
   RectAreaLightUniformsLib.init();
   const lights: THREE.Light[] = [];
-  const sky = new THREE.HemisphereLight(0xd5e8f2, 0xa0ad99, 0.85);
+  const sky = new THREE.HemisphereLight(0xdbe5e2, 0x969581, .73);
   scene.add(sky); lights.push(sky);
 
-  const sun = new THREE.DirectionalLight(0xffefd4, 2.25);
+  const sun = new THREE.DirectionalLight(0xffebcf, 2.05);
   sun.name = 'Clear morning over the open courtyard';
-  sun.position.set(-9, 15, 11);
+  sun.position.set(-12, 13, 8);
   sun.target.position.set(0, 0, -2);
   sun.castShadow = true;
   sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);

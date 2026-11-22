@@ -5,7 +5,7 @@ import type { SurfaceLibrary } from './materials';
 import type { Collider, WalkArea } from './types';
 
 /** These openings also cut the island's soil; water must not float on an uncut ground plane. */
-export const COURTYARD_POOL = { x0: -2.6, x1: -.9, z0: -3.7, z1: -.7 } as const;
+export const COURTYARD_POOL = { x0: -3.97, x1: -2.65, z0: 3.80, z1: 5.86 } as const;
 export const FORECOURT_PLANTER = { x0: -5.88, x1: -4.12, z0: 2.05, z1: 5.35 } as const;
 
 type Rect = { x0: number; x1: number; z0: number; z1: number };
@@ -119,16 +119,19 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     return [{ ...rect, x1: a }, { ...rect, x0: b }, { x0: a, x1: b, z0: rect.z0, z1: c }, { x0: a, x1: b, z0: d, z1: rect.z1 }]
       .filter(r => r.x1 - r.x0 > .02 && r.z1 - r.z0 > .02);
   }
-  function floorBase(rect: Rect, hole?: Rect) {
-    for (const r of subtract(rect, hole)) box(r.x1 - r.x0, .06, r.z1 - r.z0, (r.x0 + r.x1) / 2, .256, (r.z0 + r.z1) / 2,
+  function cutOpenings(rect: Rect, holes: Rect[]) {
+    return holes.reduce<Rect[]>((pieces, hole) => pieces.flatMap(piece => subtract(piece, hole)), [rect]);
+  }
+  function floorBase(rect: Rect, holes: Rect[] = []) {
+    for (const r of cutOpenings(rect, holes)) box(r.x1 - r.x0, .06, r.z1 - r.z0, (r.x0 + r.x1) / 2, .256, (r.z0 + r.z1) / 2,
       joints, 'Recessed floor joint bed', .002).castShadow = false;
   }
-  function paving(rect: Rect, width: number, depth: number, hole?: Rect, material: THREE.Material = limestone) {
-    floorBase(rect, hole); let row = 0;
+  function paving(rect: Rect, width: number, depth: number, holes: Rect[] = [], material: THREE.Material = limestone) {
+    floorBase(rect, holes); let row = 0;
     for (let z = rect.z0; z < rect.z1 - .001; z += depth, row++) {
       for (let x = rect.x0 - (row % 2) * width / 2; x < rect.x1; x += width) {
         const tile = { x0: Math.max(x, rect.x0), x1: Math.min(x + width, rect.x1), z0: z, z1: Math.min(z + depth, rect.z1) };
-        for (const r of subtract(tile, hole)) {
+        for (const r of cutOpenings(tile, holes)) {
           if (r.x1 - r.x0 < .035 || r.z1 - r.z0 < .035) continue;
           box(r.x1 - r.x0 - .012, .028, r.z1 - r.z0 - .012, (r.x0 + r.x1) / 2, .288, (r.z0 + r.z1) / 2,
             material, 'Large staggered courtyard flagstone', .004).castShadow = false;
@@ -159,8 +162,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   for (const sign of [-1,1]) {
     const side = (r: Rect) => sign < 0 ? r : mirrorRect(r);
     const p = side(COURTYARD_POOL), rim = { x0:p.x0-.12,x1:p.x1+.12,z0:p.z0-.12,z1:p.z1+.12 };
-    paving(side({x0:-3.2,x1:0,z0:-5.8,z1:.6}),1.6,.8,rim);
-    paving(side({x0:-6.35,x1:-1.98,z0:.6,z1:8.4}),.94,1.56,side(FORECOURT_PLANTER),sidePaving);
+    paving(side({x0:-3.2,x1:0,z0:-5.8,z1:.6}),1.6,.8);
+    paving(side({x0:-6.35,x1:-1.98,z0:.6,z1:8.4}),.94,1.56,[rim, side(FORECOURT_PLANTER)],sidePaving);
     for (let i=0;i<6;i++) box(.115,.028,1.288,sign*1.916,.288,1.25+i*1.3,joints,'Inset stone path border',.003).castShadow=false;
     timberFloor(side({x0:-7.36,x1:-6.1,z0:-6,z1:7.85}));
   }
@@ -183,14 +186,15 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     const x=(p.x0+p.x1)/2,z=(p.z0+p.z1)/2;
     box(waterW,.06,waterD,x,.13,z,joints,'Recessed pool bed',.005).castShadow=false;
     for (const side of [-1,1]) {
-      box(.12,.19,waterD+.24,x+side*(waterW/2+.06),.245,z,limestone,'Stone pool coping',.009);
-      box(waterW,.19,.12,x,.245,z+side*(waterD/2+.06),limestone,'Stone pool coping',.009);
+      box(.12,.15,waterD+.24,x+side*(waterW/2+.06),.227,z,limestone,'Stone pool coping',.009);
+      box(waterW,.15,.12,x,.227,z+side*(waterD/2+.06),limestone,'Stone pool coping',.009);
     }
-    obstacle(x,z,waterW/2+.12,waterD/2+.12);
+    // The flush coping is walkable stone. Only the open water blocks feet.
+    obstacle(x,z,waterW/2,waterD/2);
     const water=add(waterGeometry,waterMaterial,'Open reflecting pool',x,0,z);
     water.castShadow=false; water.userData.dynamic=true; water.userData.ignoreInteractionRay=true;
     for (let j=0;j<9;j++) {
-      const px=x+Math.sin(j*2.5+i*.8)*.51, pz=z+Math.cos(j*1.76+i)*1.06, r=.10+(j%4)*.036;
+      const px=x+Math.sin(j*2.5+i*.8)*(waterW*.32), pz=z+Math.cos(j*1.76+i)*(waterD*.34), r=.10+(j%4)*.036;
       const leaf=add(lotusLeaf,leafColor,'Notched lotus pad',px,.274+(j%3)*.005,pz);
       leaf.scale.set(r,.4,r); leaf.rotation.y=j*2.39;
       if (j!==1 && j!==6) continue;
@@ -219,9 +223,9 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   for (const sign of [-1, 1]) {
     wall('x', .6, sign < 0 ? -6.1 : 3.2, sign < 0 ? -3.2 : 6.1, 3.16,
       [{ from: sign < 0 ? -5.67 : 3.63, to: sign < 0 ? -3.63 : 5.67, bottom: 1.02, top: 2.82, lattice: true }]);
-    for (const z of [-1.05, .52]) post(sign * 3.2, z, 3.08, .17);
+    for (const z of [-4.22, .52]) post(sign * 3.2, z, 3.08, .17);
     box(.20, .17, 6.5, sign * 3.2, 3.07, -2.6, joinery, 'Continuous open-gallery bearing beam');
-    for (const z of [-5.73, -1.05, .52]) beam(new THREE.Vector3(sign * 3.2, 3.07, z), new THREE.Vector3(sign * 6.02, 3.39, z), .13, .15, 'Visible gallery cross beam');
+    for (const z of [-5.73, -4.22, .52]) beam(new THREE.Vector3(sign * 3.2, 3.07, z), new THREE.Vector3(sign * 6.02, 3.39, z), .13, .15, 'Visible gallery cross beam');
   }
   for (const z of [-9.75, -7.9]) {
     box(12.20,.20,.22,0,4.12,z,joinery,'Crossbeam beneath north hall');

@@ -25,7 +25,7 @@ function describePlace(x: number, z: number) {
     return { name: '临庭观物', nameEn: 'The courtyard workroom', indoor: true };
   if (Math.abs(x) >= 6.1 && Math.abs(x) <= 8.4 && z >= -8.2 && z <= 7.5)
     return { name: '临云长廊', nameEn: 'The cloudside gallery', indoor: false };
-  if (x >= -3.2 && x <= 3.2 && z > -5.8 && z <= 8.4)
+  if ((Math.abs(x) <= 3.2 && z > -5.8 && z <= .6) || (Math.abs(x) < 6.35 && z > .6 && z <= 8.4))
     return { name: '天光水庭', nameEn: 'The sunlit water court', indoor: false };
   if (Math.abs(x) > 8.4 && z >= -8.2 && z <= 8.5)
     return { name: '松间露台', nameEn: 'The pine terrace', indoor: false };
@@ -368,6 +368,7 @@ async function initializeWorld(root: HTMLElement) {
       if (!aimPoint()) return;
       const item = findAimed();
       if (item) activate(item);
+      else if (inputMode === 'locked') ui.useCentredWaymark();
     };
     readingAction = open => {
       if (open) {
@@ -612,6 +613,7 @@ async function initializeWorld(root: HTMLElement) {
       if (elapsed < selectedUntil) lighting.sun.shadow.needsUpdate = true;
       ambience.update(indoor, speed, delta);
       if (aimDirty || elapsed - lastPick > 0.075) showInteraction();
+      if (mode === 'exploring' && !seatedAt) ui.updateWaymarks(camera, furniture.interactions, aimed?.id);
       if (seatedAt) ui.setLocation('临崖小坐', 'Among the clouds');
       else ui.setLocation(place.name, place.nameEn);
       pipeline.render(delta);

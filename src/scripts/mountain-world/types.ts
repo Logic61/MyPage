@@ -48,6 +48,8 @@ export interface WorldConfig {
   posts: WorldPost[];
 }
 export interface WorldUI {
+  updateWaymarks: (camera: THREE.PerspectiveCamera, items: Interaction[], aimed?: string) => void;
+  useCentredWaymark: () => void;
   setReady: () => void;
   setFailed: (reason: string) => void;
   setLocation: (name: string, nameEn: string) => void;

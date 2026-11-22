@@ -56,7 +56,6 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   const ink = material({ color: '#182724', roughness: .23, metalness: .08 });
   const cord = material({ color: '#c5b38a', roughness: .97 });
   const red = material({ color: '#934b38', roughness: .64 });
-  const wax = material({ color: '#9a4938', roughness: .46 });
   const cloth = surface('cloth', { roughness: .96, normalScale: .48, side: THREE.DoubleSide, worldScale: 2 });
   const bindings = ['#cee2dc', '#e6c7ac', '#a4bce2', '#e4dbae', '#c7cfb3', '#e4bab0'].map(color =>
     surface('cloth', { color, roughness: 1, normalScale: .42 }));
@@ -235,49 +234,69 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
   batchStatic(screen);
   colliders.push({ x: 0, z: -9.5, halfX: 1.64, halfZ: .26 });
-  const assetsReady = artwork.ready.then(texture => {
+  const screenReady = artwork.ready.then(texture => {
     if (disposed) return;
     silk.map = texture; silk.needsUpdate = true;
     silk.userData.artworkSource = artwork.loaded ? 'generated-local-artwork' : 'canvas-fallback';
   });
 
-  // The personal motto remains a secondary, smaller object on the west wall.
-  const hangingScroll = group('north-wall-inscribed-scroll', 4.4, -9.80);
-  hangingScroll.position.y = 2.55; hangingScroll.scale.setScalar(.60);
-  bevel(hangingScroll, cloth, 1.15, 1.62, .016, 0, 0, -.018, .002);
-  const scrollSheet = geometry('hanging-scroll-paper', () => {
-    const result = new THREE.PlaneGeometry(.99, 1.45, 8, 20);
-    const p = result.attributes.position;
-    for (let i = 0; i < p.count; i++) p.setZ(i, .009 + Math.cos(p.getY(i) * 3) * .008 + Math.sin(p.getY(i) * 7) * .003);
-    result.computeVertexNormals(); return result;
+  const brocade = surface('cloth', {color:'#739486', repeat:[3,8], normalScale:.34, roughness:.84});
+  const hostPaper = surface('paper', {roughness:.93, normalScale:.17, side:THREE.DoubleSide});
+  hostPaper.map = lettering.portraitTexture;
+  hostPaper.emissive.set('#b99056'); hostPaper.emissiveIntensity=0;
+  focusMaterials.push({id:'about',material:hostPaper});
+  const scrollSheet = geometry('silk-mounted-paper', () => {
+    const sheet = new THREE.PlaneGeometry(1.19,1.87,10,32), p = sheet.attributes.position;
+    for (let i=0;i<p.count;i++) {
+      const y=p.getY(i);
+      p.setZ(i, .012 + .010*Math.cos(y*4.5) + .004*Math.sin(y*13+p.getX(i)*1.7));
+    }
+    sheet.computeVertexNormals(); return sheet;
   });
-  mesh(hangingScroll, scrollSheet, written('scroll'));
-  for (const yy of [-.82, .82]) {
-    cylinder(hangingScroll, wood, .026, .026, 1.24, 0, yy, 0, 20).rotation.z = Math.PI / 2;
-    for (const xx of [-.65, .65]) cylinder(hangingScroll, woodDark, .036, .036, .07, xx, yy, 0, 16).rotation.z = Math.PI / 2;
+  function mountScroll(name: string, x: number, field: THREE.Material) {
+    const mount=group(name,x,-9.77); mount.position.y=2.13;
+    bevel(mount,brocade,1.43,2.34,.022,0,0,-.017,.005);
+    for (const side of [-1,1]) {
+      box(mount,cord,.014,1.91,.009,side*.608,0,.003);
+      box(mount,cord,1.23,.014,.009,0,side*.948,.003);
+      const y=side*1.18, r=side<0?.052:.031;
+      cylinder(mount,woodDark,r,r,1.49,0,y,0,24).rotation.z=Math.PI/2;
+      for (const end of [-1,1]) {
+        cylinder(mount,brassDark,r*1.08,r*1.08,.024,end*.752,y,0,20).rotation.z=Math.PI/2;
+        cylinder(mount,wood,r*1.23,r*1.23,.075,end*.796,y,0,24).rotation.z=Math.PI/2;
+      }
+    }
+    mesh(mount,scrollSheet,field);
+    for (const side of [-1,1]) rod(mount,cord,new THREE.Vector3(side*.55,1.19,0),new THREE.Vector3(0,1.43,-.046),.006);
+    cylinder(mount,brassDark,.025,.025,.11,0,1.43,-.045,12).rotation.x=Math.PI/2;
+    batchStatic(mount); return mount;
   }
-  for (const side of [-1, 1]) rod(hangingScroll, cord, new THREE.Vector3(side * .4, .83, 0), new THREE.Vector3(0, 1.04, -.035), .003);
-  cylinder(hangingScroll, brassDark, .008, .008, .13, 0, 1.04, -.06, 10).rotation.x = Math.PI / 2;
-  batchStatic(hangingScroll);
+  mountScroll('North wall poetic inscription',-3.68,written('scroll'));
+  const hostMount=mountScroll('North wall host biography scroll',3.68,hostPaper);
+  interactions.push({ id:'about', kind:'about', label:'展读山居自序', labelEn:'Read the host’s scroll',
+    position:new THREE.Vector3(3.68,2.22,-9.73), approach:new THREE.Vector3(3.68,.3,-7.46), radius:2.75, meshes:[hostMount] });
+  const assetsReady=Promise.all([screenReady,lettering.portraitReady]).then(()=>{});
 
-  const wallLamp = group('north-wall-paper-sconce', 2.7, -9.82);
-  wallLamp.position.y = 2.46;
-  bevel(wallLamp, woodDark, .16, .42, .065, 0, .02, 0);
-  bevel(wallLamp, wood, .038, .045, .25, 0, .24, .10);
   const wallPaper = surface('paper', { roughness: 1, normalScale: .25 });
   wallPaper.emissive.set('#ffcea0'); wallPaper.emissiveIntensity = .42;
-  cylinder(wallLamp, wallPaper, .115, .115, .31, 0, .02, .23, 24);
-  for (const yy of [-.145, .185]) {
-    cylinder(wallLamp, woodDark, .128, .128, .024, 0, yy, .23, 24);
-    torus(wallLamp, brassDark, .116, .003, 0, yy + .015, .23, 32).rotation.x = Math.PI / 2;
+  for (const x of [-2.29, 2.29]) {
+    const wallLamp = group('north-wall-paper-sconce', x, -9.82);
+    wallLamp.position.y = 2.46;
+    bevel(wallLamp, woodDark, .16, .42, .065, 0, .02, 0);
+    bevel(wallLamp, wood, .038, .045, .25, 0, .24, .10);
+    cylinder(wallLamp, wallPaper, .115, .115, .31, 0, .02, .23, 24);
+    for (const yy of [-.145, .185]) {
+      cylinder(wallLamp, woodDark, .128, .128, .024, 0, yy, .23, 24);
+      torus(wallLamp, brassDark, .116, .003, 0, yy + .015, .23, 32).rotation.x = Math.PI / 2;
+    }
+    for (let i = 0; i < 12; i++) {
+      const a = i / 12 * Math.PI * 2;
+      cylinder(wallLamp, wood, .0032, .0032, .32, Math.sin(a) * .117, .02, .23 + Math.cos(a) * .117, 5);
+    }
+    cylinder(wallLamp, cord, .0035, .0035, .07, 0, .22, .23, 6);
+    const studyLight = new THREE.PointLight('#ffe0b8', .68, 3.7, 2);
+    studyLight.position.set(0, .02, .30); wallLamp.add(studyLight); batchStatic(wallLamp);
   }
-  for (let i = 0; i < 12; i++) {
-    const a = i / 12 * Math.PI * 2;
-    cylinder(wallLamp, wood, .0032, .0032, .32, Math.sin(a) * .117, .02, .23 + Math.cos(a) * .117, 5);
-  }
-  cylinder(wallLamp, cord, .0035, .0035, .07, 0, .22, .23, 6);
-  const studyLight = new THREE.PointLight('#ffe0b8', .9, 4.2, 2);
-  studyLight.position.set(0, .02, .30); wallLamp.add(studyLight); batchStatic(wallLamp);
 
   // ---------------------------- The library ----------------------------
   const shelf = group('library-carved-wood-shelf', -5.55, -3.2); shelf.rotation.y = Math.PI / 2;
@@ -515,38 +534,6 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     position: new THREE.Vector3(-.38, 1.115, -6.92), approach: new THREE.Vector3(-.35, .3, -5.55), radius: 2.1,
     meshes: [notebook], activate: () => { leafElapsed = 0; leafHasTurned = true; } });
 
-  // The letter has its own raycast group; aiming at the desk cannot select it.
-  const letter = group('personal-letter', 1.03, -6.79); letter.position.y = 1.087; letter.rotation.y = .12;
-  for (let i = 0; i < 3; i++) {
-    const slip = bevel(letter, paper, .348, .0012, .242, .003 * i, -.002 + .0013 * i, -.003 * i, .0002);
-    slip.rotation.y = -.022 * i;
-  }
-  bevel(letter, paper, .32, .006, .228, 0, .005, 0, .001);
-  const letterPaper = written('letter', 'about');
-  const letterTop = label(letter, letterPaper, .308, .215, 0, .0084, 0); letterTop.rotation.x = -Math.PI / 2;
-  const letterFlap = new THREE.Group(); letterFlap.position.set(0, .010, -.108); letter.add(letterFlap);
-  const flapGeometry = geometry('letter-folded-triangle', () => {
-    const result = new THREE.BufferGeometry();
-    result.setAttribute('position', new THREE.Float32BufferAttribute([-.156,0,0, .156,0,0, 0,0,.145],3));
-    result.setAttribute('uv', new THREE.Float32BufferAttribute([0,0,1,0,.5,1],2)); result.computeVertexNormals(); return result;
-  });
-  const flapPaper = surface('paper', { roughness: 1, side: THREE.DoubleSide, normalScale: .25 });
-  mesh(letterFlap, flapGeometry, flapPaper);
-  const sealGeometry = geometry('irregular-wax-seal', () => {
-    const result = new THREE.CylinderGeometry(.019, .0205, .0045, 36);
-    const p = result.attributes.position;
-    for (let i = 0; i < p.count; i++) { const a = Math.atan2(p.getZ(i), p.getX(i)); const s = 1 + Math.sin(a * 7) * .04 + Math.cos(a * 11) * .025; p.setX(i, p.getX(i) * s); p.setZ(i, p.getZ(i) * s); }
-    result.computeVertexNormals(); return result;
-  });
-  mesh(letterFlap, sealGeometry, wax, 0, .003, .124);
-  torus(letterFlap, red, .0146, .0013, 0, .0058, .124, 36).rotation.x = Math.PI / 2;
-  const sealGlyph = label(letterFlap, written('seal'), .019, .022, 0, .0059, .124); sealGlyph.rotation.x = -Math.PI / 2;
-  batchStatic(letter, [letterFlap]); batchStatic(letterFlap);
-  let letterOpen = false;
-  interactions.push({ id: 'about', kind: 'about', label: '读一封小笺', labelEn: 'Read a personal letter',
-    position: new THREE.Vector3(1.03, 1.106, -6.79), approach: new THREE.Vector3(1.48, .3, -5.65), radius: 1.95,
-    meshes: [letter], activate: () => { letterOpen = true; } });
-
   // ----------------------- The instrument workbench -----------------------
   const workbench = group('project-workbench', 5, -2.8); workbench.rotation.y = -Math.PI / 2; writingTable(workbench, 2.3, 1.1);
   const instrumentBase = new THREE.Group(); instrumentBase.name = 'armillary-pedestal'; instrumentBase.position.set(-.15, 0, -.03); workbench.add(instrumentBase);
@@ -609,53 +596,66 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     meshes:[armillary,instrumentBase,projectCard],activate:()=>{instrumentImpulse=2.7;} });
 
   // ------------------------- Six-sided silk lantern -------------------------
-  const lamp = group('courtyard-paper-lantern', -3, 3);
-  bevel(lamp, woodDark, .48, .09, .44, -.53, .045, 0, .014);
-  bevel(lamp, wood, .37, .028, .34, -.53, .102, 0, .009);
-  cylinder(lamp, wood, .030, .047, 1.96, -.53, 1.10, 0, 20);
-  tube(lamp, wood, 'lantern-curved-crook', [new THREE.Vector3(-.53,2.05,0), new THREE.Vector3(-.51,2.30,0),
-    new THREE.Vector3(-.35,2.43,0), new THREE.Vector3(-.06,2.43,0), new THREE.Vector3(.15,2.34,0)], .030, 36);
-  for (const yy of [1.97, 2.015]) torus(lamp, brassDark, .032, .0025, -.53, yy, 0, 28).rotation.x = Math.PI / 2;
-  const lantern = new THREE.Group(); lantern.name = 'hanging-lantern'; lantern.position.set(.15,2.34,0); lamp.add(lantern);
-  cylinder(lantern, cord, .0035, .0035, .23, 0,-.115,0,8);
-  const hook = torus(lantern,brassDark,.019,.003,0,-.225,0,28); hook.scale.y = 1.4;
-  const lanternPaper = surface('paper', { normalScale: .28, roughness: .98, side: THREE.DoubleSide });
-  lanternPaper.emissive.set('#ffd3a0'); lanternPaper.emissiveIntensity = .7;
-  const lanternPanels = geometry('lantern-six-silk-panels', () => {
-    const positions: number[] = [], uvs: number[] = [], indices: number[] = [];
+  function courtLamp(side: number, id: string) {
+    const lamp = group('courtyard-paper-lantern', side * 3.53, 4.55);
+    if (side > 0) lamp.rotation.y = Math.PI;
+    bevel(lamp, woodDark, .48, .09, .44, -.53, .045, 0, .014);
+    bevel(lamp, wood, .37, .028, .34, -.53, .102, 0, .009);
+    cylinder(lamp, wood, .030, .047, 1.96, -.53, 1.10, 0, 20);
+    tube(lamp, wood, 'lantern-curved-crook', [new THREE.Vector3(-.53,2.05,0), new THREE.Vector3(-.51,2.30,0),
+      new THREE.Vector3(-.35,2.43,0), new THREE.Vector3(-.06,2.43,0), new THREE.Vector3(.15,2.34,0)], .030, 36);
+    for (const yy of [1.97, 2.015]) torus(lamp, brassDark, .032, .0025, -.53, yy, 0, 28).rotation.x = Math.PI / 2;
+    const lantern = new THREE.Group(); lantern.name = 'hanging-lantern'; lantern.position.set(.15,2.34,0); lamp.add(lantern);
+    cylinder(lantern, cord, .0035, .0035, .23, 0,-.115,0,8);
+    const hook = torus(lantern,brassDark,.019,.003,0,-.225,0,28); hook.scale.y = 1.4;
+    const lanternPaper = surface('paper', { normalScale: .28, roughness: .98, side: THREE.DoubleSide });
+    lanternPaper.emissive.set('#ffd3a0'); lanternPaper.emissiveIntensity = .7;
+    const lanternPanels = geometry('lantern-six-silk-panels', () => {
+      const positions: number[] = [], uvs: number[] = [], indices: number[] = [];
+      for (let i = 0; i < 6; i++) {
+        const a = Math.PI / 6 + i * Math.PI / 3, b = a + Math.PI / 3;
+        const base = positions.length / 3;
+        positions.push(Math.sin(a) * .158,-.75,Math.cos(a) * .158, Math.sin(b) * .158,-.75,Math.cos(b) * .158,
+          Math.sin(a) * .178,-.32,Math.cos(a) * .178, Math.sin(b) * .178,-.32,Math.cos(b) * .178);
+        uvs.push(0,0,1,0,0,1,1,1); indices.push(base,base+1,base+2,base+2,base+1,base+3);
+      }
+      const result = new THREE.BufferGeometry();
+      result.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
+      result.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2)); result.setIndex(indices); result.computeVertexNormals(); return result;
+    });
+    mesh(lantern, lanternPanels, lanternPaper);
+    cylinder(lantern, woodDark, .073, .244, .094, 0,-.267,0,6).rotation.y = Math.PI / 6;
+    cylinder(lantern, woodDark, .187, .185, .024, 0,-.325,0,6).rotation.y = Math.PI / 6;
+    cylinder(lantern, woodDark, .171, .181, .032, 0,-.765,0,6).rotation.y = Math.PI / 6;
     for (let i = 0; i < 6; i++) {
       const a = Math.PI / 6 + i * Math.PI / 3, b = a + Math.PI / 3;
-      const base = positions.length / 3;
-      positions.push(Math.sin(a) * .158,-.75,Math.cos(a) * .158, Math.sin(b) * .158,-.75,Math.cos(b) * .158,
-        Math.sin(a) * .178,-.32,Math.cos(a) * .178, Math.sin(b) * .178,-.32,Math.cos(b) * .178);
-      uvs.push(0,0,1,0,0,1,1,1); indices.push(base,base+1,base+2,base+2,base+1,base+3);
+      rod(lantern, woodEdge, new THREE.Vector3(Math.sin(a)*.162,-.75,Math.cos(a)*.162),
+        new THREE.Vector3(Math.sin(a)*.182,-.32,Math.cos(a)*.182), .008, 8);
+      for (const [r,y] of [[.186,-.338],[.175,-.748]]) rod(lantern, brassDark,
+        new THREE.Vector3(Math.sin(a)*r,y,Math.cos(a)*r), new THREE.Vector3(Math.sin(b)*r,y,Math.cos(b)*r), .0023, 6);
     }
-    const result = new THREE.BufferGeometry();
-    result.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
-    result.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2)); result.setIndex(indices); result.computeVertexNormals(); return result;
-  });
-  mesh(lantern, lanternPanels, lanternPaper);
-  cylinder(lantern, woodDark, .073, .244, .094, 0,-.267,0,6).rotation.y = Math.PI / 6;
-  cylinder(lantern, woodDark, .187, .185, .024, 0,-.325,0,6).rotation.y = Math.PI / 6;
-  cylinder(lantern, woodDark, .171, .181, .032, 0,-.765,0,6).rotation.y = Math.PI / 6;
-  for (let i = 0; i < 6; i++) {
-    const a = Math.PI / 6 + i * Math.PI / 3, b = a + Math.PI / 3;
-    rod(lantern, woodEdge, new THREE.Vector3(Math.sin(a)*.162,-.75,Math.cos(a)*.162),
-      new THREE.Vector3(Math.sin(a)*.182,-.32,Math.cos(a)*.182), .008, 8);
-    for (const [r,y] of [[.186,-.338],[.175,-.748]]) rod(lantern, brassDark,
-      new THREE.Vector3(Math.sin(a)*r,y,Math.cos(a)*r), new THREE.Vector3(Math.sin(b)*r,y,Math.cos(b)*r), .0023, 6);
+    const glyph = label(lantern, written('lamp',id), .042,.066,0,-.52,.1477); glyph.rotation.x = .040;
+    const knot = torus(lantern, red, .010, .0023, 0,-.798,0,24); knot.scale.x = .65;
+    cylinder(lantern, cord, .0018,.0018,.29,.125,-.91,.01,6);
+    lathe(lantern, brassDark, 'lantern-pull-bead', [[.002,0],[.008,.006],[.009,.018],[.005,.028],[.002,.03]],.125,-1.075,.01,16);
+    const lampLight = new THREE.PointLight('#ffd2a0',5.8,6.5,2); lampLight.position.set(0,-.535,0); lantern.add(lampLight);
+    batchStatic(lamp,[lantern]); batchStatic(lantern);
+    // The standard stands on the stone coping. Its shade hangs freely over the water.
+    colliders.push({x:side*4.06,z:4.55,halfX:.22,halfZ:.18});
+    let lampOn=true,lampAmount=1;
+    interactions.push({id,kind:'lantern',label:'拨一盏灯',labelEn:'Switch the lantern',
+      position:new THREE.Vector3(side*3.38,2.105,4.55),approach:new THREE.Vector3(side*1.99,.3,4.55),radius:1.95,
+      meshes:[lantern],activate:()=>{lampOn=!lampOn;} });
+    return (time: number, dt: number) => {
+      lantern.rotation.z = Math.sin(time * .8) * .018;
+      lantern.rotation.x = Math.sin(time * .61 + side * .9) * .009;
+      lampAmount = THREE.MathUtils.damp(lampAmount, lampOn ? 1 : 0, 9, dt);
+      const flicker = 1 + Math.sin(time * 4.2) * .010 + Math.sin(time * 9.1) * .006;
+      lampLight.intensity = lampAmount * 5.8 * flicker;
+      lanternPaper.emissiveIntensity = .025 + lampAmount * .70 * flicker;
+    };
   }
-  const glyph = label(lantern, written('lamp','lantern'), .042,.066,0,-.52,.1477); glyph.rotation.x = .040;
-  const knot = torus(lantern, red, .010, .0023, 0,-.798,0,24); knot.scale.x = .65;
-  cylinder(lantern, cord, .0018,.0018,.29,.125,-.91,.01,6);
-  lathe(lantern, brassDark, 'lantern-pull-bead', [[.002,0],[.008,.006],[.009,.018],[.005,.028],[.002,.03]],.125,-1.075,.01,16);
-  const lampLight = new THREE.PointLight('#ffd2a0',5.8,6.5,2); lampLight.position.set(0,-.535,0); lantern.add(lampLight);
-  batchStatic(lamp,[lantern]); batchStatic(lantern);
-  colliders.push({x:-3.53,z:3,halfX:.25,halfZ:.23},{x:-2.85,z:3,halfX:.28,halfZ:.28});
-  let lampOn=true,lampAmount=1;
-  interactions.push({id:'lantern',kind:'lantern',label:'拨一盏灯',labelEn:'Switch the lantern',
-    position:new THREE.Vector3(-2.85,2.105,3),approach:new THREE.Vector3(-1.65,.3,2.8),radius:1.95,
-    meshes:[lantern],activate:()=>{lampOn=!lampOn;} });
+  const courtyardLights = [courtLamp(-1, 'lantern'), courtLamp(1, 'east-lantern')];
 
   // --------------------------- Overlook bench ---------------------------
   const bench = group('overlook-carved-bench',10,5);
@@ -707,7 +707,6 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
       if (disposed) return;
       const dt = Math.min(Math.max(delta, 0), .08);
       if (selectedId !== 'books') bookOpen = false;
-      if (selectedId !== 'about') letterOpen = false;
       if (pulledBook) {
         const distance = bookOpen ? .10 : selectedId === 'books' ? .035 : 0;
         pulledBook.position.z = THREE.MathUtils.damp(pulledBook.position.z, pulledBookBaseZ + distance, 7, dt);
@@ -716,19 +715,12 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
         leafElapsed = Math.min(1.25, leafElapsed + dt);
         turningLeaf.rotation.z = THREE.MathUtils.smoothstep(leafElapsed / 1.25, 0, 1) * Math.PI;
       }
-      letterFlap.rotation.x = THREE.MathUtils.damp(letterFlap.rotation.x,
-        letterOpen ? -1.2 : selectedId === 'about' ? -.10 : 0, 6, dt);
       instrumentImpulse = Math.max(0, instrumentImpulse - dt);
       instrumentAngle += dt * (.04 + (selectedId === 'projects' ? .12 : 0) + instrumentImpulse * .5);
       middle.rotation.y = Math.PI / 2 + instrumentAngle;
       inner.rotation.z = instrumentAngle * .62;
       outerRing.rotation.y = Math.sin(time * .12) * .035;
-      lantern.rotation.z = Math.sin(time * .8) * .018;
-      lantern.rotation.x = Math.sin(time * .61 + .9) * .009;
-      lampAmount = THREE.MathUtils.damp(lampAmount, lampOn ? 1 : 0, 9, dt);
-      const flicker = 1 + Math.sin(time * 4.2) * .010 + Math.sin(time * 9.1) * .006;
-      lampLight.intensity = lampAmount * 5.8 * flicker;
-      lanternPaper.emissiveIntensity = .025 + lampAmount * .70 * flicker;
+      for (const updateLamp of courtyardLights) updateLamp(time, dt);
       for (const entry of focusMaterials) {
         entry.material.emissiveIntensity = THREE.MathUtils.damp(entry.material.emissiveIntensity,
           entry.id === selectedId ? .07 : 0, 7, dt);

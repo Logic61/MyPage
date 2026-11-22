@@ -51,10 +51,35 @@ test('entrance, hall and mirror-paired roofs share the built courtyard axis',asy
       assert.ok(Math.abs(west.max.x+east.min.x)<1e-4 && Math.abs(west.min.x+east.max.x)<1e-4);
       for (const axis of ['z','y']) for(const bound of ['min','max']) assert.ok(Math.abs(west[bound][axis]-east[bound][axis])<1e-4);
     }
+    // The bounds alone cannot catch an extra rafter or an off-centre row of tile ends.
+    const position = new THREE.Vector3(), instance = new THREE.Matrix4();
+    const key = (x,y,z) => [x,y,z].map(n => Math.round(n * 1000)).join(',');
+    for (const name of ['Round clay tile ends', 'Splayed eave rafters']) {
+      const points = new Set();
+      for (const row of root.getObjectsByProperty('name', name)) {
+        for (let i=0; i<row.count; i++) {
+          row.getMatrixAt(i,instance);
+          position.setFromMatrixPosition(instance.premultiply(row.matrixWorld));
+          points.add(key(position.x,position.y,position.z));
+        }
+      }
+      assert.ok(points.size > 300);
+      for (const value of points) {
+        const [x,y,z] = value.split(',');
+        assert.ok(points.has([-Number(x),y,z].join(',')), name+' at '+value);
+      }
+    }
     const nav=createNavigation(site.walkAreas,site.colliders);
     for(let z=origin.z;z>=-5.75;z-=.125) assert.ok(nav.canWalk(0,z),'Open axis at '+z);
     for(const side of [-1,1]) {
-      assert.equal(nav.canWalk(side*1.72,-2),false,'Pool basin blocks walking');
+      assert.equal(nav.canWalk(side*3.3,4.8),false,'The water in the pine court blocks walking');
+      for (const offset of [.7,1.35,2.05]) {
+        let p={x:side*offset,z:.42};
+        for (let i=0;i<100;i++) p=nav.move(p,0,-.055);
+        assert.ok(p.z < -5,'Walking beside the centreline stays clear');
+      }
+      assert.ok(nav.clearLine({x:0,z:5.85},{x:side*3.7,z:-3.2}),'Diagonal from the gate to either wing');
+      assert.ok(nav.clearLine({x:-3.7,z:-2.55},{x:3.7,z:-2.55}),'Unbroken crossing between the wings');
       assert.ok(nav.clearLine({x:side*3.2,z:6.65},{x:side*8.7,z:6.65}),'A clear side gate beyond the planter');
       for(const end of [{x:side*10.18,z:3.10},{x:side*4.65,z:-3.2}]) {
         assert.ok(nav.canWalk(end.x,end.z));

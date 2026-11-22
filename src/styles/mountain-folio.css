@@ -1,0 +1,108 @@
+/* Floating seals stay attached to their rooms as the visitor turns. */
+.mw-waymarks { position:absolute; inset:0; z-index:3; pointer-events:none; overflow:hidden; }
+.mountain-world:not([data-mode="exploring"]) .mw-waymarks, .mountain-world[data-seated] .mw-waymarks { display:none; }
+.mw-waymark {
+  position:absolute; left:0; top:0; width:96px; min-height:40px; display:flex; align-items:center; justify-content:center; gap:8px;
+  pointer-events:auto; background:transparent; border:0; color:#fff1cb; isolation:isolate; padding:0 4px; cursor:pointer;
+  font:600 15px/1.1 var(--font-serif,serif); letter-spacing:.09em; text-shadow:0 1px 3px #13211c;
+}
+.mw-waymark[hidden] { display:none; }
+[data-language="en"] .mw-waymark { width:122px; font-size:14px; letter-spacing:.02em; }
+.mw-waymark::before { content:""; position:absolute; inset:4px -2px; z-index:-1; background:linear-gradient(90deg,transparent,#1a2e28ec 15%,#253b32ec 80%,transparent); }
+.mw-mark-symbol { position:relative; display:grid; place-items:center; width:25px; height:25px; flex:none; color:#f1d399; }
+.mw-mark-symbol::before { content:""; position:absolute; inset:1px; border:1px solid #ead29c; box-shadow:inset 0 0 0 2px #4d5947,0 0 0 1px #24372d; background:#283d32; transform:rotate(45deg); z-index:-1; }
+.mw-mark-symbol svg { width:17px; height:17px; }
+.mw-waymark[data-side="in"]::after { content:""; height:13px; width:1px; position:absolute; left:50%; top:calc(100% - 4px); background:linear-gradient(#ecd5a0,#ac8a51); box-shadow:0 1px 2px #1a3025; }
+.mw-waymark:is([data-side="left"],[data-side="right"])::after { content:""; position:absolute; top:calc(50% - 3px); width:6px; height:6px; border:solid #ebd09a; border-width:0 0 2px 2px; }
+.mw-waymark[data-side="left"]::after { left:0; transform:rotate(45deg); }
+.mw-waymark[data-side="right"]::after { right:0; transform:rotate(225deg); }
+.mw-waymark:not([data-primary]) { color:#eee7ce; }
+.mw-waymark:not([data-primary]) .mw-mark-symbol { transform:scale(.87); }
+.mw-waymark:hover .mw-mark-symbol::before, .mw-waymark:focus-visible .mw-mark-symbol::before, .mw-waymark[data-centred] .mw-mark-symbol::before { background:#7a4832; outline:1px solid #e4c68d; outline-offset:3px; }
+.mountain-world[data-input-mode="locked"] .mw-waymark { pointer-events:none; }
+
+/* The two turned rollers sit beyond the silk mounting, clear of the scrolling paper. */
+.mountain-world .mw-reader {
+  --ink:#292c27; --cinnabar:#854334; --paper:#f4ecda; --silk:#42574c; --rule:#b1a184;
+  --mount:clamp(13px,2.2vw,30px); --rod:16px;
+  width:min(1150px,calc(100vw - 66px)); height:min(960px,calc(100dvh - 54px));
+  overflow:visible; border:0; border-radius:0; background:transparent; color:var(--ink); box-shadow:none;
+}
+.mw-reader::backdrop { background:rgba(12,23,21,.67); backdrop-filter:blur(4px); }
+.mw-reader-frame {
+  position:relative; min-width:0; isolation:isolate; margin:0 8px; padding:var(--rod) var(--mount); box-sizing:border-box;
+  background:repeating-linear-gradient(43deg,transparent 0 3px,#9aab8a1c 3px 4px,transparent 4px 8px),
+    repeating-linear-gradient(-43deg,#384b44 0 3px,#4b5c4e 3px 4px,#41534a 4px 8px);
+  box-shadow:0 25px 64px #0a171a77,inset 0 0 0 1px #8a8a6a,inset 0 0 0 4px #31473f,inset 0 0 0 5px #ab966940;
+}
+.mw-reader-frame::before {
+  content:""; position:absolute; inset:var(--rod) var(--mount); z-index:-1;
+  background:linear-gradient(90deg,#c4b0874a,transparent 5%,transparent 95%,#a997713b),
+    linear-gradient(#f9f2e2cb,#f7f0dfcc),var(--folio-fibres) center/450px 450px,var(--paper);
+  box-shadow:0 0 0 1px #bdab87,0 0 0 3px #34473f;
+}
+.mw-scroll-rod { position:absolute; z-index:2; left:-8px; right:-8px; height:var(--rod); pointer-events:none;
+  border-radius:3px; background:linear-gradient(#392a20,#805e3e 15%,#ae9064 29%,#70563a 47%,#4e3627 76%,#33251d);
+  box-shadow:0 3px 6px #3d32293f;
+}
+.mw-scroll-rod-top { top:0; } .mw-scroll-rod-bottom { bottom:0; }
+.mw-scroll-rod::before,.mw-scroll-rod::after { content:""; position:absolute; top:-2px; bottom:-2px; width:18px; border-radius:4px; border:1px solid #725c40;
+  background:linear-gradient(90deg,#52432e 0 10%,transparent 10% 75%,#d0ab65 75% 82%,#59442f 82% 90%,transparent 90%),linear-gradient(#473b2d,#b59b70 26%,#77603e 57%,#3e3226); }
+.mw-scroll-rod::before { left:-3px; } .mw-scroll-rod::after { right:-3px; transform:scaleX(-1); }
+.mw-reader-header { min-width:0; padding:20px clamp(24px,4.7vw,70px) 17px; gap:18px; border:0; background:transparent; color:var(--ink); position:relative; }
+.mw-reader-header::after { content:""; position:absolute; left:clamp(24px,4.7vw,70px); right:clamp(24px,4.7vw,70px); bottom:0; height:1px; background:linear-gradient(90deg,#9e8865,#9e88654a); }
+.mw-reader-header .mw-eyebrow { color:#785b41; letter-spacing:.15em; margin-bottom:5px; }
+.mw-reader-header h2 { color:#313c32; font-size:clamp(21px,2.5vw,32px); letter-spacing:.1em; }
+.mw-reader-close { color:#47574c; margin-left:auto; min-height:42px; gap:8px; }
+.mw-reader-close svg { width:16px; height:16px; }
+.mw-reader:not([data-view="directory"]) .mw-reader-header { padding-top:7px; padding-bottom:5px; min-height:52px; }
+.mw-reader:not([data-view="directory"]) .mw-reader-header h2 { font-size:16px; letter-spacing:.13em; white-space:nowrap; }
+.mw-reader:not([data-view="directory"]) .mw-reader-header .mw-eyebrow { display:none; }
+.mw-reader-toolbar { align-items:center; justify-content:flex-end; margin-left:auto; padding:0; border:0; gap:20px; color:#70523d; font-size:13px; }
+.mw-reader-toolbar:not([hidden]) + .mw-reader-close { margin-left:0; border-left:1px solid #baac93; padding-left:16px; }
+.mw-reader-toolbar a,.mw-reader-toolbar button { display:inline-flex; align-items:center; min-height:42px; }
+.mw-reader-scroll { padding:25px clamp(24px,4.7vw,70px) 38px; scrollbar-color:#ac9b79 transparent; }
+.mw-reader[data-view="article"] .mw-reader-scroll { padding-top:0; }
+.mountain-world .mw-article { max-width:860px; font-size:18px; line-height:1.92; }
+.mountain-world .mw-article .article-header { position:relative; isolation:isolate; margin:0 0 28px; padding:36px 0 24px; border:0; border-bottom:1px solid #b3a286; color:var(--ink); }
+.mw-article .article-header::after { content:""; position:absolute; inset:0 -12px 0 50%; z-index:-1; pointer-events:none; opacity:.51; mix-blend-mode:multiply;
+  background:var(--folio-painting) 32% 65% / cover no-repeat; mask-image:linear-gradient(90deg,transparent,#000 48%,#000 83%,transparent),linear-gradient(180deg,transparent,#000 18%,#000 87%,transparent); mask-composite:intersect; }
+.mountain-world .mw-article .article-header h1 { position:relative; font-size:clamp(27px,3.1vw,43px); line-height:1.38; color:#2d382f; letter-spacing:.025em; max-width:85%; margin:14px 0 13px; text-wrap:balance; }
+.mountain-world .mw-article .article-tags { gap:.55em; color:#6c6555; font-size:12px; }
+.mountain-world .mw-article .article-category { color:var(--cinnabar); border:1px solid #95523b8f; border-radius:1px; padding:2px 6px; background:transparent; }
+.mountain-world .mw-article .article-meta { color:#635e50; font-size:13px; }
+.mountain-world .mw-article .article-body { font-size:18px; line-height:1.95; color:#343a32; max-width:72ch; margin:0 auto; }
+.mountain-world .mw-article .article-body p { margin:0 0 1.2em; }
+.mountain-world .mw-article .article-body h2 { margin:1.45em 0 .65em; border:0; border-left:3px solid #924d39; padding:0 0 0 .55em; line-height:1.45; color:#303d33; }
+.mountain-world .mw-article .article-body h3 { color:#475343; }
+.mountain-world .mw-article .article-body blockquote { background:#ab987518; border-color:#9f7856; color:#535749; }
+.mw-destinations { gap:12px; }
+.mw-destinations button { border-color:#a79573; }
+.mw-posts > li { border-bottom-color:#b8a78866; }
+.mw-posts a .mw-post-topic { color:var(--cinnabar); }
+.mw-posts time { color:#746d5e; }
+.mw-catalogue-count,.mw-destinations button span { color:#6c695b; }
+@media (max-width:679px) {
+  .mw-waymark { width:72px; min-height:38px; gap:6px; font-size:13px; }
+  [data-language="en"] .mw-waymark { width:92px; font-size:12px; }
+  .mw-mark-symbol { width:21px; height:21px; } .mw-mark-symbol svg { width:14px; height:14px; }
+  .mountain-world .mw-waymark:is([data-side="left"],[data-side="right"]) { width:44px; }
+  .mw-waymark:is([data-side="left"],[data-side="right"]) .mw-mark-label { display:none; }
+  .mountain-world .mw-reader { width:calc(100vw - 10px); height:calc(100dvh - 12px); --mount:6px; --rod:10px; }
+  .mw-reader-frame { margin:0 1px; }
+  .mw-scroll-rod { left:-2px; right:-2px; } .mw-scroll-rod::before,.mw-scroll-rod::after { width:8px; }
+  .mw-reader-header { padding:14px 15px 12px; gap:8px; } .mw-reader-header::after { left:15px; right:15px; }
+  .mw-reader:not([data-view="directory"]) .mw-reader-header { min-height:44px; padding:2px 12px; }
+  .mw-reader:not([data-view="directory"]) .mw-reader-header h2 { font-size:13px; letter-spacing:0; }
+  .mw-reader-toolbar { gap:11px; white-space:nowrap; font-size:12px; }
+  .mw-reader-toolbar:not([hidden]) + .mw-reader-close { padding-left:8px; }
+  .mw-reader-close { gap:3px; font-size:12px; }
+  .mw-reader-scroll { padding:18px 16px 26px; }
+  .mountain-world .mw-article .article-header { padding:22px 0 18px; margin-bottom:20px; }
+  .mountain-world .mw-article .article-header h1 { max-width:94%; font-size:27px; }
+  .mw-article .article-header::after { inset:0 -3px 0 42%; opacity:.33; }
+  .mountain-world .mw-article .article-body { font-size:16.5px; line-height:1.85; }
+}
+@media (max-height:550px) and (min-width:680px) {
+  .mountain-world .mw-reader { height:calc(100dvh - 18px); --rod:10px; }
+}

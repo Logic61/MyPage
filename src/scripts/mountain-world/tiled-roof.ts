@@ -56,15 +56,23 @@ export function tiledRoof({ name, eave, ridge, height, rise, lift, tileWidth = .
       const y = height + rise * (.20 * t + .80 * t * t) + lift * corner * (1 - t) ** 2;
       return new THREE.Vector3(THREE.MathUtils.lerp(outerX, innerX, t), y + offset, THREE.MathUtils.lerp(outerZ, innerZ, t));
     };
-    const windward = new THREE.Color('#8caaa5'), shadow = new THREE.Color('#536e70');
-    const rib = (u: number) => Math.max(0, Math.cos(u * runs * Math.PI * 2));
-    // Five samples across each cover tile give a rounded silhouette without separate tile meshes.
-    add(gridSurface(runs * 6, 20, (u, t) => point(u, t, rib(u) * .046 * (1 - .34 * t)),
-      false, (u, t) => {
-        const course = Math.floor(t * 10), run = Math.round(u * runs);
-        const variation = .5 + .5 * Math.sin(run * 13.1 + course * .91);
-        return shadow.clone().lerp(windward, .17 + .62 * rib(u) + .16 * variation);
-      }), m.tile, 'Glazed pan and cover tiles');
+    const windward = new THREE.Color('#81918a'), shadow = new THREE.Color('#465855');
+    const rib = (u: number) => Math.max(0, -Math.cos(u * runs * Math.PI * 2));
+    // Each course laps the one below it. Paired rows form a rounded lip with a small shadow line.
+    const slope = point(.5, 0).distanceTo(point(.5, 1));
+    const courses = Math.max(3, Math.round(slope / .32));
+    const tileFace = gridSurface(runs * 6, courses * 5, (u, t) => {
+      const courseT = (t * courses) % 1;
+      const lap = .022 * Math.max(0, 1 - courseT * 2.6) * (1 - t);
+      return point(u, t, lap + rib(u) * .046 * (1 - .34 * t));
+    }, false, (u, t) => {
+      const course = Math.floor(t * courses + .0001), run = Math.min(runs - 1, Math.floor(u * runs));
+      const variation = .5 + .5 * Math.sin(run * 13.1 + course * 5.23 + i);
+      return shadow.clone().lerp(windward, .22 + .48 * rib(u) + .28 * variation);
+    });
+    const tileUV = tileFace.getAttribute('uv');
+    for (let j = 0; j < tileUV.count; j++) tileUV.setXY(j, tileUV.getX(j) * a.distanceTo(b) / 2, tileUV.getY(j) * slope / 2);
+    add(tileFace, m.tile, 'Glazed pan and cover tiles');
     add(gridSurface(20, 8, (u, t) => point(u, t, -.12), true), m.soffit, 'Boarded eave underside');
     add(gridSurface(runs * 3, 1, (u, v) => point(u, 0, -.12 + v * (.12 + .043 * rib(u)))), m.ridge, 'Closed eave and tile lips');
     const eaveLine = Array.from({ length: 21 }, (_, j) => point(j / 20, 0, -.10));
@@ -76,17 +84,21 @@ export function tiledRoof({ name, eave, ridge, height, rise, lift, tileWidth = .
     const capTemplate = new THREE.CylinderGeometry(.049, .051, .058, 10).rotateX(Math.PI / 2);
     const rafterTemplate = new THREE.CylinderGeometry(.042, .054, 1, 8);
     const caps = new THREE.InstancedMesh(capTemplate, m.ridge, runs);
-    const rafters = new THREE.InstancedMesh(rafterTemplate, m.timber, Math.ceil(runs / 2));
+    const rafterCount = Math.ceil(runs / 2);
+    const rafters = new THREE.InstancedMesh(rafterTemplate, m.timber, rafterCount);
     caps.name = 'Round clay tile ends'; rafters.name = 'Splayed eave rafters';
     const transform = new THREE.Object3D(), up = new THREE.Vector3(0, 1, 0);
     for (let k = 0; k < runs; k++) {
-      const u = k / runs, end = point(u, 0, -.015).addScaledVector(outward, .012);
+      const end = point((k + .5) / runs, 0, -.015).addScaledVector(outward, .012);
       transform.position.copy(end); transform.rotation.set(0, Math.atan2(outward.x, outward.z), 0);
       transform.scale.set(1, 1, 1); transform.updateMatrix(); caps.setMatrixAt(k, transform.matrix);
-      if (k % 2) continue;
+    }
+    // Centre each run between the hips so both ends, including even-sized bays, have the same margin.
+    for (let k = 0; k < rafterCount; k++) {
+      const u = (k + .5) / rafterCount;
       const foot = point(u, .005, -.15), head = point(u, .56, -.16), dir = head.clone().sub(foot);
       transform.position.copy(foot).lerp(head, .5); transform.quaternion.setFromUnitVectors(up, dir.clone().normalize());
-      transform.scale.set(1, dir.length(), 1); transform.updateMatrix(); rafters.setMatrixAt(k / 2, transform.matrix);
+      transform.scale.set(1, dir.length(), 1); transform.updateMatrix(); rafters.setMatrixAt(k, transform.matrix);
     }
     group.add(caps, rafters);
   }

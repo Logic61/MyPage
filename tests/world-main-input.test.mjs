@@ -84,6 +84,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
       label: id, labelEn: id, radius: 2.5, meshes: [mesh], activate: () => activated.push(id) });
   }
   const ui = {
+    updateWaymarks() {}, useCentredWaymark() {},
     interaction: null, screen: undefined,
     setInteraction(item, screen) { this.interaction = item; this.screen = screen; },
     setLocation(name, nameEn) { this.location = { name, nameEn }; }, showToast(message) { toasts.push(message); },

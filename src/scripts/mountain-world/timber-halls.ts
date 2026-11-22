@@ -5,7 +5,7 @@ interface Materials {
   timber: THREE.Material;
   stone: THREE.MeshStandardMaterial;
   sideStone: THREE.MeshStandardMaterial;
-  plaster: THREE.Material;
+  plaster: THREE.MeshStandardMaterial;
   soffit: THREE.Material;
 }
 type Obstacle = (x: number, z: number, halfX: number, halfZ: number) => void;
@@ -17,11 +17,11 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   group.name = 'Cloud Court timber halls'; parent.add(group);
   const textures: THREE.Texture[] = [];
   let disposed = false;
-  const lacquer = new THREE.MeshStandardMaterial({ name: 'Oxide red lacquer', color: '#8e382a', roughness: .53 });
-  const mineral = new THREE.MeshStandardMaterial({ name: 'Mineral green bracket paint', color: '#346460', roughness: .79 });
+  const lacquer = new THREE.MeshStandardMaterial({ name: 'Oxide red lacquer', color: '#8d4636', roughness: .72 });
+  const mineral = new THREE.MeshStandardMaterial({ name: 'Mineral green bracket paint', color: '#495e56', roughness: .86 });
   const gold = new THREE.MeshStandardMaterial({ name: 'Worn ochre gilding', color: '#cda669', metalness: .34, roughness: .51 });
-  const glazed = new THREE.MeshStandardMaterial({ name: 'Celadon barrel tiles', vertexColors: true, roughness: .52, metalness: .09 });
-  const ridge = new THREE.MeshStandardMaterial({ name: 'Dark glazed ridge clay', color: '#3e6260', roughness: .49 });
+  const glazed = new THREE.MeshStandardMaterial({ name: 'Celadon barrel tiles', vertexColors: true, roughness: .88, metalness: .025 });
+  const ridge = new THREE.MeshStandardMaterial({ name: 'Dark glazed ridge clay', color: '#354d4a', roughness: .73 });
   const silk = new THREE.MeshStandardMaterial({ name: 'Amber lantern silk', color: '#edbb76', emissive: '#bb5b25', emissiveIntensity: .37, roughness: .86 });
   const roofMaterials = { tile: glazed, ridge, soffit: m.soffit, timber: m.timber };
   const cube = new THREE.BoxGeometry(1, 1, 1), disk = new THREE.CylinderGeometry(1, 1, 1, 24);
@@ -87,16 +87,27 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     };
     image.onerror = () => resolve(); image.src = assetRoot+'cloud-crane-frieze.webp';
   });
-  async function surfaceMap(name: string, targets: THREE.MeshStandardMaterial[]) {
+  async function surfaceMap(name: string, targets: THREE.MeshStandardMaterial[], channel: 'map' | 'normalMap' | 'roughnessMap' = 'map') {
     try {
       const tex = await new THREE.TextureLoader().loadAsync(assetRoot+name);
       if (disposed) { tex.dispose(); return; }
-      tex.colorSpace = THREE.SRGBColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 4;
+      tex.colorSpace = channel === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 4;
       textures.push(tex);
-      for (const mat of targets) { mat.map = tex; mat.needsUpdate = true; }
+      for (const mat of targets) { mat[channel] = tex; mat.needsUpdate = true; }
     } catch { /* The authored base colour and relief remain usable. */ }
   }
-  const surfaceImages = Promise.all([surfaceMap('court-stone.webp',[m.stone,m.sideStone]),surfaceMap('lacquer-grain.webp',[lacquer])]);
+  lacquer.normalScale.setScalar(.22);
+  const surfaceImages = Promise.all([
+    surfaceMap('court-stone.webp', [m.stone, m.sideStone]),
+    surfaceMap('flagstone-normal.webp', [m.stone, m.sideStone], 'normalMap'),
+    surfaceMap('lacquer-grain.webp', [lacquer]),
+    surfaceMap('timber-normal.webp', [lacquer], 'normalMap'),
+    surfaceMap('timber-rough.webp', [lacquer], 'roughnessMap'),
+    surfaceMap('limewash-color.webp', [m.plaster]),
+    surfaceMap('limewash-normal.webp', [m.plaster], 'normalMap'),
+    surfaceMap('fired-tile-grain.webp', [glazed]),
+    surfaceMap('fired-tile-rough.webp', [glazed], 'roughnessMap'),
+  ]);
   const mural = new THREE.MeshStandardMaterial({ name: 'Mineral-pigment crane painting', map: band.texture, roughness: .9 });
   function paintedBeam(x: number, y: number, z: number, width: number, height: number, depth: number) {
     box(lacquer, 'Painted lintel frame', x, y, z, width, height, depth);
@@ -184,7 +195,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     group.add(tiledRoof({ name:sign<0?'Library roof':'Instrument hall roof', eave:rectangularRing(x,-2.46,1.99,3.81),
       ridge:rectangularRing(x,-2.46,.022,2.24),height:3.40,rise:.98,lift:.35 },roofMaterials));
     paintedBeam(x,3.05,.68,2.85,.22,.22);
-    for (const z of [-1.05,.52]) brackets(sign*3.2,2.93,z,.66,Math.PI/2);
+    for (const z of [-4.22,.52]) brackets(sign*3.2,2.93,z,.66,Math.PI/2);
   }
   function gardenWall(left: number, right: number, centre: number) {
     const top = 2.18, h = 1.43, radius = .58;

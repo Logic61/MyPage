@@ -106,7 +106,7 @@ export function branchGeometry(points: THREE.Vector3[], startRadius: number, end
     const radius = THREE.MathUtils.lerp(startRadius, endRadius, Math.pow(t, .74));
     for (let j = 0; j <= radial; j++) {
       const a = j / radial * Math.PI * 2;
-      const rough = 1 + Math.sin(j * 2.4 + i * .71) * .035;
+      const rough = 1 + Math.sin(a * 3 + t * 3.1) * .062 + Math.cos(a * 5 - t * 4.5) * .032;
       const normal = frames.normals[i].clone().multiplyScalar(Math.cos(a)).addScaledVector(frames.binormals[i], Math.sin(a));
       const p = center.clone().addScaledVector(normal, radius * rough);
       pos.push(p.x, p.y, p.z); uv.push(j / radial, t * length / 1.7);

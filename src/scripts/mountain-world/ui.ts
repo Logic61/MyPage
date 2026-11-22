@@ -1,3 +1,4 @@
+import { createWaymarks } from './waymarks';
 import type { Interaction, InteractionKind, WorldConfig, WorldUI } from './types';
 
 interface UIActions {
@@ -15,6 +16,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     return element;
   };
   const en = config.isEn;
+  const waymarks = createWaymarks(root);
   const controller = new AbortController();
   const { signal } = controller;
   const dialog = one<HTMLDialogElement>('[data-world-reader]');
@@ -40,6 +42,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
   let currentKind: InteractionKind = 'books';
   let currentInteraction: string | null = null;
   let currentPage = '';
+  let catalogueScroll = 0;
   let toastTimer = 0;
   let requestId = 0;
   let pageRequest: AbortController | null = null;
@@ -98,6 +101,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     cancelPageRequest();
     currentKind = kind === 'latest' ? 'latest' : 'books';
     currentPage = '';
+    dialog.dataset.view = 'directory';
     title.textContent = currentKind === 'latest' ? (en ? 'The open notebook' : '案头手记') : (en ? 'The collected pages' : '藏书与手记');
     eyebrow.textContent = currentKind === 'latest' ? (en ? 'RECENT WRITING' : '最近写下的文字') : (en ? 'FROM THE BOOKSHELF' : '书架之间');
     directory.hidden = false;
@@ -106,8 +110,9 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     toolbar.hidden = true;
     if (reset) { search.value = ''; category.value = ''; }
     filterPosts();
-    scroll.scrollTop = 0;
     openDialog();
+    if (reset) catalogueScroll = 0;
+    scroll.scrollTop = catalogueScroll;
   }
 
   function sanitizeContent(container: Element, pageURL: URL) {
@@ -147,7 +152,9 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     cancelPageRequest();
     const request = requestId;
     pageRequest = new AbortController();
+    if (dialog.open && !directory.hidden) catalogueScroll = scroll.scrollTop;
     currentPage = pageURL.href;
+    dialog.dataset.view = kind === 'projects' || kind === 'about' ? kind : 'article';
     currentKind = kind;
     directory.hidden = true;
     article.hidden = true;
@@ -155,8 +162,8 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     toolbar.hidden = false;
     status.hidden = false;
     status.textContent = en ? 'Opening the page…' : '正在翻开这一页…';
-    title.textContent = kind === 'projects' ? (en ? 'Work & experiments' : '作品与实践') : kind === 'about' ? (en ? 'A letter from the host' : '一纸信笺') : (en ? 'Reading' : '庭畔阅读');
-    eyebrow.textContent = kind === 'projects' ? (en ? 'ON THE WORKBENCH' : '工作案上') : kind === 'about' ? (en ? 'ABOUT & CURRICULUM VITAE' : '关于与简历') : (en ? 'A PAGE FROM THE STUDY' : '取一页，慢慢读');
+    title.textContent = kind === 'projects' ? (en ? 'Work & experiments' : '作品与实践') : kind === 'about' ? (en ? 'The host’s scroll' : '山居自序') : (en ? 'Collected writings' : '云庭文集');
+    eyebrow.textContent = kind === 'projects' ? (en ? 'ON THE WORKBENCH' : '工作案上') : kind === 'about' ? (en ? 'ABOUT & CURRICULUM VITAE' : '关于与简历') : (en ? 'FROM THE STUDY' : '云庭书斋');
     original.href = pageURL.href;
     scroll.scrollTop = 0;
     openDialog();
@@ -197,9 +204,20 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     else if (kind === 'projects' || kind === 'about') void openPage(`${config.prefix}/${kind === 'projects' ? 'projects' : 'cv'}`, kind);
   }
 
+  function useWaymark(kind: InteractionKind, id: string) {
+    if (kind === 'lantern' || kind === 'bench') actions.onNavigate(id);
+    else openContent(kind);
+  }
+
   root.addEventListener('click', event => {
     const element = event.target instanceof Element ? event.target : null;
     if (!element) return;
+    const mark = element.closest<HTMLButtonElement>('[data-world-mark]');
+    if (mark && !mark.hidden && mark.dataset.destinationId) {
+      event.preventDefault();
+      useWaymark(mark.dataset.worldMark as InteractionKind, mark.dataset.destinationId);
+      return;
+    }
     const destination = element.closest<HTMLElement>('[data-world-destination]');
     if (destination) {
       event.preventDefault();
@@ -273,6 +291,11 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
   }, { signal });
 
   return {
+    updateWaymarks: waymarks.update,
+    useCentredWaymark() {
+      const item = waymarks.atCentre();
+      if (item) useWaymark(item.kind, item.id);
+    },
     setReady() {
       failed = false;
       root.dataset.state = 'ready';

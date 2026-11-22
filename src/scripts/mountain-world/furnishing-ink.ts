@@ -4,6 +4,7 @@ import * as THREE from 'three';
 export function createFurnishingInk(isEn: boolean) {
   const textures = new Set<THREE.Texture>();
   const cache = new Map<string, THREE.CanvasTexture>();
+  let disposed = false;
   const font = '"Noto Serif SC", "Songti SC", serif';
   const titles = ['读诗小记', '数学随笔', '桃源', '读书札记', '自由的代价', '初中生活', '残灵', '光明',
     '算法导论', '计算机系统', '离散数学', '编译原理', '山中手记', '机器学习', '新年', '格物札记'];
@@ -39,7 +40,7 @@ export function createFurnishingInk(isEn: boolean) {
     ctx.fillRect(0, 0, width, height);
   }
 
-  function stamp(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+  function stamp(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, mark = '羽') {
     ctx.fillStyle = '#9b4838';
     ctx.fillRect(x, y, size, size);
     ctx.strokeStyle = '#ead8b6';
@@ -49,8 +50,44 @@ export function createFurnishingInk(isEn: boolean) {
     ctx.font = `500 ${size * .64}px ${font}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('羽', x + size / 2, y + size / 2 + 1);
+    ctx.fillText(mark, x + size / 2, y + size / 2 + 1);
   }
+
+  // Lay out the author's name as text independently of the landscape plate.
+  const portrait = canvas(768, 1200);
+  const portraitTexture = texture(portrait.canvas);
+  function paintPortrait(landscape?: HTMLImageElement) {
+    const {ctx} = portrait;
+    paper(ctx,768,1200,'#ece0c6');
+    if (landscape) {
+      ctx.drawImage(landscape,0,0,landscape.width,landscape.height,0,665,768,535);
+      const feather = ctx.createLinearGradient(0,665,0,720);
+      feather.addColorStop(0,'#ece0c6'); feather.addColorStop(1,'rgba(236,224,198,0)');
+      ctx.fillStyle=feather; ctx.fillRect(0,665,768,55);
+    }
+    ctx.fillStyle='#2c302a'; ctx.textBaseline='middle'; ctx.textAlign='center';
+    if (isEn) {
+      ctx.font='italic 90px "EB Garamond",Georgia,serif';
+      ctx.fillText('The host',390,205); ctx.fillText('of the study',390,309,640);
+      ctx.font='42px Georgia,serif'; ctx.fillText('Guanyu Chen',390,452);
+      ctx.font='27px Georgia,serif'; ctx.fillText('Curriculum vitae',390,515);
+    } else {
+      const brush='KaiTi,STKaiti,"Kaiti SC","Noto Serif SC",serif';
+      ctx.font='116px '+brush;
+      [...'山居自序'].forEach((char,i)=>ctx.fillText(char,489,120+i*136));
+      ctx.font='46px '+brush; [...'陈冠宇'].forEach((char,i)=>ctx.fillText(char,306,342+i*57));
+      ctx.font='28px '+font; [...'个人履历'].forEach((char,i)=>ctx.fillText(char,221,245+i*39));
+    }
+    stamp(ctx,isEn?365:281,552,51,isEn ? 'C' : '陈');
+    portraitTexture.needsUpdate=true;
+  }
+  paintPortrait();
+  const portraitReady = new Promise<void>(resolve => {
+    const image = new Image();
+    image.onload = () => { if (!disposed) paintPortrait(image); resolve(); };
+    image.onerror = () => resolve();
+    image.src = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/,'')+'/world/folio-pines.webp';
+  });
 
   const atlas = canvas(512, 2048);
   titles.forEach((title, index) => {
@@ -87,7 +124,7 @@ export function createFurnishingInk(isEn: boolean) {
   }
   const pageEdges = texture(edge.canvas);
 
-  function page(kind: 'notes' | 'poem' | 'letter' | 'schematic' | 'scroll' | 'shelf' | 'bench' | 'lamp' | 'project' | 'seal') {
+  function page(kind: 'notes' | 'poem' | 'schematic' | 'scroll' | 'shelf' | 'bench' | 'lamp' | 'project') {
     const previous = cache.get(kind);
     if (previous) return previous;
     const { canvas: source, ctx } = canvas(kind === 'scroll' ? 768 : 512, kind === 'scroll' ? 1024 : 704);
@@ -111,30 +148,12 @@ export function createFurnishingInk(isEn: boolean) {
         });
       }
       stamp(ctx, 162, 856, 62);
-    } else if (['shelf', 'bench', 'lamp', 'project', 'seal'].includes(kind)) {
-      const copy = { shelf: '藏书', bench: '坐听松风', lamp: '归', project: '观物求知', seal: '羽' }[kind as 'shelf'];
-      if (kind === 'seal') {
-        ctx.fillStyle = '#9b4635';
-        ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = '#6c3128';
-        ctx.font = `500 300px ${font}`;
-        ctx.fillText('羽', 256, 352);
-      } else {
-        ctx.font = `500 ${kind === 'lamp' ? 290 : 118}px ${font}`;
-        const letters = [...copy];
-        const step = Math.min(142, 490 / letters.length);
-        letters.forEach((letter, i) => ctx.fillText(letter, 256, (704 - (letters.length - 1) * step) / 2 + i * step));
-      }
-    } else if (kind === 'letter') {
-      ctx.textAlign = 'right';
-      ctx.font = `500 57px ${font}`;
-      ctx.fillText(isEn ? 'A letter' : '致来访者', 438, 115);
-      ctx.font = `26px ${font}`;
-      ctx.fillStyle = '#6f6551';
-      ctx.fillText(isEn ? 'Shane Lorien' : '山中书斋 · 羽', 438, 181);
-      ctx.strokeStyle = 'rgba(110,86,49,.28)';
-      ctx.strokeRect(34, 36, 444, 632);
-      stamp(ctx, 61, 524, 57);
+    } else if (['shelf', 'bench', 'lamp', 'project'].includes(kind)) {
+      const copy = { shelf: '藏书', bench: '坐听松风', lamp: '归', project: '观物求知' }[kind as 'shelf'];
+      ctx.font = `500 ${kind === 'lamp' ? 290 : 118}px ${font}`;
+      const letters = [...copy];
+      const step = Math.min(142, 490 / letters.length);
+      letters.forEach((letter, i) => ctx.fillText(letter, 256, (704 - (letters.length - 1) * step) / 2 + i * step));
     } else if (kind === 'schematic') {
       ctx.font = `500 49px ${font}`;
       ctx.fillText(isEn ? 'Celestial notes' : '格物札记', 256, 74);
@@ -174,5 +193,5 @@ export function createFurnishingInk(isEn: boolean) {
     return result;
   }
 
-  return { titles, bookAtlas, pageEdges, page, dispose: () => { for (const item of textures) item.dispose(); textures.clear(); } };
+  return { titles, bookAtlas, pageEdges, page, portraitTexture, portraitReady, dispose: () => { disposed = true; for (const item of textures) item.dispose(); textures.clear(); } };
 }
