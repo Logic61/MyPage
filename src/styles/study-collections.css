@@ -13,16 +13,6 @@
     box-shadow: var(--study-shadow, 0 20px 65px #263e3214);
   }
 
-  .study-page .cv-shell .cv-document::before,
-  .study-page .projects-shell .project-folio::before {
-    content: '';
-    position: absolute;
-    inset: 8px;
-    z-index: -1;
-    border: 1px solid color-mix(in srgb, var(--study-gold) 24%, transparent);
-    pointer-events: none;
-  }
-
   .study-page .cv-shell .cv-document {
     display: block;
     width: var(--measure);
@@ -39,7 +29,7 @@
     gap: 2rem;
     margin: 0;
     padding: 0 0 2.5rem;
-    border-bottom: 3px double color-mix(in srgb, var(--study-gold) 55%, var(--line));
+    border-bottom: 1px solid var(--line);
   }
 
   .study-page .cv-document-label {
@@ -145,7 +135,7 @@
     gap: 1rem;
     margin: .5rem 0 0;
     padding: 1.35rem 0 0;
-    border-top: 3px double color-mix(in srgb, var(--study-gold) 55%, var(--line));
+    border-top: 1px solid var(--line);
     font-size: .875rem;
   }
 

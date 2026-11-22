@@ -5,10 +5,9 @@ interface Props {
   eyebrow?: string;
   description?: string;
   isEn?: boolean;
-  seal?: string;
   compact?: boolean;
 }
-const { title, eyebrow, description, isEn = false, seal = '山居', compact = false } = Astro.props;
+const { title, eyebrow, description, isEn = false, compact = false } = Astro.props;
 ---
 <header class:list={['section-wrap', 'study-prelude', { 'study-prelude-compact': compact }]}>
   <nav class="study-trail" aria-label={isEn ? 'Your place in the study' : '书斋导航'}>
@@ -18,12 +17,10 @@ const { title, eyebrow, description, isEn = false, seal = '山居', compact = fa
   {title && (
     <div class="study-heading">
       <div>
-        <p class="study-kicker">{isEn ? 'From a mountain study' : '山中书斋'}</p>
         <h1>{title}</h1>
         {description && <p class="study-description">{description}</p>}
         <slot />
       </div>
-      <span class="study-seal" aria-hidden="true">{seal}</span>
     </div>
   )}
 </header>

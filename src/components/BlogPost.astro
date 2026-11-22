@@ -21,12 +21,11 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
     <Navigation {languagePath} />
     <main id="main-content" class="site-content">
       <div id="top-sentinel" aria-hidden="true"></div>
-      <StudyPrelude {isEn} compact eyebrow={isEn ? 'An open page' : '灯下展卷'} />
+      <StudyPrelude {isEn} compact eyebrow={isEn ? 'Blog' : '博客'} />
       <div class:list={['reading-grid', { 'reading-grid--single': directory.length === 0 }]}>
         <article class="article">
           <nav class="article-return-links" aria-label={isEn ? 'Return links' : '返回导航'}>
-            <a class="back-link" href={`${base}${isEn ? '/en' : ''}/blog`}>{isEn ? 'Back to the bookshelves' : '回到藏书目录'}</a>
-            <span class="article-folio-note">{isEn ? 'A page from the study' : '山中一页'}</span>
+            <a class="back-link" href={`${base}${isEn ? '/en' : ''}/blog`}>{isEn ? 'Back to blog' : '返回博客'}</a>
           </nav>
           <header class="article-header">
             <div class="article-tags">

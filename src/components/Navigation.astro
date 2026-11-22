@@ -10,9 +10,9 @@ const prefix = `${base}${isEn ? '/en' : ''}`;
 const toggleUrl = `${base}${isEn ? '' : '/en'}${languagePath ?? localPath}`;
 const section = localPath.split('/')[1] || '';
 const navItems = [
-  { key: 'blog', label: isEn ? 'Writing' : '藏书' },
-  { key: 'projects', label: isEn ? 'Projects' : '造物' },
-  { key: 'cv', label: isEn ? 'About' : '小笺' },
+  { key: 'blog', label: isEn ? 'Blog' : '博客' },
+  { key: 'projects', label: isEn ? 'Projects' : '项目' },
+  { key: 'cv', label: isEn ? 'CV' : '简历' },
 ];
 ---
 <nav class="site-nav" aria-label={isEn ? 'Main navigation' : '主导航'}>

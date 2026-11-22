@@ -23,6 +23,7 @@ function mountRetreat(host: HTMLElement) {
   let opener: HTMLElement | null = null;
   let transitionTimer = 0;
   let revealTimer = 0;
+  let sceneRequest = 0;
   let switching = false;
 
   const remember = (scene: RetreatScene) => {
@@ -42,8 +43,16 @@ function mountRetreat(host: HTMLElement) {
     if (focus) document.getElementById(`${scene}-title`)?.focus({ preventScroll: true });
   };
 
-  const changeScene = (scene: RetreatScene, push = true, focus = true) => {
+  const changeScene = async (scene: RetreatScene, push = true, focus = true) => {
     if (switching || scene === current) return;
+    const request = ++sceneRequest;
+    switching = true;
+    main.setAttribute('aria-busy', 'true');
+    // Decode the destination before fading so the first visit never shows an empty room.
+    const painting = sections.find(section => section.dataset.scene === scene)?.querySelector<HTMLImageElement>('.retreat-painting');
+    if (painting) await painting.decode().catch(() => {});
+    if (request !== sceneRequest) return;
+    main.removeAttribute('aria-busy');
     const finish = () => {
       main.inert = false;
       renderScene(scene, focus);
@@ -55,7 +64,6 @@ function mountRetreat(host: HTMLElement) {
       }, motion.matches ? 0 : 45);
     };
     if (motion.matches) { finish(); return; }
-    switching = true;
     main.inert = true;
     host.setAttribute('data-switching', '');
     transitionTimer = window.setTimeout(finish, 190);
@@ -70,6 +78,7 @@ function mountRetreat(host: HTMLElement) {
   });
 
   const fromLocation = () => {
+    sceneRequest += 1;
     const hashScene = location.hash === '#study' ? 'study' : location.hash === '#mountain' ? 'mountain' : undefined;
     const rememberedState = historyState().retreatScene;
     const next = hashScene || (rememberedState === 'study' || rememberedState === 'mountain' ? rememberedState : current);
@@ -77,6 +86,7 @@ function mountRetreat(host: HTMLElement) {
     window.clearTimeout(revealTimer);
     switching = false;
     main.inert = false;
+    main.removeAttribute('aria-busy');
     host.removeAttribute('data-switching');
     if (catalogue.open) catalogue.close();
     renderScene(next);
@@ -168,9 +178,11 @@ function mountRetreat(host: HTMLElement) {
     if (document.hidden) resetDrift();
   });
   window.addEventListener('pagehide', () => {
+    sceneRequest += 1;
     window.clearTimeout(transitionTimer);
     window.clearTimeout(revealTimer);
     main.inert = false;
+    main.removeAttribute('aria-busy');
     switching = false;
     host.removeAttribute('data-switching');
     resetDrift();

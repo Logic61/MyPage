@@ -17,12 +17,11 @@ const title = isEn ? 'Projects' : '项目';
   <div class="site-shell section-shell projects-shell">
     <Navigation />
     <main id="main-content" class="site-content">
-      <StudyPrelude {isEn} title={isEn ? 'At the workbench' : '手边造物'}
-        eyebrow={isEn ? 'The mountain study · Projects' : '山中书斋 · 项目'} seal="造"
-        description={isEn ? 'A few ideas made into things, gathered here on the desk.' : '把一些念头做成东西，留在案上，慢慢打磨。'} />
+      <StudyPrelude {isEn} title={title}
+        description={isEn ? 'Experiments in code, with notes on their design and implementation.' : '代码中的尝试，以及设计与实现的记录。'} />
       <div class="section-wrap workbench-collection">
         <div class="workbench-directory">
-          <p>{isEn ? 'On the desk' : '案上目录'}</p>
+          <p>{isEn ? 'On this page' : '项目目录'}</p>
           <nav class="project-index" aria-label={isEn ? 'On this page' : '本页项目'}>
             {entries.map(project => <a href={`#${project.id}`}>{project.name}</a>)}
           </nav>
@@ -39,7 +38,7 @@ const title = isEn ? 'Projects' : '项目';
                   aria-label={`GitHub · ${project.name}`}><Icon name="mdi:github" />{isEn ? 'View repository' : '查看仓库'}</a>
               </div>
               <div class="project-notes">
-                <p class="project-notes-label">{isEn ? 'Project notes' : '造物手记'}</p>
+                <p class="project-notes-label">{isEn ? 'Project notes' : '项目说明'}</p>
                 <ul>{project.points.map(point => <li>{point}</li>)}</ul>
               </div>
             </section>
