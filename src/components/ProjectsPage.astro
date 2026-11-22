@@ -3,6 +3,7 @@ import { Icon } from 'astro-icon/components';
 import Layout from '../layouts/Layout.astro';
 import Navigation from './Navigation.astro';
 import Footer from './Footer.astro';
+import ReturnToStudy from './ReturnToStudy.astro';
 import SectionHero from './SectionHero.astro';
 import viaduct from '../assets/projects-viaduct.webp';
 
@@ -18,6 +19,7 @@ const title = isEn ? 'Projects' : '项目';
   <div class="site-shell section-shell projects-shell">
     <Navigation />
     <main id="main-content" class="site-content">
+      <div class="section-wrap"><ReturnToStudy {isEn} /></div>
       <SectionHero art={viaduct} title={title} class="projects-heading"
         description={isEn ? 'Selected open-source repositories and academic experiments.' : '一些开源仓库。'} />
       <div class="section-wrap">

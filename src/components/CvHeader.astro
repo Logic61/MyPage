@@ -1,9 +1,11 @@
 ---
 import { Icon } from 'astro-icon/components';
+import ReturnToStudy from './ReturnToStudy.astro';
 interface Props { isEn?: boolean; }
 const { isEn = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
+<div class="cv-room-return"><ReturnToStudy {isEn} /></div>
 <header class="cv-header">
   <div>
     <h1>{isEn ? 'Guanyu Chen' : '陈冠宇'}</h1>
@@ -15,3 +17,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
   </div>
   <a href={`${base}/cv.pdf`} download class="button cv-download"><Icon name="mdi:download" />{isEn ? 'Download PDF' : '下载 PDF'}</a>
 </header>
+<style>
+  .cv-room-return { margin-bottom: 18px; }
+  @media print { .cv-room-return { display: none; } }
+</style>

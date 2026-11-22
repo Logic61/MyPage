@@ -5,17 +5,19 @@ interface Props {
   title?: string;
   description?: string;
   section?: 'home' | 'archive' | 'article' | 'cv' | 'projects';
+  spatial?: boolean;
 }
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const isEn = Astro.url.pathname.slice(base.length).startsWith('/en');
 const {
   section,
+  spatial = false,
   title = 'Shane Lorien',
   description = isEn ? 'Notes on mathematics, computer science, and reading by Shane Lorien.' : 'Shane Lorien 的个人博客，记录数学、计算机与阅读中的思考。',
 } = Astro.props;
 ---
 <!doctype html>
-<html lang={isEn ? 'en' : 'zh-CN'} data-section={section} class:list={{ 'archive-catalogue': section === 'archive' }}>
+<html lang={isEn ? 'en' : 'zh-CN'} data-section={section} class:list={{ 'archive-catalogue': section === 'archive', 'spatial-home': spatial }}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

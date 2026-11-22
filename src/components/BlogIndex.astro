@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import Navigation from './Navigation.astro';
 import Footer from './Footer.astro';
+import ReturnToStudy from './ReturnToStudy.astro';
 import BlogCard from './BlogCard.astro';
 import ArchiveStudyPreview from './ArchiveStudyPreview.astro';
 import ArchiveIndexPreview from './ArchiveIndexPreview.astro';
@@ -30,6 +31,7 @@ const topicCount = isEn ? `${categories.length} ${categories.length === 1 ? 'top
   <div class="site-shell section-shell archive-shell">
     <Navigation />
     <main id="main-content" class="site-content">
+      <div class="section-wrap archive-room-return"><ReturnToStudy {isEn} /></div>
       <SectionHero art={volumes} title={isEn ? 'Blog' : '博客'} class="archive-heading"
         description={isEn ? 'Mathematics, computer science, and reading.' : '数学、计算机，以及阅读中的思考。'}>
         {posts.length > 0 && <p class="archive-counts">{entryCount} <span>·</span> {topicCount}</p>}
@@ -74,6 +76,7 @@ const topicCount = isEn ? `${categories.length} ${categories.length === 1 ? 'top
   </div>
 </Layout>
 <style>
+  .archive-room-return { padding-bottom: 12px; }
   .blog-card-list { display: grid; gap: 14px; }
   .archive-pagination[hidden] { display: none; }
   .archive-pagination { gap: clamp(6px, 2vw, 18px); }
