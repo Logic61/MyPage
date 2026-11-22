@@ -251,7 +251,7 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-settings input[type="range"] { max-width: 140px; width: 42%; accent-color: #d2bb8d; }
 .mw-settings input[type="checkbox"] { accent-color: #d2bb8d; width: 16px; height: 16px; margin-right: 0; }
 .mw-reticle { position: absolute; z-index: 3; left: 50%; top: 50%; width: 17px; height: 17px; transform: translate(-50%,-50%); display: none; place-items: center; border: 1px solid transparent; border-radius: 50%; pointer-events: none; transition: border-color .18s,transform .18s; }
-.mountain-world[data-state="ready"][data-mode="exploring"]:is([data-input-mode="locked"],[data-input-mode="drag"],[data-input-mode="touch"]) .mw-reticle { display: grid; }
+.mountain-world[data-state="ready"][data-mode="exploring"]:not([data-seated]):is([data-input-mode="locked"],[data-input-mode="drag"],[data-input-mode="touch"]) .mw-reticle { display: grid; }
 .mountain-world[data-mode="exploring"]:is([data-input-mode="locked"],[data-input-mode="drag"]) #mountain-canvas { cursor: none; }
 .mountain-world[data-mode="exploring"][data-input-mode="pointer"] #mountain-canvas { cursor: default; }
 .mountain-world[data-mode="exploring"][data-input-mode="pointer"][data-aimed="true"] #mountain-canvas { cursor: pointer; }
@@ -280,7 +280,7 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mountain-world[data-mode="welcome"] .mw-hud,
 .mountain-world[data-mode="paused"] .mw-hud { opacity: 0; visibility: hidden; }
 .mountain-world[data-mode="transition"] .mw-hint { opacity: 0; }
-.mountain-world[data-state="ready"][data-touch="true"][data-mode="exploring"] .mw-thumbstick { display: block; }
+.mountain-world[data-state="ready"][data-touch="true"][data-mode="exploring"]:not([data-seated]) .mw-thumbstick { display: block; }
 .mountain-world[data-touch="true"] .mw-hint-desktop { display: none !important; }
 .mountain-world[data-touch="true"] .mw-hint-touch { display: block !important; }
 .mountain-world[data-touch="false"] .mw-hint-touch { display: none !important; }
@@ -318,5 +318,5 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 }
 .mw-stand { position:absolute; z-index:5; bottom:max(65px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:.7em; padding:10px 20px; min-height:44px; color:#f1e5c6; background:#223833ed; border:1px solid #ab9468; border-radius:2px; letter-spacing:.1em; }
 .mw-stand kbd { font:11px var(--font-sans,sans-serif); border:1px solid #a8997c; padding:2px 4px; }
-.mountain-world:not([data-mode="exploring"]) .mw-stand, .mountain-world[data-seated="true"] :is(.mw-reticle,.mw-hint,.mw-thumbstick,.mw-place-note), .mountain-world[data-touch="true"] .mw-stand kbd { display:none; }
+.mountain-world:not([data-mode="exploring"]) .mw-stand, .mountain-world[data-seated="true"] :is(.mw-hint,.mw-place-note), .mountain-world[data-touch="true"] .mw-stand kbd { display:none; }
 .mountain-world[data-seated="true"][data-mode="exploring"] .mw-stand { display:flex; }
