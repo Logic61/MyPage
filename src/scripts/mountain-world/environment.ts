@@ -1,502 +1,433 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { createSurfaceLibrary, type SurfaceLibrary } from './materials';
+import { branchGeometry, gridSurface, mistTexture, mountainRing, naturalRock, pavingSlab, pineSpray, rockNoise, roundedBlock, seeded } from './environment-geometry';
 import type { Collider, Environment, WalkArea } from './types';
 
-/** A small, continuous mountain ledge. All accessible surfaces meet at y = .3. */
-export function createEnvironment(scene: THREE.Scene): Environment {
-  const root = new THREE.Group();
-  root.name = 'Mountain — the inhabited ledge';
-  scene.add(root);
+/** Eye-level mountain dwelling. The cave is a thick, continuous shell, never a cutaway. */
+export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary): Environment {
+  const library = surfaces ?? createSurfaceLibrary();
+  const ownsLibrary = !surfaces;
+  const root = new THREE.Group(); root.name = 'Mountain dwelling — first-person environment'; scene.add(root);
+  const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), localTextures = new Set<THREE.Texture>();
   const colliders: Collider[] = [];
-  const roofOccluders: THREE.Object3D[] = [];
-  const geometries = new Set<THREE.BufferGeometry>();
-  const materials = new Set<THREE.Material>();
-  const textures = new Set<THREE.Texture>();
-  const keepGeometry = <T extends THREE.BufferGeometry>(g: T): T => { geometries.add(g); return g; };
-  const keepMaterial = <T extends THREE.Material>(m: T): T => { materials.add(m); return m; };
-  const rng = (seed: number) => { let s = seed >>> 0; return () => { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; }; };
-  const random = rng(12391);
-  const standard = (color: string, extra: THREE.MeshStandardMaterialParameters = {}) => keepMaterial(new THREE.MeshStandardMaterial({ color, roughness: .94, metalness: 0, ...extra }));
-  const mat = {
-    stone: standard('#7b8076', { flatShading: true }),
-    darkStone: standard('#535f5c', { flatShading: true }),
-    lightStone: standard('#a5a997', { flatShading: true }),
-    warmStone: standard('#9d967d', { flatShading: true }),
-    path: standard('#b3b39f', { flatShading: true }),
-    moss: standard('#536a57', { flatShading: true }),
-    wood: standard('#514735'),
-    weatheredWood: standard('#8c7e60'),
-    timberEdge: standard('#322d25'),
-    leaf: standard('#38584e', { flatShading: true }),
-    bamboo: standard('#72806a'),
-    bambooLeaf: standard('#516e5d', { side: THREE.DoubleSide, flatShading: true }),
-    rope: standard('#b6a78a'),
-    brass: standard('#b99a59', { roughness: .55, metalness: .38 }),
-  };
-  const box = keepGeometry(new THREE.BoxGeometry(1, 1, 1));
-  const cylinder = keepGeometry(new THREE.CylinderGeometry(1, 1, 1, 7));
-  const sphere = keepGeometry(new THREE.IcosahedronGeometry(1, 1));
-  const pineCrown = keepGeometry(new THREE.IcosahedronGeometry(1, 1));
-  const block = keepGeometry(makeWeatheredBlock());
-  const rockGeometries = [0, 1, 2].map(n => keepGeometry(makeRock(49 + n * 31)));
-  const pathStone = keepGeometry(new THREE.CylinderGeometry(1, 1.05, 1, 6, 1));
-  const matrix = new THREE.Matrix4();
-  const quaternion = new THREE.Quaternion();
-  const vector = new THREE.Vector3();
-  const scale = new THREE.Vector3();
-  const up = new THREE.Vector3(0, 1, 0);
+  const keep = <T extends THREE.BufferGeometry>(geometry: T): T => { geometries.add(geometry); return geometry; };
+  const own = <T extends THREE.Material>(material: T): T => { materials.add(material); return material; };
+  const rng = seeded(23877), up = new THREE.Vector3(0, 1, 0);
+  const stone = own(library.material('stone', { worldScale: .58, normalScale: .7 }));
+  const innerStone = own(library.material('stone', { worldScale: .68, normalScale: .62, side: THREE.DoubleSide }));
+  innerStone.vertexColors = true;
+  const darkStone = own(library.material('darkStone', { worldScale: .43, normalScale: .75 }));
+  const cutStone = own(library.material('stone', { worldScale: .82, normalScale: .45, roughness: .88 }));
+  const earth = own(library.material('ground', { worldScale: .55, normalScale: .55 }));
+  const wood = own(library.material('wood', { repeat: [1, 1.35], normalScale: .45 }));
+  const deckWood = own(library.material('wood', { repeat: [1.25, 2.1], normalScale: .48 }));
+  const bark = own(library.material('bark', { repeat: [1.7, 1], normalScale: .85 }));
+  const moss = own(library.material('moss', { worldScale: 1.1, normalScale: .4 }));
+  const iron = own(new THREE.MeshStandardMaterial({ color: '#4b4c43', metalness: .63, roughness: .72 }));
+  const ropeMaterial = own(new THREE.MeshStandardMaterial({ color: '#b4aa8b', roughness: 1 }));
+  const fissureMaterial = own(new THREE.MeshStandardMaterial({ color: '#37413d', roughness: 1 }));
+  const leaves = own(new THREE.MeshStandardMaterial({ color: '#ffffff', vertexColors: true, side: THREE.DoubleSide, roughness: .92 }));
+  const bambooMaterial = own(library.material('bark', { color: '#dae5c5', repeat: [1, 2], normalScale: .23 }));
+  const bambooLeafMaterial = own(new THREE.MeshStandardMaterial({ color: '#596e4c', roughness: .95, side: THREE.DoubleSide }));
+  const block = keep(roundedBlock()), cube = keep(new THREE.BoxGeometry(1, 1, 1));
+  const cylinder = keep(new THREE.CylinderGeometry(1, 1, 1, 12));
+  const rocks = [keep(naturalRock(12)), keep(naturalRock(49)), keep(naturalRock(87))];
+  const smallRock = keep(naturalRock(31, 1));
+  const matrix = new THREE.Matrix4(), quat = new THREE.Quaternion(), vector = new THREE.Vector3(), scale = new THREE.Vector3();
+  const MIN_Z = -9.9, MOUTH_Z = -.8, SPRING = 3.05;
 
-  function mesh(g: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number,
-    sx = 1, sy = 1, sz = 1, parent: THREE.Object3D = root) {
-    const m = new THREE.Mesh(g, material);
-    m.position.set(x, y, z); m.scale.set(sx, sy, sz);
-    m.castShadow = true; m.receiveShadow = true;
-    parent.add(m); return m;
+  interface Placed { x: number; y: number; z: number; sx: number; sy: number; sz: number; rx?: number; ry?: number; rz?: number; color?: THREE.Color; }
+  function mesh(g: THREE.BufferGeometry, m: THREE.Material, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, parent: THREE.Object3D = root) {
+    const result = new THREE.Mesh(g, m); result.position.set(x, y, z); result.scale.set(sx, sy, sz);
+    result.castShadow = true; result.receiveShadow = true; parent.add(result); return result;
   }
-  function beam(a: THREE.Vector3, b: THREE.Vector3, radius: number, material: THREE.Material, parent: THREE.Object3D = root) {
-    const delta = b.clone().sub(a);
-    const m = mesh(cylinder, material, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2, radius, delta.length(), radius, parent);
-    m.quaternion.setFromUnitVectors(up, delta.normalize()); return m;
-  }
-  interface Instance { x: number; y: number; z: number; sx: number; sy: number; sz: number; ry?: number; rx?: number; rz?: number; color?: THREE.Color; }
-  function instances(g: THREE.BufferGeometry, material: THREE.Material, items: Instance[], parent: THREE.Object3D = root) {
-    const m = new THREE.InstancedMesh(g, material, items.length);
-    items.forEach((item, i) => {
-      quaternion.setFromEuler(new THREE.Euler(item.rx ?? 0, item.ry ?? 0, item.rz ?? 0));
-      matrix.compose(vector.set(item.x, item.y, item.z), quaternion, scale.set(item.sx, item.sy, item.sz));
-      m.setMatrixAt(i, matrix);
-      if (item.color) m.setColorAt(i, item.color);
+  function batch(g: THREE.BufferGeometry, m: THREE.Material, instances: Placed[], name: string, parent: THREE.Object3D = root) {
+    const result = new THREE.InstancedMesh(g, m, instances.length); result.name = name;
+    instances.forEach((item, i) => {
+      quat.setFromEuler(new THREE.Euler(item.rx ?? 0, item.ry ?? 0, item.rz ?? 0));
+      matrix.compose(vector.set(item.x, item.y, item.z), quat, scale.set(item.sx, item.sy, item.sz)); result.setMatrixAt(i, matrix);
+      if (item.color) result.setColorAt(i, item.color);
     });
-    m.castShadow = true; m.receiveShadow = true; m.instanceMatrix.needsUpdate = true;
-    if (m.instanceColor) m.instanceColor.needsUpdate = true;
-    m.computeBoundingSphere(); parent.add(m); return m;
+    result.instanceMatrix.needsUpdate = true; if (result.instanceColor) result.instanceColor.needsUpdate = true;
+    result.castShadow = true; result.receiveShadow = true; result.computeBoundingSphere(); parent.add(result); return result;
   }
-  function collider(x: number, z: number, halfX: number, halfZ: number) { colliders.push({ x, z, halfX, halfZ }); }
-  // Project the actual transformed vertices, rather than rotating an existing AABB:
-  // the latter greatly overestimates the footprint of our irregular cliff rocks.
-  function colliderFromGeometry(geometry: THREE.BufferGeometry, transform: THREE.Matrix4) {
-    const bounds = new THREE.Box3();
-    const vertex = new THREE.Vector3();
-    const positions = geometry.attributes.position;
-    for (let i = 0; i < positions.count; i++) {
-      vertex.fromBufferAttribute(positions, i).applyMatrix4(transform);
-      bounds.expandByPoint(vertex);
-    }
-    // Decorative strata wholly below the floor, or above the visitor, are not walls.
-    if (bounds.max.y <= .35 || bounds.min.y >= 1.95) return;
-    const padding = .025;
-    collider((bounds.min.x + bounds.max.x) / 2, (bounds.min.z + bounds.max.z) / 2,
+  function obstacle(x: number, z: number, halfX: number, halfZ: number) { colliders.push({ x, z, halfX, halfZ }); }
+  function boundsCollider(geometry: THREE.BufferGeometry, transform: THREE.Matrix4, padding = .025) {
+    const bounds = new THREE.Box3(), p = new THREE.Vector3(), positions = geometry.attributes.position;
+    for (let i = 0; i < positions.count; i++) bounds.expandByPoint(p.fromBufferAttribute(positions, i).applyMatrix4(transform));
+    if (bounds.max.y <= .35 || bounds.min.y >= 2.15) return;
+    obstacle((bounds.min.x + bounds.max.x) / 2, (bounds.min.z + bounds.max.z) / 2,
       (bounds.max.x - bounds.min.x) / 2 + padding, (bounds.max.z - bounds.min.z) / 2 + padding);
   }
-  function colliderForMesh(object: THREE.Mesh) {
-    object.updateMatrix();
-    colliderFromGeometry(object.geometry, object.matrix);
+  function solid(object: THREE.Mesh) { object.updateMatrix(); boundsCollider(object.geometry, object.matrix); return object; }
+  function branch(points: THREE.Vector3[], start: number, end: number, m: THREE.Material = bark) {
+    return mesh(keep(branchGeometry(points, start, end, 12, 12)), m);
+  }
+  function timber(a: THREE.Vector3, b: THREE.Vector3, radius: number, m: THREE.Material = wood) {
+    return branch([a, a.clone().lerp(b, .5), b], radius, radius * .93, m);
+  }
+  const white = new THREE.Color('#ffffff');
+  const rockShade = (_u: number, _v: number, p: THREE.Vector3) => white.clone().multiplyScalar(.70 + .26 * THREE.MathUtils.smoothstep(p.y, .25, 2.5) + rockNoise(p.x, p.y, p.z) * .035);
+
+  // The ledge grows into a mountainside below the mist, rather than tapering into a floating toy island.
+  const outline = [[-14.5, -11.7], [-7.8, -14.2], [.2, -13.2], [8.7, -12.4], [13.7, -8.4], [15, -1.2], [14.1, 8.3], [10.7, 12], [5.5, 14.4], [3.6, 17.1], [-1.1, 17.9], [-5.1, 15.1], [-11.4, 12], [-14.9, 6.1], [-16, -.8]];
+  const strata = keep(gridSurface(outline.length, 7, (u, v) => {
+    const t = u * outline.length, i = Math.floor(t) % outline.length, j = (i + 1) % outline.length, f = t - Math.floor(t);
+    const x = THREE.MathUtils.lerp(outline[i][0], outline[j][0], f), z = THREE.MathUtils.lerp(outline[i][1], outline[j][1], f);
+    const outward = 1 + Math.pow(1 - v, 1.3) * .55;
+    return new THREE.Vector3(x * outward + Math.sin(v * 23 + i) * (1 - v) * .6, .275 - Math.pow(1 - v, 1.4) * 30, z * outward);
+  }, true));
+  mesh(strata, darkStone).castShadow = false;
+  const groundShape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
+  const ground = mesh(keep(new THREE.ShapeGeometry(groundShape)), earth, 0, .284, 0); ground.rotation.x = -Math.PI / 2; ground.castShadow = false;
+
+  // The room opens gently into a generous natural mouth. No rectangular block is used as the cave roof.
+  function widthAt(z: number) { return THREE.MathUtils.lerp(3.25, 6.05, THREE.MathUtils.smoothstep(-z, .8, 3.25)); }
+  function heightAt(z: number) { return THREE.MathUtils.lerp(1.55, 2.38, THREE.MathUtils.smoothstep(-z, .8, 3)); }
+  function sideTop(z: number) {
+    const t = (z + 5) / 1.6;
+    return Math.abs(t) <= 1 ? 2.12 + Math.sqrt(Math.max(0, 1 - t * t)) * .86 : .3;
+  }
+  function wallPoint(sign: number, z: number, y: number, outer = false) {
+    const edgeFade = Math.pow(Math.max(0, Math.sin((y - .3) / (SPRING - .3) * Math.PI)), .72);
+    const strata = Math.sin(z * .77 + sign * .91) * .13
+      + Math.cos(y * 1.63 + z * .43 - sign) * .085
+      + rockNoise(sign * 6, y * .7, z * .72) * .035;
+    // Keep the existing collision envelope at body height. The upper rock can
+    // swell more deeply without narrowing either doorway or the furniture aisles.
+    const relief = THREE.MathUtils.lerp(.075, .25, THREE.MathUtils.smoothstep(y, 2.15, 2.58));
+    const warp = THREE.MathUtils.clamp(strata, -relief, relief) * edgeFade;
+    return new THREE.Vector3(sign * (widthAt(z) + (outer ? 1.35 : 0) + warp), y, z);
+  }
+  function vaultPoint(theta: number, z: number, outer = false) {
+    const edgeFade = Math.sin(theta);
+    const longFold = Math.sin(theta * 2.25 + z * .58 + .9) * .28;
+    const crossFold = Math.sin(theta * 4.65 - z * .34 + .2) * .16;
+    const weatheredShelf = -.19 * Math.exp(-Math.pow((theta - .92) / .4, 2))
+      * (.75 + Math.cos(z * .42) * .25);
+    const grain = rockNoise(Math.cos(theta) * 4.2, Math.sin(theta) * 2.3, z * .7) * .055;
+    // The same asymmetric displacement is applied to both skins. Its zero-valued
+    // side edges preserve the wall/vault seams and the rock's full thickness.
+    const wave = THREE.MathUtils.clamp(longFold + crossFold + weatheredShelf + grain, -.35, .34) * edgeFade;
+    return new THREE.Vector3(Math.cos(theta) * (widthAt(z) + (outer ? 1.35 : 0)),
+      SPRING + Math.sin(theta) * (heightAt(z) + (outer ? 1.25 : 0)) + wave, z);
+  }
+  function makeWall(sign: number, z0: number, z1: number, outer: boolean, arch = false) {
+    const surface = keep(gridSurface(Math.max(2, Math.ceil((z1 - z0) / .22)), 14, (u, v) => {
+      const z = THREE.MathUtils.lerp(z0, z1, u);
+      const bottom = arch ? sideTop(z) + (outer ? .05 : 0) : .3;
+      return wallPoint(sign, z, THREE.MathUtils.lerp(bottom, SPRING, v), outer);
+    }, sign < 0 !== outer, outer ? undefined : rockShade));
+    const result = mesh(surface, outer ? stone : innerStone); result.name = `${outer ? 'Outer' : 'Inner'} cave wall ${sign < 0 ? 'west' : 'east'} ${z0}`; return result;
+  }
+  for (const outer of [false, true]) {
+    const vault = mesh(keep(gridSurface(48, 42, (u, v) => vaultPoint(u * Math.PI, THREE.MathUtils.lerp(MIN_Z, MOUTH_Z, v), outer), !outer, outer ? undefined : rockShade)), outer ? stone : innerStone);
+    vault.name = outer ? 'Continuous exterior rock vault' : 'Continuous interior rock vault';
+    makeWall(-1, MIN_Z, MOUTH_Z, outer);
+    makeWall(1, MIN_Z, -6.6, outer);
+    makeWall(1, -6.6, -3.4, outer, true);
+    makeWall(1, -3.4, MOUTH_Z, outer);
+  }
+  const backWall = mesh(keep(gridSurface(44, 24, (u, v) => {
+    const x = (u * 2 - 1) * widthAt(MIN_Z);
+    const ceiling = vaultPoint(Math.acos(THREE.MathUtils.clamp(x / widthAt(MIN_Z), -1, 1)), MIN_Z).y;
+    const y = THREE.MathUtils.lerp(.3, ceiling, v);
+    return new THREE.Vector3(x, y, MIN_Z + rockNoise(x, y * .9, -9.9) * .045 * Math.sin(v * Math.PI));
+  }, false, rockShade)), innerStone); backWall.name = 'Continuous rear rock wall';
+  obstacle(0, -10.35, 6.8, .5);
+
+  // Connect both shells across a deep, irregular lip: a real arch section visible from either side.
+  function mouthCurve(t: number, outer: boolean) {
+    const vertical = .24, z = MOUTH_Z;
+    let p: THREE.Vector3;
+    if (t < vertical) p = wallPoint(-1, z, THREE.MathUtils.lerp(.3, SPRING, t / vertical), outer);
+    else if (t > 1 - vertical) p = wallPoint(1, z, THREE.MathUtils.lerp(SPRING, .3, (t - 1 + vertical) / vertical), outer);
+    else p = vaultPoint(Math.PI * (1 - (t - vertical) / (1 - vertical * 2)), z, outer);
+    return p;
+  }
+  const mouth = mesh(keep(gridSurface(88, 9, (u, v) => {
+    const inside = mouthCurve(u, false), outside = mouthCurve(u, true), p = inside.lerp(outside, v);
+    p.z += Math.sin(v * Math.PI) * rockNoise(p.x * 1.2, p.y * 1.3, 1) * .12;
+    return p;
+  }, false)), stone); mouth.material.side = THREE.DoubleSide; mouth.name = 'Thick irregular entrance arch';
+  // Two broad, embedded weathering ledges interrupt the otherwise smooth lip.
+  // Their lowest surfaces stay well above standing eye/head height.
+  for (const [theta, sx, sy, sz, lift, index] of [[.68, .72, .31, .49, .13, 0], [1.87, .93, .26, .53, .12, 2]]) {
+    const p = vaultPoint(theta, MOUTH_Z);
+    const ledge = mesh(rocks[index], stone, p.x, p.y + lift, MOUTH_Z - .02, sx, sy, sz);
+    ledge.rotation.z = theta < 1 ? -.17 : .11;
+    ledge.name = 'Embedded weathered entrance ledge';
   }
 
-  // The ledge has a hand-shaped silhouette and a clearly visible layered rock face.
-  const outline = [
-    [-14.5, -11.7], [-7.8, -14.2], [.2, -13.2], [8.7, -12.4], [13.7, -8.4],
-    [15.0, -1.2], [14.1, 8.3], [10.7, 12.0], [5.5, 14.4], [3.6, 17.1],
-    [-1.1, 17.9], [-5.1, 15.1], [-11.4, 12.0], [-14.9, 6.1], [-16.0, -.8],
-  ];
-  const cliffMaterial = keepMaterial(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, flatShading: true }));
-  const cliff = mesh(keepGeometry(makeLedge(outline)), cliffMaterial, 0, 0, 0);
-  cliff.name = 'Layered rock ledge';
-  cliff.castShadow = false;
+  // The side portal is cut through the rock, with a continuous reveal connecting both skins.
+  const sideReveal = mesh(keep(gridSurface(44, 7, (u, v) => {
+    const z = THREE.MathUtils.lerp(-6.6, -3.4, u);
+    return wallPoint(1, z, sideTop(z)).lerp(wallPoint(1, z, sideTop(z) + .05, true), v);
+  }, true)), cutStone); sideReveal.material.side = THREE.DoubleSide;
+  for (const z of [-6.6, -3.4]) {
+    const jamb = mesh(keep(gridSurface(7, 15, (u, v) => wallPoint(1, z, .3 + v * 1.82)
+      .lerp(wallPoint(1, z, .3 + v * 1.87, true), u), z < -5)), cutStone);
+    jamb.material.side = THREE.DoubleSide;
+  }
+  mesh(block, cutStone, 6.72, .25, -5, 1.55, .105, 3.08);
 
-  // A slight top layer keeps the playable plane precise while the edge is irregular.
-  const groundShape = new THREE.Shape(outline.map(p => new THREE.Vector2(p[0], -p[1])));
-  const ground = mesh(keepGeometry(new THREE.ShapeGeometry(groundShape)), standard('#8e9581'), 0, .255, 0);
-  ground.rotation.x = -Math.PI / 2;
-  ground.castShadow = false;
-
-  // Lichen, pebbles and seam stones form restrained patches, never a noisy all-over scatter.
-  const pebbles: Instance[] = [];
-  const moss: Instance[] = [];
-  const patches = [[-11, 7, 2.8], [-10.5, -3, 2], [11.7, 10, 1.7], [-5.7, 11.7, 2.2], [7.3, -10.5, 2]];
-  for (const [cx, cz, radius] of patches) {
-    for (let i = 0; i < 16; i++) {
-      const angle = random() * Math.PI * 2, distance = Math.sqrt(random()) * radius;
-      pebbles.push({ x: cx + Math.cos(angle) * distance, y: .31, z: cz + Math.sin(angle) * distance,
-        sx: .1 + random() * .3, sy: .06 + random() * .12, sz: .1 + random() * .24, ry: random() * 6 });
+  // Short wall segments follow the taper accurately enough to walk naturally up to it.
+  function wallStrip(sign: number, start: number, end: number) {
+    let inner = Infinity, outer = -Infinity;
+    // Include the upper relief too, so an overhang cannot hang over a nominally
+    // walkable shoulder space. The sampling is denser than the rendered wall grid.
+    for (let zz = 0; zz <= 4; zz++) for (let yy = 0; yy <= 18; yy++) {
+      const z = THREE.MathUtils.lerp(start, end, zz / 4);
+      const y = THREE.MathUtils.lerp(.3, SPRING, yy / 18);
+      const radius = Math.abs(wallPoint(sign, z, y).x);
+      inner = Math.min(inner, radius); outer = Math.max(outer, radius + 1.35);
     }
-    for (let i = 0; i < 5; i++) moss.push({ x: cx + (random() - .5) * radius, y: .27, z: cz + (random() - .5) * radius,
-      sx: .45 + random() * .6, sy: .015, sz: .3 + random() * .5, ry: random() * 6 });
+    const low = Math.min(inner - .025, Math.min(widthAt(start), widthAt(end)) - .09);
+    const high = Math.max(outer + .025, Math.max(widthAt(start), widthAt(end)) + 1.42);
+    obstacle(sign * (low + high) / 2, (start + end) / 2, (high - low) / 2, (end - start) / 2 + .015);
   }
-  instances(rockGeometries[0], mat.lightStone, pebbles);
-  instances(sphere, mat.moss, moss).castShadow = false;
+  for (let z = MIN_Z; z < MOUTH_Z; z += .34) {
+    const end = Math.min(MOUTH_Z, z + .34);
+    wallStrip(-1, z, end);
+    if (z >= -3.4 || end <= -6.6) wallStrip(1, z, end);
+    else {
+      if (z < -6.6) wallStrip(1, z, -6.6);
+      if (end > -3.4) wallStrip(1, -3.4, end);
+    }
+  }
 
-  // Uneven flagstones make a quiet path from the entry to the wide, warm doorway.
-  // Their whole six-sided footprints (including the wider bottom ring) fit inside
-  // the row/column spacing. Coplanar overlap here produces visible depth fighting.
-  const paving: Instance[] = [];
+  // Hairline seams emerge from the same surface instead of floating above it.
+  for (let seam = 0; seam < 8; seam++) {
+    const z = -8.9 + seam * .8, points: THREE.Vector3[] = [];
+    for (let i = 0; i < 12; i++) {
+      const y = .55 + i * .23, p = wallPoint(-1, z + Math.sin(i * .8 + seam) * .035, y);
+      p.x += .009; points.push(p);
+    }
+    mesh(keep(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points), 20, .005 + seam % 3 * .0015, 3, false)), fissureMaterial).castShadow = false;
+  }
+  // A modest timber support remains recognisably built by a person, inside the natural cave.
+  for (const x of [-5.54, 5.54]) {
+    const post = mesh(block, wood, x, 1.86, -7.9, .21, 3.12, .23); solid(post);
+    mesh(block, cutStone, x, .38, -7.9, .39, .16, .42);
+    for (const y of [.62, 2.92]) mesh(cube, iron, x, y, -7.9, .226, .065, .246);
+  }
+  timber(new THREE.Vector3(-5.54, 3.38, -7.9), new THREE.Vector3(5.54, 3.38, -7.9), .115);
+  for (const x of [-5.54, 5.54]) timber(new THREE.Vector3(x, 2.65, -7.9), new THREE.Vector3(x - Math.sign(x) * .7, 3.38, -7.9), .065);
+
+  // Inset stone floor: readable joints and bevels, all close to the fixed walk plane.
+  mesh(cube, darkStone, 0, .144, -5.5, 12.1, .29, 9.12);
+  const floor: Placed[] = [];
+  for (let row = 0; row < 9; row++) for (let col = 0; col < 12; col++) {
+    const x = -5.5 + col, z = -9.45 + row;
+    if (Math.abs(x) > widthAt(z) - .18) continue;
+    floor.push({ x, y: .292, z, sx: .976, sy: .028, sz: .976, color: white.clone().multiplyScalar(.89 + rng() * .14) });
+  }
+  batch(block, cutStone, floor, 'Bevelled stone floor tiles').castShadow = false;
+  mesh(block, cutStone, 0, .259, -.73, 5.75, .11, .74);
+  const path: Placed[][] = [[], [], [], []];
   for (let i = 0; i < 13; i++) {
-    const z = 13.6 - i * 1.12, center = 1.4 + Math.sin(i * .42) * .65;
-    for (let side = -1; side <= 1; side++) paving.push({
-      x: center + side * .91 + (random() - .5) * .03, y: .278, z: z + (random() - .5) * .03,
-      sx: .385 + random() * .025, sy: .062, sz: .45 + random() * .03, ry: (random() - .5) * .08,
-      color: new THREE.Color().setScalar(.88 + random() * .15),
-    });
-  }
-  // The branch starts beyond the main stones and ends at the timber veranda,
-  // leaving the material transition clear instead of overlapping either surface.
-  for (let i = 0; i < 5; i++) {
-    const x = 3.7 + i * .8, z = 6.6 - Math.sin(i / 4 * Math.PI) * .75;
-    paving.push({ x, y: .278, z, sx: .34, sy: .062, sz: .42, ry: (random() - .5) * .1 });
-  }
-  instances(pathStone, mat.path, paving).name = 'Separated flagstones';
-
-  // The room is carved into stone, with an inset, warm-toned floor and a real threshold.
-  // Base top = .290; tile top = .308; the .018 relief exposes real grout gaps.
-  mesh(box, mat.warmStone, 0, .145, -5.5, 12.2, .29, 9.2).name = 'Recessed room floor base';
-  const floorTiles: Instance[] = [];
-  for (let x = -5.25; x < 6; x += 1.5) for (let z = -9.25; z < -1; z += 1.5)
-    floorTiles.push({ x, y: .296, z, sx: 1.46, sy: .024, sz: 1.46, color: new THREE.Color().setScalar(.92 + random() * .14) });
-  const tiles = instances(box, mat.warmStone, floorTiles);
-  tiles.name = 'Raised room floor tiles'; tiles.castShadow = false;
-  mesh(block, mat.lightStone, 0, .243, -.94, 5.3, .14, .75);
-  mesh(box, mat.wood, 0, .25, -.6, 5.12, .1, .16);
-
-  // The north and west walls remain visible when the front roof is faded out.
-  mesh(block, mat.darkStone, 0, 2.8, -10.4, 13.4, 5.6, 1.1);
-  mesh(block, mat.darkStone, -6.35, 2.6, -5.5, 1.15, 5.2, 10.5);
-  collider(0, -10.38, 6.55, .55);
-  collider(-6.35, -5.5, .6, 5.25);
-  // The side door is centred at z=-5 and stays clear over z[-6.6,-3.4].
-  mesh(block, mat.stone, 6.35, .9, -8.55, 1.15, 1.8, 3.9);
-  mesh(block, mat.stone, 6.35, .9, -2.18, 1.15, 1.8, 2.45);
-  collider(6.35, -8.55, .6, 1.95);
-  collider(6.35, -2.18, .6, 1.22);
-  const sideLintel = mesh(block, mat.stone, 6.35, 4.6, -5, 1.2, 1.1, 3.25);
-  // Low interior stone skirting and wood rails lend the room a lived-in scale.
-  mesh(box, mat.wood, 0, .55, -9.8, 11.7, .28, .17);
-  mesh(box, mat.wood, -5.76, .55, -5.5, .17, .28, 8.55);
-  mesh(box, mat.weatheredWood, 0, 4.35, -9.79, 11.7, .17, .2);
-  for (const x of [-5.45, 5.45]) mesh(block, mat.wood, x, 2.43, -1.28, .25, 4.3, .3);
-
-  // Thick asymmetrical entrance piers have a deliberately generous central opening.
-  const leftPier = mesh(block, mat.stone, -4.65, 2.66, -.93, 4.05, 5.3, 1.55);
-  leftPier.rotation.z = -.035;
-  const rightPier = mesh(block, mat.stone, 4.65, 2.3, -.95, 4.05, 4.6, 1.5);
-  rightPier.rotation.z = .025;
-  colliderForMesh(leftPier);
-  colliderForMesh(rightPier);
-  mesh(block, mat.lightStone, -2.77, 2.5, -.76, .34, 4.6, .68);
-  mesh(block, mat.lightStone, 2.77, 2.5, -.76, .34, 4.6, .68);
-  mesh(block, mat.wood, 0, 4.68, -.66, 5.55, .28, .52);
-  mesh(box, mat.weatheredWood, 0, 4.55, -.37, 5.1, .05, .09);
-  // Small dowels and the underside of the eave catch the afternoon light.
-  for (const x of [-2.32, -1.18, 0, 1.18, 2.32]) mesh(block, mat.wood, x, 4.77, -.43, .18, .19, 1.5);
-  // A dark grain line makes the wooden structure readable without texture downloads.
-  mesh(box, mat.timberEdge, 0, 4.73, -.38, 5.48, .032, .024);
-
-  // The cutaway has its own materials: changing its opacity never fades distant rocks.
-  const roof = new THREE.Group(); roof.name = 'Cave roof — controlled cutaway'; root.add(roof);
-  const roofStone = keepMaterial(mat.stone.clone());
-  const roofDark = keepMaterial(mat.darkStone.clone());
-  roofStone.transparent = true; roofDark.transparent = true;
-  mesh(block, roofDark, 0, 5.67, -6.04, 13.25, 1.24, 9.5, roof);
-  const arch = mesh(rockGeometries[1], roofStone, -.2, 5.66, -.72, 6.95, 1.0, 1.3, roof);
-  arch.rotation.z = -.035;
-  mesh(rockGeometries[0], roofStone, -4.4, 6.28, -4.15, 3.9, 1.45, 3.3, roof);
-  mesh(rockGeometries[2], roofDark, 2.6, 6.0, -7.75, 4.4, 1.15, 3.6, roof);
-  // The near-side upper rim can disappear with the roof; the side door remains tangible.
-  mesh(block, roofStone, 6.35, 3.1, -8.55, 1.15, 2.6, 3.9, roof);
-  mesh(block, roofStone, 6.35, 2.85, -2.18, 1.15, 2.1, 2.45, roof);
-  const upperSide = mesh(block, roofStone, 6.35, 4.5, -8.45, 1.18, .75, 3.9, roof);
-  upperSide.name = 'East upper rim';
-  sideLintel.material = roofStone; roof.attach(sideLintel);
-  roofOccluders.push(roof);
-  const roofMeshes: THREE.Mesh[] = [];
-  const roofMaterials = new Set<THREE.Material>();
-  roof.traverse(object => {
-    if (!(object instanceof THREE.Mesh)) return;
-    roofMeshes.push(object);
-    const assigned = Array.isArray(object.material) ? object.material : [object.material];
-    for (const material of assigned) {
-      material.transparent = true;
-      material.opacity = 1;
-      material.depthWrite = true;
-      roofMaterials.add(material);
+    const z = 13.5 - i * 1.1, center = 1.35 + Math.sin(i * .36) * .55;
+    for (let side = -1; side <= 1; side++) {
+      const index = i * 3 + side + 1;
+      path[index % 4].push({ x: center + side * .9 + (rng() - .5) * .025, y: .274, z: z + (rng() - .5) * .025,
+        sx: .82, sy: 1, sz: .99, ry: (rng() - .5) * .06, color: white.clone().multiplyScalar(.9 + rng() * .12) });
     }
-  });
-  let roofOpacity = 1;
+  }
+  for (let i = 0; i < 5; i++) path[i % 4].push({ x: 3.65 + i * .8, y: .274, z: 6.5 - Math.sin(i / 4 * Math.PI) * .65, sx: .73, sy: 1, sz: .9, ry: (rng() - .5) * .08 });
+  path.forEach((items, i) => batch(keep(pavingSlab(123 + i)), cutStone, items, `Separate irregular path stones ${i}`));
 
-  // The mountain is behind and beside the room, never a solid lump over its centre.
-  const flankRocks: Instance[][] = [[], [], []];
-  const bigRocks = [
-    [-9.4, 2.2, -7.3, 3.5, 4.0, 4.6], [-10.1, 1.8, -1.7, 3.15, 3.15, 3.65],
-    [-7.6, 4.8, -12.15, 4.0, 4.9, 3.2], [-2.8, 5.7, -13.0, 3.7, 5.8, 2.7],
-    [2.8, 4.4, -13.4, 3.7, 4.5, 2.8], [8.0, 2.7, -13.4, 3.2, 3.2, 2.6],
-    [-12.9, -.8, 2.3, 2.5, 2.0, 3.0], [-12.1, -.8, 9.6, 3.0, 2.2, 2.3],
-    [12.8, -1.6, 10.6, 2.9, 2.5, 2.4], [6.8, -2.2, 15.2, 3.2, 2.7, 2.4],
+  // Mountain mass sits outside the inner shell; nothing protrudes through the room.
+  const exterior: Placed[][] = [[], [], []];
+  const outerRocks = [
+    [-10.1, 2.45, -7.3, 3.15, 4.1, 3.7], [-10.5, 1.65, -1.5, 2.45, 2.6, 2.7],
+    [-7.8, 5.8, -12.5, 3.9, 6.2, 2.4], [-2.5, 7.0, -13.2, 3.8, 7.0, 2.3],
+    [2.9, 6.0, -13.3, 3.8, 6.1, 2.5], [8.1, 4.1, -12.4, 3.3, 4.4, 2.2],
+    [-13.7, -.5, 3.0, 2.4, 1.9, 2.6], [-12.4, -.6, 9.5, 2.3, 2.1, 2.3],
+    [13.6, -1.2, 10.6, 2.35, 2.1, 2.5], [7.5, -2.0, 15.8, 2.7, 2.5, 2.7],
   ];
-  bigRocks.forEach((r, i) => flankRocks[i % 3].push({ x: r[0], y: r[1], z: r[2], sx: r[3], sy: r[4], sz: r[5], ry: random() * .8, rz: (random() - .5) * .2 }));
-  flankRocks.forEach((r, i) => {
-    const rocks = instances(rockGeometries[i], i === 1 ? mat.darkStone : mat.stone, r);
-    rocks.name = `Solid cliff rocks ${i + 1}`;
-    for (let instance = 0; instance < rocks.count; instance++) {
-      rocks.getMatrixAt(instance, matrix);
-      colliderFromGeometry(rocks.geometry, matrix);
-    }
+  outerRocks.forEach((r, i) => exterior[i % 3].push({ x: r[0], y: r[1], z: r[2], sx: r[3], sy: r[4], sz: r[5], ry: rng() * .35 }));
+  exterior.forEach((items, i) => {
+    const object = batch(rocks[i], i === 1 ? darkStone : stone, items, `Outer mountain rocks ${i}`);
+    for (let j = 0; j < object.count; j++) { object.getMatrixAt(j, matrix); boundsCollider(object.geometry, matrix); }
   });
-  // Additional strata, protruding from the cliff, make the diorama feel like geology.
-  const strata: Instance[] = [];
-  for (let i = 0; i < 18; i++) {
-    const t = i / 17 * Math.PI;
-    strata.push({ x: Math.cos(t) * (11.8 + random()), y: -1.0 - random() * 4.0,
-      z: Math.sin(t) * 9.5 + 2.4, sx: 1.0 + random() * 2.8, sy: .35 + random() * .5, sz: 1 + random() * 1.4,
-      ry: -.25 + random() * .5, rz: (random() - .5) * .15 });
+  // Small fractured stones, moss islands and grass sit at edges, not across the path.
+  const rubble: Placed[] = [], growth: Placed[] = [];
+  for (const [cx, cz, radius] of [[-9.6, 6.7, 2], [-8.5, -.7, 1.3], [-5.9, 9.0, 1.4], [11.9, 10, 1.2], [8.3, -9.1, 1.3]]) {
+    for (let i = 0; i < 22; i++) {
+      const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * radius;
+      rubble.push({ x: cx + Math.cos(a) * d, y: .29, z: cz + Math.sin(a) * d,
+        sx: .055 + rng() * .14, sy: .035 + rng() * .09, sz: .065 + rng() * .14, ry: rng() * 6 });
+    }
+    for (let i = 0; i < 7; i++) growth.push({ x: cx + (rng() - .5) * radius, y: .285, z: cz + (rng() - .5) * radius,
+      sx: .25 + rng() * .4, sy: .012, sz: .23 + rng() * .3, ry: rng() * 6 });
   }
-  instances(block, mat.darkStone, strata);
+  batch(smallRock, cutStone, rubble, 'Small fractured edge stones');
+  batch(rocks[0], moss, growth, 'Low moss islands').castShadow = false;
+  solid(mesh(rocks[2], stone, -5.9, .6, 7.9, .85, .62, .73));
+  solid(mesh(rocks[0], cutStone, -6.62, .39, 8.05, .45, .31, .43));
 
-  // Eastern veranda: a narrow, safe loop from the side door to the lookout and yard.
-  mesh(box, mat.wood, 10.15, .1, .1, 5.65, .34, 16.4);
-  const deckBoards: Instance[] = [];
-  for (let i = 0; i < 32; i++) deckBoards.push({ x: 10.15, y: .278, z: -7.85 + i * .5, sx: 5.57, sy: .044, sz: .465,
-    color: new THREE.Color().setScalar(.86 + random() * .23) });
-  instances(box, mat.weatheredWood, deckBoards);
-  // Two boards bridge the small threshold between stone and timber.
-  mesh(box, mat.weatheredWood, 6.85, .28, -5, 1.05, .04, 3.15);
-  const railPosts: Instance[] = [];
-  for (let z = -7.7; z <= 8.4; z += 2.2) railPosts.push({ x: 12.83, y: .91, z, sx: .14, sy: 1.22, sz: .14 });
-  for (let x = 8.0; x <= 12.7; x += 2.25) railPosts.push({ x, y: .91, z: -7.9, sx: .14, sy: 1.22, sz: .14 });
-  instances(block, mat.wood, railPosts);
-  beam(new THREE.Vector3(12.83, 1.5, -7.9), new THREE.Vector3(12.83, 1.5, 8.3), .065, mat.weatheredWood);
-  beam(new THREE.Vector3(12.83, .9, -7.9), new THREE.Vector3(12.83, .9, 8.3), .04, mat.wood);
-  beam(new THREE.Vector3(7.8, 1.5, -7.9), new THREE.Vector3(12.83, 1.5, -7.9), .065, mat.weatheredWood);
-  collider(12.9, .2, .12, 8.3);
-  collider(10.3, -7.95, 2.7, .12);
-  // Exterior braces visibly support the overhanging deck.
+  // Timber veranda: separated, end-grained planks, pegged posts and two slender rails.
+  const deckGeometry = keep(roundedBlock()), deckUV = deckGeometry.attributes.uv, deckPosition = deckGeometry.attributes.position;
+  for (let i = 0; i < deckUV.count; i++) deckUV.setXY(i, deckPosition.getZ(i) + .5, (deckPosition.getX(i) + .5) * 2.1);
+  mesh(cube, wood, 10.15, .111, .1, 5.65, .36, 16.4);
+  const planks: Placed[] = [], nails: Placed[] = [];
+  for (let i = 0; i < 39; i++) {
+    const z = -7.88 + i * .42;
+    planks.push({ x: 10.15, y: .274, z, sx: 5.58, sy: .048, sz: .402, color: white.clone().multiplyScalar(.89 + rng() * .15) });
+    for (const x of [7.53, 12.77]) nails.push({ x, y: .298, z, sx: .009, sy: .004, sz: .009 });
+  }
+  batch(deckGeometry, deckWood, planks, 'Individual weathered veranda planks');
+  batch(cylinder, iron, nails, 'Recessed iron plank nails').castShadow = false;
+  mesh(deckGeometry, deckWood, 6.78, .274, -5, 1.3, .048, 3.1);
+  const railPosts: Placed[] = [];
+  for (let z = -7.8; z <= 8.2; z += 2) railPosts.push({ x: 12.87, y: .94, z, sx: .12, sy: 1.28, sz: .12 });
+  for (let x = 7.9; x < 12.8; x += 2.3) railPosts.push({ x, y: .94, z: -7.9, sx: .12, sy: 1.28, sz: .12 });
+  batch(block, wood, railPosts, 'Carved veranda posts');
+  timber(new THREE.Vector3(12.87, 1.57, -7.9), new THREE.Vector3(12.87, 1.57, 8.2), .055, deckWood);
+  timber(new THREE.Vector3(12.87, .91, -7.9), new THREE.Vector3(12.87, .91, 8.2), .032);
+  timber(new THREE.Vector3(7.8, 1.57, -7.9), new THREE.Vector3(12.87, 1.57, -7.9), .055, deckWood);
+  obstacle(12.87, .15, .11, 8.18); obstacle(10.3, -7.95, 2.75, .1);
   for (const z of [-6.3, -.2, 6.4]) {
-    beam(new THREE.Vector3(9.7, -2.1, z), new THREE.Vector3(12.6, -.1, z), .11, mat.wood);
-    mesh(box, mat.wood, 11, -.18, z, 4.1, .3, .24);
+    timber(new THREE.Vector3(9.8, -2.4, z), new THREE.Vector3(12.62, -.12, z), .105);
+    mesh(block, wood, 11, -.17, z, 4.1, .28, .22);
   }
 
-  // The southward stair continues below the walk boundary; no invisible elevation changes.
-  const stairs: Instance[] = [];
-  for (let i = 0; i < 15; i++) stairs.push({ x: 1.4 + Math.sin(i * .17) * .25, y: .12 - i * .3,
-    z: 14.6 + i * .69, sx: 4.0 - i * .035, sy: .34, sz: .89, ry: Math.sin(i * .18) * .02 });
-  instances(block, mat.lightStone, stairs);
-  mesh(rockGeometries[1], mat.darkStone, -2.1, -1.8, 17.3, 1.4, 2.2, 3.0);
-  mesh(rockGeometries[0], mat.stone, 4.1, -2.2, 18.8, 1.4, 2.6, 3.2);
-
-  // Trees use one instanced batch for timber and one for foliage, including the bent pine.
-  const branches: Instance[] = [], crowns: Instance[] = [];
-  function branchInstance(a: THREE.Vector3, b: THREE.Vector3, width: number) {
-    const length = a.distanceTo(b); quaternion.setFromUnitVectors(up, b.clone().sub(a).normalize());
-    const e = new THREE.Euler().setFromQuaternion(quaternion);
-    branches.push({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2, sx: width, sy: length, sz: width, rx: e.x, ry: e.y, rz: e.z });
+  // The lower stair is visibly closed by an old rope rail; the fixed-height walk plane stops here.
+  const steps: Placed[] = [];
+  for (let i = 0; i < 16; i++) steps.push({ x: 1.4 + Math.sin(i * .17) * .25, y: .115 - i * .29, z: 14.8 + i * .69,
+    sx: 3.85 - i * .025, sy: .33, sz: .87, ry: Math.sin(i * .17) * .015 });
+  batch(block, cutStone, steps, 'Descending distant mountain stair');
+  for (const x of [-2, 1.4, 4.8]) solid(mesh(block, wood, x, .92, 14.03, .13, 1.24, .13));
+  for (const y of [.88, 1.47]) {
+    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(-2, y, 14.03), new THREE.Vector3(-.3, y - .16, 14.03), new THREE.Vector3(1.4, y, 14.03), new THREE.Vector3(3.1, y - .16, 14.03), new THREE.Vector3(4.8, y, 14.03)]);
+    mesh(keep(new THREE.TubeGeometry(curve, 42, .018, 6, false)), ropeMaterial);
   }
+  obstacle(1.4, 14.04, 3.75, .07);
+
+  // A bent pine has real branching and sprays of needles, rather than solid balls for foliage.
+  const sprays: Placed[] = [];
   function pine(x: number, z: number, height: number, lean: number, seed: number) {
-    const r = rng(seed), base = new THREE.Vector3(x, .3, z);
-    const middle = base.clone().add(new THREE.Vector3(lean * .25, height * .46, 0));
-    const top = base.clone().add(new THREE.Vector3(lean, height, -.25));
-    branchInstance(base, middle, height * .047);
-    branchInstance(middle, top, height * .032);
+    const r = seeded(seed), base = new THREE.Vector3(x, .3, z), mid = base.clone().add(new THREE.Vector3(lean * .25, height * .44, .1)), top = base.clone().add(new THREE.Vector3(lean, height, -.16));
+    branch([base, base.clone().lerp(mid, .5).add(new THREE.Vector3(-.09, 0, .07)), mid, top], height * .043, height * .008, bark);
+    obstacle(x + lean * .1, z, height * .045, height * .045);
+    for (let i = 0; i < 8; i++) {
+      const t = .48 + i * .057, start = base.clone().lerp(top, t), angle = i * 2.39 + seed;
+      const reach = height * (.36 - i * .023), end = start.clone().add(new THREE.Vector3(Math.cos(angle) * reach, .18 + i * .025, Math.sin(angle) * reach * .8));
+      const elbow = start.clone().lerp(end, .58).add(new THREE.Vector3(0, -.12, 0));
+      branch([start, elbow, end], height * .013 * (1 - i * .045), .016, bark);
+      for (let twig = 0; twig < 5; twig++) {
+        const u = .35 + twig * .15, center = elbow.clone().lerp(end, u), side = twig % 2 ? 1 : -1;
+        center.x += Math.sin(angle) * side * .18; center.z -= Math.cos(angle) * side * .18;
+        const size = height * (.17 - i * .008) * (.8 + r() * .35);
+        sprays.push({ x: center.x, y: center.y + .13, z: center.z, sx: size, sy: size, sz: size, ry: angle + (r() - .5) * 1.2, rx: (r() - .5) * .15 });
+      }
+    }
     for (let i = 0; i < 5; i++) {
-      const theta = i * 2.2 + seed, y = .42 + i * .1;
-      const start = base.clone().lerp(top, y);
-      const reach = height * (.48 - i * .05);
-      const end = start.clone().add(new THREE.Vector3(Math.cos(theta) * reach, height * .1, Math.sin(theta) * reach * .66));
-      branchInstance(start, end, height * .018);
-      crowns.push({ x: end.x, y: end.y + .17, z: end.z, sx: height * (.27 - i * .019), sy: height * (.115 + r() * .025), sz: height * (.22 - i * .012),
-        ry: r() * 6, color: new THREE.Color().setScalar(.8 + r() * .36) });
-    }
-    crowns.push({ x: top.x, y: top.y, z: top.z, sx: height * .22, sy: height * .14, sz: height * .2, color: new THREE.Color().setScalar(1.03) });
-    collider(x + lean * .12, z, .35, .35);
-  }
-  pine(-9.0, 3.3, 6.1, 1.6, 98);
-  pine(-11.8, 8.8, 4.1, -.75, 42);
-  pine(-10.6, -9.5, 4.0, -.7, 11);
-  pine(10.6, -10.5, 3.8, .5, 35);
-  instances(cylinder, mat.wood, branches);
-  const foliage = instances(pineCrown, mat.leaf, crowns);
-  foliage.name = 'Wind-carved pine crowns';
-  // Exposed rootwork seats the main tree against the stone, not in a perfect circle.
-  for (let i = 0; i < 5; i++) {
-    const a = i * 1.28;
-    beam(new THREE.Vector3(-9, .5, 3.3), new THREE.Vector3(-9 + Math.cos(a) * 1.15, .28, 3.3 + Math.sin(a) * .75), .09, mat.wood);
-  }
-
-  // A small bamboo cluster creates a soft west edge. Only its upper leaves sway.
-  const bambooGroup = new THREE.Group(); root.add(bambooGroup);
-  const bambooStalks: Instance[] = [], bambooNodes: Instance[] = [], bambooLeaves: Instance[] = [];
-  for (let i = 0; i < 11; i++) {
-    const x = -7.65 + (random() - .5) * 1.6, z = -2.4 + random() * 3.2, height = 2.4 + random() * 1.8;
-    bambooStalks.push({ x, y: .3 + height / 2, z, sx: .047, sy: height, sz: .047 });
-    for (let y = .55; y < height; y += .48) bambooNodes.push({ x, y, z, sx: .055, sy: .035, sz: .055 });
-    for (let j = 0; j < 5; j++) {
-      const angle = random() * Math.PI * 2;
-      bambooLeaves.push({ x: x + Math.cos(angle) * .26, y: height * (.6 + j * .075), z: z + Math.sin(angle) * .26,
-        sx: .17, sy: .035, sz: .57, ry: angle, rz: .35 + random() * .7, rx: random() * .8 });
+      const a = i * 1.256, end = base.clone().add(new THREE.Vector3(Math.cos(a) * .85, -.02, Math.sin(a) * .64));
+      branch([base.clone().add(new THREE.Vector3(0, .2, 0)), base.clone().lerp(end, .55), end], .075, .018, bark);
     }
   }
-  instances(cylinder, mat.bamboo, bambooStalks);
-  instances(cylinder, mat.lightStone, bambooNodes);
-  instances(sphere, mat.bambooLeaf, bambooLeaves, bambooGroup);
-  collider(-7.7, -.8, 1, 1.85);
+  pine(-9.05, 3.5, 5.7, 1.15, 13);
+  pine(-11.75, 9, 4.0, -.6, 42);
+  pine(-10.8, -10.4, 4.4, -.4, 77);
+  pine(10.5, -10.4, 4.1, .4, 31);
+  const foliageGroup = new THREE.Group(); foliageGroup.name = 'Subtle pine needle movement'; foliageGroup.userData.dynamic = true; root.add(foliageGroup);
+  batch(keep(pineSpray(8)), leaves, sprays, 'Detailed pine needle sprays', foliageGroup);
 
-  // A few planted rocks frame the open court; the centre stays spacious.
-  colliderForMesh(mesh(rockGeometries[2], mat.stone, -5.9, .7, 7.9, 1.15, .75, .95));
-  colliderForMesh(mesh(rockGeometries[0], mat.lightStone, -6.75, .38, 8.1, .65, .4, .6));
-  // A low boundary on the west leaves a view over the drop.
-  const edging: Instance[] = [];
-  for (let i = 0; i < 9; i++) edging.push({ x: -11.7 + Math.sin(i * .4) * .45, y: .5, z: .2 + i * 1.15, sx: .65, sy: .5 + random() * .25, sz: .98, ry: random() * .3 });
-  instances(block, mat.darkStone, edging);
-  collider(-11.75, 4.8, .42, 5.5);
+  // Slender bamboo and small ferns occupy the western rock edge only.
+  const bambooStems: Placed[] = [], bambooNodes: Placed[] = [], bambooLeaves: Placed[] = [];
+  const leafShape = keep(new THREE.BufferGeometry());
+  leafShape.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -.07, .012, .24, 0, .025, .58, 0, 0, 0, 0, .025, .58, .055, -.006, .24], 3));
+  leafShape.setAttribute('uv', new THREE.Float32BufferAttribute([.5, 0, 0, .45, .5, 1, .5, 0, .5, 1, 1, .45], 2)); leafShape.computeVertexNormals();
+  for (let i = 0; i < 15; i++) {
+    const x = -8.15 + (rng() - .5) * 1.2, z = -.75 + (rng() - .5) * 2.5, height = 2.3 + rng() * 1.9;
+    bambooStems.push({ x, y: .3 + height / 2, z, sx: .028 + rng() * .012, sy: height, sz: .034 });
+    for (let y = .65; y < height; y += .44) bambooNodes.push({ x, y, z, sx: .043, sy: .022, sz: .043 });
+    for (let j = 0; j < 12; j++) bambooLeaves.push({ x, y: height * (.48 + j / 24), z, sx: .75, sy: .75, sz: .75, ry: j * 2.4 + i, rx: -.25 + rng() * .5 });
+  }
+  batch(cylinder, bambooMaterial, bambooStems, 'Fine bamboo stems'); batch(cylinder, cutStone, bambooNodes, 'Bamboo joints');
+  const bambooGroup = new THREE.Group(); bambooGroup.userData.dynamic = true; root.add(bambooGroup);
+  batch(leafShape, bambooLeafMaterial, bambooLeaves, 'Lanceolate bamboo leaves', bambooGroup); obstacle(-8.15, -.75, .72, 1.38);
+  const ferns: Placed[] = [];
+  for (const [x, z] of [[-7.4, 6.8], [-10.1, 6.2], [-7.4, -.1], [11.8, 9.4]]) for (let j = 0; j < 12; j++)
+    ferns.push({ x, y: .3, z, sx: .6, sy: .7, sz: .7, ry: j * Math.PI / 6, rx: -.8 + (j % 3) * .1 });
+  batch(leafShape, bambooLeafMaterial, ferns, 'Low edge ferns');
 
-  // Layered ridges are real geometry, deliberately outside the tiny traversable map.
-  const ridges = [
-    { z: -116, y: -18, height: 38, color: '#667f87', seed: 16, width: 260 },
-    { z: -83, y: -17, height: 31, color: '#536d74', seed: 33, width: 220 },
-    { z: -56, y: -19, height: 28, color: '#3e5960', seed: 81, width: 160 },
-  ];
-  ridges.forEach(r => {
-    const mountain = mesh(keepGeometry(makeRidge(r.width, r.height, r.seed)), keepMaterial(new THREE.MeshBasicMaterial({ color: r.color, fog: true, side: THREE.DoubleSide })), 0, r.y, r.z);
+  // Low stones guard the outer ledge without obstructing the entrance or the lookout.
+  const edging: Placed[] = [];
+  for (let i = 0; i < 10; i++) edging.push({ x: -11.45 + Math.sin(i * .35) * .25, y: .48, z: .3 + i * 1.02, sx: .61, sy: .43 + rng() * .15, sz: .76, ry: rng() * .3 });
+  const edgeBatch = batch(smallRock, stone, edging, 'Low natural ledge boundary');
+  for (let i = 0; i < edgeBatch.count; i++) { edgeBatch.getMatrixAt(i, matrix); boundsCollider(edgeBatch.geometry, matrix); }
+
+  // Every viewing direction has a landscape; these rings remain far outside the tiny playable ledge.
+  for (const [radius, base, height, color, seed] of [[62, -19, 28, '#425c65', 23], [105, -20, 39, '#5b7580', 64], [163, -25, 52, '#718b94', 91]] as const) {
+    const mountain = mesh(keep(mountainRing(radius, base, height, seed)), own(new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, fog: true })));
     mountain.castShadow = false; mountain.receiveShadow = false;
-  });
-  const sideRidge = mesh(keepGeometry(makeRidge(170, 28, 19)), keepMaterial(new THREE.MeshBasicMaterial({ color: '#4a646b', fog: true, side: THREE.DoubleSide })), -68, -24, -30);
-  sideRidge.rotation.y = Math.PI * .3; sideRidge.castShadow = false;
-
-  // Soft mist lives below the edge, so the route and the book-room never disappear into it.
-  const mistTexture = keepTexture(makeMistTexture());
-  const mistSprites: { sprite: THREE.Sprite; x: number; z: number; phase: number }[] = [];
-  for (let i = 0; i < 11; i++) {
-    const angle = i / 11 * Math.PI * 2;
-    const material = keepMaterial(new THREE.SpriteMaterial({ map: mistTexture, color: '#a6bbba', opacity: .13, transparent: true, depthWrite: false, fog: true }));
-    const sprite = new THREE.Sprite(material);
-    const x = Math.cos(angle) * (17 + random() * 5), z = Math.sin(angle) * (16 + random() * 5);
-    sprite.position.set(x, -3.3 - random() * 3, z); sprite.scale.set(22 + random() * 9, 5 + random() * 3, 1);
-    root.add(sprite); mistSprites.push({ sprite, x, z, phase: random() * 6 });
   }
-  const motesGeometry = keepGeometry(new THREE.BufferGeometry());
-  const motePositions = new Float32Array(48 * 3), moteOrigins: number[] = [];
-  for (let i = 0; i < 48; i++) {
-    const x = (random() - .5) * 19, y = .7 + random() * 4.4, z = random() * 13 - 1;
-    motePositions.set([x, y, z], i * 3); moteOrigins.push(x, y, z, random() * 6);
+  const mistMap = mistTexture(); localTextures.add(mistMap);
+  const clouds: { sprite: THREE.Sprite; x: number; z: number; phase: number }[] = [];
+  for (let i = 0; i < 13; i++) {
+    const a = i / 13 * Math.PI * 2, x = Math.cos(a) * (18 + rng() * 7), z = Math.sin(a) * (19 + rng() * 8);
+    const sprite = new THREE.Sprite(own(new THREE.SpriteMaterial({ map: mistMap, color: '#bdcccb', opacity: .14, transparent: true, depthWrite: false, fog: true })));
+    sprite.position.set(x, -3.5 - rng() * 4, z); sprite.scale.set(22 + rng() * 10, 5 + rng() * 4, 1); root.add(sprite);
+    clouds.push({ sprite, x, z, phase: rng() * 6 });
   }
-  motesGeometry.setAttribute('position', new THREE.BufferAttribute(motePositions, 3));
-  const motesMaterial = keepMaterial(new THREE.PointsMaterial({ size: .035, color: '#f0d8a3', opacity: .48, transparent: true, depthWrite: false, sizeAttenuation: true }));
-  const motes = new THREE.Points(motesGeometry, motesMaterial); root.add(motes);
+  const dustGeometry = keep(new THREE.BufferGeometry()), dust = new Float32Array(38 * 3), origins: number[] = [];
+  for (let i = 0; i < 38; i++) { const x = (rng() - .5) * 5.7, y = .7 + rng() * 3.5, z = -1 + rng() * 5; dust.set([x, y, z], i * 3); origins.push(x, y, z, rng() * 6); }
+  dustGeometry.setAttribute('position', new THREE.BufferAttribute(dust, 3));
+  const dustPoints = new THREE.Points(dustGeometry, own(new THREE.PointsMaterial({ size: .017, color: '#e8d4ad', transparent: true, opacity: .37, depthWrite: false }))); root.add(dustPoints);
 
   const walkAreas: WalkArea[] = [
-    { x: 0, z: -5.5, halfX: 5.85, halfZ: 4.45 },       // Room, connected directly to the entrance.
-    { x: 0, z: -.7, halfX: 2.5, halfZ: 1.15 },         // Main portal.
-    { x: .15, z: 5.45, halfX: 10.85, halfZ: 6.3 },    // Spacious front court.
-    { x: 9.45, z: .05, halfX: 3.3, halfZ: 7.7 },      // Eastern loop / lookout.
-    { x: 6.1, z: -5, halfX: 1.35, halfZ: 1.45 },      // Side portal.
-    { x: 1.4, z: 12.1, halfX: 3.6, halfZ: 2.2 },      // South landing above the scenic stair.
+    { x: 0, z: -5.5, halfX: 5.85, halfZ: 4.45 },
+    { x: 0, z: -.7, halfX: 2.5, halfZ: 1.15 },
+    { x: .15, z: 5.45, halfX: 10.85, halfZ: 6.3 },
+    { x: 9.45, z: .05, halfX: 3.3, halfZ: 7.7 },
+    { x: 6.1, z: -5, halfX: 1.35, halfZ: 1.45 },
+    { x: 1.4, z: 12.1, halfX: 3.6, halfZ: 2.2 },
   ];
-
+  mergeStatic();
   return {
-    root, colliders, walkAreas, roofOccluders,
-    update(time: number, delta: number, indoor: boolean) {
-      // Only the upper/near-side cutaway fades: the north and west walls retain
-      // the room's spatial frame. Hidden geometry must not keep casting a roof shadow.
-      const targetOpacity = indoor ? 0 : 1;
-      const dt = Number.isFinite(delta) ? THREE.MathUtils.clamp(delta, 0, .1) : 1 / 60;
-      roofOpacity = THREE.MathUtils.damp(roofOpacity, targetOpacity, 7.5, dt);
-      if (Math.abs(roofOpacity - targetOpacity) < .002) roofOpacity = targetOpacity;
-      for (const material of roofMaterials) {
-        material.opacity = roofOpacity;
-        material.depthWrite = roofOpacity > .95;
-      }
-      for (const roofMesh of roofMeshes) {
-        roofMesh.visible = roofOpacity > .01;
-        roofMesh.castShadow = roofOpacity > .95;
-      }
-      bambooGroup.rotation.z = Math.sin(time * .43) * .004;
-      bambooGroup.rotation.x = Math.sin(time * .31 + 2) * .003;
-      for (const mist of mistSprites) {
-        mist.sprite.position.x = mist.x + Math.sin(time * .037 + mist.phase) * 2;
-        mist.sprite.position.z = mist.z + Math.cos(time * .029 + mist.phase) * 1.1;
-      }
-      const positions = motesGeometry.attributes.position.array as Float32Array;
-      for (let i = 0; i < 48; i++) {
-        const j = i * 4, phase = moteOrigins[j + 3];
-        positions[i * 3] = moteOrigins[j] + Math.sin(time * .21 + phase) * .25;
-        positions[i * 3 + 1] = moteOrigins[j + 1] + Math.sin(time * .36 + phase) * .2;
-      }
-      motesGeometry.attributes.position.needsUpdate = true;
-      motesMaterial.opacity = indoor ? .18 : .48;
+    root, colliders, walkAreas, roofOccluders: [],
+    update(time, delta, _indoor) {
+      // The full cave stays in place in first person, including its roof and shadows.
+      foliageGroup.rotation.z = Math.sin(time * .34) * .002;
+      bambooGroup.rotation.z = Math.sin(time * .47) * .003;
+      for (const cloud of clouds) { cloud.sprite.position.x = cloud.x + Math.sin(time * .025 + cloud.phase) * 1.9; cloud.sprite.position.z = cloud.z + Math.cos(time * .021 + cloud.phase) * 1.3; }
+      for (let i = 0; i < 38; i++) { const j = i * 4; dust[i * 3] = origins[j] + Math.sin(time * .17 + origins[j + 3]) * .18; dust[i * 3 + 1] = origins[j + 1] + Math.sin(time * .25 + origins[j + 3]) * .13; }
+      dustGeometry.attributes.position.needsUpdate = delta > 0;
     },
     dispose() {
-      scene.remove(root);
-      root.traverse(object => { if (object instanceof THREE.InstancedMesh) object.dispose(); });
-      for (const g of geometries) g.dispose();
-      for (const m of materials) m.dispose();
-      for (const t of textures) t.dispose();
-      root.clear();
+      root.removeFromParent(); root.traverse(o => { if (o instanceof THREE.InstancedMesh) o.dispose(); });
+      for (const g of geometries) g.dispose(); for (const m of materials) m.dispose(); for (const t of localTextures) t.dispose();
+      if (ownsLibrary) library.dispose(); root.clear();
     },
   };
 
-  function keepTexture<T extends THREE.Texture>(texture: T): T { textures.add(texture); return texture; }
-  function makeWeatheredBlock() {
-    const g = new THREE.BoxGeometry(1, 1, 1, 2, 2, 2);
-    const p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      const inner = new THREE.Vector3(THREE.MathUtils.clamp(x, -.41, .41), THREE.MathUtils.clamp(y, -.41, .41), THREE.MathUtils.clamp(z, -.41, .41));
-      const delta = new THREE.Vector3(x, y, z).sub(inner).normalize().multiplyScalar(.09);
-      const noise = Math.sin(x * 37 + y * 11 + z * 23) * .016;
-      inner.add(delta).multiplyScalar(1 + noise);
-      p.setXYZ(i, inner.x, inner.y, inner.z);
+  function mergeStatic() {
+    root.updateWorldMatrix(true, true);
+    const groups = new Map<string, { material: THREE.Material; cast: boolean; receive: boolean; geometries: THREE.BufferGeometry[]; sources: THREE.Mesh[] }>();
+    root.traverse(object => {
+      if (!(object instanceof THREE.Mesh) || object instanceof THREE.InstancedMesh || Array.isArray(object.material)) return;
+      let ancestor: THREE.Object3D | null = object;
+      while (ancestor) { if (ancestor.userData.dynamic) return; ancestor = ancestor.parent; }
+      const key = `${object.material.uuid}:${object.castShadow}:${object.receiveShadow}`;
+      if (!groups.has(key)) groups.set(key, { material: object.material, cast: object.castShadow, receive: object.receiveShadow, geometries: [], sources: [] });
+      const group = groups.get(key)!;
+      let copy = object.geometry.clone(); copy.applyMatrix4(object.matrixWorld);
+      if (copy.index) { const flat = copy.toNonIndexed(); copy.dispose(); copy = flat; }
+      if (!copy.attributes.uv) copy.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(copy.attributes.position.count * 2), 2));
+      if (object.material instanceof THREE.MeshStandardMaterial && object.material.vertexColors && !copy.attributes.color)
+        copy.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(copy.attributes.position.count * 3).fill(1), 3));
+      for (const name of Object.keys(copy.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(name)) copy.deleteAttribute(name);
+      group.geometries.push(copy); group.sources.push(object);
+    });
+    for (const group of groups.values()) {
+      if (group.geometries.length < 2) { group.geometries.forEach(g => g.dispose()); continue; }
+      const geometry = mergeGeometries(group.geometries, false); group.geometries.forEach(g => g.dispose());
+      if (!geometry) continue;
+      group.sources.forEach(object => object.removeFromParent());
+      const merged = mesh(keep(geometry), group.material); merged.name = `Static environment ${group.material.name || group.material.type}`; merged.castShadow = group.cast; merged.receiveShadow = group.receive;
     }
-    g.computeVertexNormals(); return g;
-  }
-  function makeRock(seed: number) {
-    const g = new THREE.IcosahedronGeometry(1, 1);
-    const p = g.attributes.position;
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      const n = 1 + Math.sin(x * 8.3 + y * 5.8 + z * 4.7 + seed) * .1 + Math.cos(x * 17 + z * 12 + seed) * .035;
-      p.setXYZ(i, x * n, y * n, z * n);
-    }
-    g.computeVertexNormals(); return g;
-  }
-  function makeLedge(points: number[][]) {
-    const vertices: number[] = [], colors: number[] = [];
-    const r = rng(951), rings = [0, 1, 2, 3].map(i => points.map(([x, z], j) => {
-      const factor = [1, 1.015, .88, .66][i];
-      return new THREE.Vector3(x * factor + (i ? Math.sin(j * 8 + i) * .45 : 0), [.25, -1.75, -5.5, -10][i] + (i ? Math.sin(j * 4 + i) * .6 : 0), z * factor);
-    }));
-    const shades = ['#7d8577', '#676f66', '#4b5752'];
-    function triangle(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, color: THREE.Color) {
-      for (const v of [a, b, c]) { vertices.push(v.x, v.y, v.z); colors.push(color.r, color.g, color.b); }
-    }
-    for (let k = 0; k < rings.length - 1; k++) for (let j = 0; j < points.length; j++) {
-      const next = (j + 1) % points.length;
-      const color = new THREE.Color(shades[k]).multiplyScalar(.9 + r() * .2);
-      triangle(rings[k][j], rings[k][next], rings[k + 1][j], color);
-      triangle(rings[k][next], rings[k + 1][next], rings[k + 1][j], color.clone().multiplyScalar(.93 + r() * .1));
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    g.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
-    g.computeVertexNormals(); return g;
-  }
-  function makeRidge(width: number, height: number, seed: number) {
-    const r = rng(seed), peaks = Array.from({ length: 8 }, (_, i) => ({ x: -.5 * width + i / 7 * width, y: .28 + r() * .72, breadth: width * (.04 + r() * .075) }));
-    const vertices: number[] = [], indices: number[] = [], steps = 80;
-    for (let i = 0; i <= steps; i++) {
-      const x = (i / steps - .5) * width;
-      let y = 0;
-      for (const peak of peaks) y = Math.max(y, Math.exp(-Math.pow((x - peak.x) / peak.breadth, 2)) * peak.y * height);
-      y += Math.sin(i * 1.7 + seed) * .45;
-      vertices.push(x, -30, 0, x, y, Math.sin(i * .45) * 2);
-      if (i < steps) { const j = i * 2; indices.push(j, j + 2, j + 1, j + 2, j + 3, j + 1); }
-    }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3)); g.setIndex(indices); g.computeVertexNormals(); return g;
-  }
-  function makeMistTexture() {
-    const size = 64, data = new Uint8Array(size * size * 4);
-    for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
-      const radius = Math.hypot((x + .5) / size * 2 - 1, (y + .5) / size * 2 - 1);
-      const alpha = Math.max(0, 1 - radius * radius);
-      const index = (y * size + x) * 4;
-      data[index] = data[index + 1] = data[index + 2] = 255; data[index + 3] = Math.round(alpha * alpha * alpha * 180);
-    }
-    const texture = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
-    texture.needsUpdate = true; texture.magFilter = THREE.LinearFilter; texture.minFilter = THREE.LinearFilter; return texture;
   }
 }

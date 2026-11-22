@@ -1,356 +1,441 @@
 import * as THREE from 'three';
 import { createEnvironment } from './environment';
 import { createFurnishings } from './furnishings';
-import { createTraveller } from './traveller';
+import { createSurfaceLibrary } from './materials';
 import { createNavigation, type Point } from './navigation';
 import { createWorldUI } from './ui';
+import { createStudyLighting } from './lighting';
+import { createStudyRenderer, type RenderQuality } from './rendering';
+import { createInteractionPicker, movementDirection, FLOOR_HEIGHT, EYE_HEIGHT, SEATED_EYE_HEIGHT } from './first-person';
 import type { Interaction, WorldConfig } from './types';
 
+type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition';
 const root = document.querySelector<HTMLElement>('[data-mountain-world]');
-if (root) initializeWorld(root);
+if (root) void initializeWorld(root);
 
-function initializeWorld(root: HTMLElement) {
+async function initializeWorld(root: HTMLElement) {
   const canvas = root.querySelector<HTMLCanvasElement>('#mountain-canvas');
   const configElement = document.getElementById('mountain-world-config');
   if (!canvas || !configElement) return;
   const config: WorldConfig = JSON.parse(configElement.textContent || '{}');
-  const abort = new AbortController();
-  const signal = abort.signal;
-  let disposeScene = () => {};
-  let navigateAction = (_id: string) => {};
-  let interactionAction = () => {};
-  let resetAction = () => {};
+  const en = config.isEn;
+  const abort = new AbortController(), { signal } = abort;
   const ambience = createAmbience();
+  let alive = true, teardown = () => {};
+  let suspendAction = () => {}, resumeAction = () => {};
+  let interactionAction = () => {}, resetAction = () => {};
+  let navigateAction = (_id: string) => {}, readingAction = (_open: boolean) => {};
   const ui = createWorldUI(root, config, {
-    onInteract: () => interactionAction(),
-    onReset: () => resetAction(),
-    onSound: () => ambience.toggle(),
-    onNavigate: id => navigateAction(id),
+    onInteract: () => interactionAction(), onReset: () => resetAction(),
+    onSound: () => ambience.toggle(), onNavigate: id => navigateAction(id),
+    onReadingChange: open => readingAction(open),
   });
+  window.addEventListener('pagehide', event => {
+    // BFCache restores this same document and its listeners, so retain its resources.
+    if (event.persisted) { suspendAction(); return; }
+    alive = false; teardown(); abort.abort(); ui.dispose(); ambience.dispose();
+  }, { signal });
+  window.addEventListener('pageshow', event => { if (event.persisted) resumeAction(); }, { signal });
 
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
   } catch {
-    ui.setFailed(config.isEn ? 'This browser could not start the 3D view. Your reading paths are still open.' : '这个浏览器暂时无法开启三维画面，你仍可以直接翻阅文章。');
+    ui.setFailed('WebGL2 could not be initialized.');
     return;
   }
+  const resources: (() => void)[] = [() => renderer.dispose()];
   try {
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Wait for the subset used by the canvas book labels, with a bounded fallback.
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    if (document.fonts) await Promise.race([
+      document.fonts.load('500 48px "Noto Serif SC"', '藏书山中手记读诗小记数学随笔桃源读书札记自由的代价初中生活残灵光明算法导论计算机系统离散数学编译原理机器学习新年格物札记夜光何德死则又育坐听松风归观物求知致来访者羽').catch(() => []),
+      new Promise(resolve => window.setTimeout(resolve, 2200)),
+    ]);
+    if (!alive) { renderer.dispose(); return; }
     const coarse = matchMedia('(pointer: coarse)').matches;
     const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let quality = Math.min(window.devicePixelRatio || 1, coarse ? 1.35 : 1.7);
+    root.dataset.touch = String(coarse);
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x718b94);
-    scene.fog = new THREE.FogExp2(0x718b94, 0.012);
-    const camera = new THREE.PerspectiveCamera(43, 1, 0.15, 220);
-    const skyLight = new THREE.HemisphereLight(0xc7dcdb, 0x424744, 1.8); scene.add(skyLight);
-    const sunlight = new THREE.DirectionalLight(0xffe2b6, 3.0);
-    sunlight.position.set(-10, 22, 8); sunlight.castShadow = true;
-    sunlight.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
-    Object.assign(sunlight.shadow.camera, { left: -25, right: 25, top: 24, bottom: -24, near: 1, far: 75 });
-    sunlight.shadow.bias = -0.00025; sunlight.shadow.normalBias = 0.035;
-    scene.add(sunlight); scene.add(sunlight.target);
-
-    const environment = createEnvironment(scene);
-    const furniture = createFurnishings(scene, config.isEn);
-    const traveller = createTraveller(); scene.add(traveller.root);
+    scene.background = new THREE.Color(0x91a5a6);
+    scene.fog = new THREE.FogExp2(0x91a5a6, 0.0095);
+    const camera = new THREE.PerspectiveCamera(coarse ? 72 : 67, 1, 0.055, 230);
+    camera.rotation.order = 'YXZ';
+    const surfaces = createSurfaceLibrary(); resources.unshift(() => surfaces.dispose());
+    const environment = createEnvironment(scene, surfaces); resources.unshift(() => environment.dispose());
+    const furniture = createFurnishings(scene, en, surfaces); resources.unshift(() => furniture.dispose());
+    const lighting = createStudyLighting(scene, coarse); resources.unshift(() => lighting.dispose());
+    lighting.sun.shadow.autoUpdate = false; lighting.sun.shadow.needsUpdate = true;
+    const pipeline = createStudyRenderer(renderer, scene, camera, coarse); resources.unshift(() => pipeline.dispose());
     const navigation = createNavigation(environment.walkAreas, [...environment.colliders, ...furniture.colliders]);
-    const spawn = navigation.nearest({ x: 2, z: 10 }, 8) || { x: 0, z: 5 };
-    const player = traveller.root;
-    player.position.set(spawn.x, 0.3, spawn.z); player.rotation.y = Math.PI;
-    const stateKey = `mountain-world-v1:${config.base}`;
+    const picker = createInteractionPicker([environment.root, furniture.root], furniture.interactions);
+    const spawn = navigation.nearest({ x: 0, z: 4.8 }, 5) || { x: 0, z: 3 };
+    const position = new THREE.Vector3(spawn.x, FLOOR_HEIGHT, spawn.z);
+    const velocity = new THREE.Vector2();
+    const keys = new Set<string>();
+    const joystick = new THREE.Vector2();
+    const stateKey = `mountain-first-person-v2:${config.base}`;
+    let yaw = 0, pitch = -0.035, sensitivity = 1, headBob = false;
+    let mode: Mode = 'welcome';
+    let route: Point[] = [], destination: Interaction | null = null;
+    let aimed: Interaction | null = null, seatedAt: Interaction | null = null;
+    let selectedId: string | null = null, selectedUntil = 0;
+    let elapsed = 0, walked = 0, interactionTimer = 0;
+    let frame = 0, previousFrame = performance.now(), lastRender = 0, lastPick = -1, lastSave = 0;
+    let frameSum = 0, frameSamples = 0, qualityAdjustments = 0;
+    let hadPointerLock = false, dragLook = false;
+    let press: { id: number; x: number; y: number; moved: boolean } | null = null;
+    let stickPointer: number | null = null;
+    let eyeY = FLOOR_HEIGHT + EYE_HEIGHT;
+    const entry = root.querySelector<HTMLElement>('[data-world-entry]')!;
+    const enterButton = root.querySelector<HTMLButtonElement>('[data-world-enter]')!;
+    const entryTitle = root.querySelector<HTMLElement>('[data-world-entry-title]')!;
+    const entryCopy = root.querySelector<HTMLElement>('[data-world-entry-copy]')!;
+    const pauseButton = root.querySelector<HTMLButtonElement>('[data-world-pause]')!;
+    const stick = root.querySelector<HTMLElement>('[data-world-stick]')!;
+    const stickThumb = root.querySelector<HTMLElement>('[data-world-stick-thumb]')!;
+    const qualitySelect = root.querySelector<HTMLSelectElement>('[data-world-quality]')!;
+    const sensitivityInput = root.querySelector<HTMLInputElement>('[data-world-sensitivity]')!;
+    const bobInput = root.querySelector<HTMLInputElement>('[data-world-bob]')!;
+    qualitySelect.value = coarse ? 'smooth' : 'detail';
     try {
       const saved = JSON.parse(sessionStorage.getItem(stateKey) || 'null');
       if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.z) && navigation.canWalk(saved.x, saved.z)) {
-        player.position.set(saved.x, 0.3, saved.z);
-        if (Number.isFinite(saved.angle)) player.rotation.y = saved.angle;
+        position.set(saved.x, FLOOR_HEIGHT, saved.z);
+        if (Number.isFinite(saved.yaw)) yaw = saved.yaw;
+        if (Number.isFinite(saved.pitch)) pitch = THREE.MathUtils.clamp(saved.pitch, -1.4, 1.4);
       } else if (location.hash === '#study') {
-        const entry = navigation.nearest({ x: 0, z: -2.8 }, 4);
-        if (entry) player.position.set(entry.x, 0.3, entry.z);
+        const inside = navigation.nearest({ x: 0, z: -2.8 }, 4);
+        if (inside) position.set(inside.x, FLOOR_HEIGHT, inside.z);
+      }
+      const preferences = JSON.parse(localStorage.getItem('mountain-first-person:preferences') || 'null');
+      if (preferences) {
+        if (preferences.quality === 'detail' || preferences.quality === 'smooth') qualitySelect.value = preferences.quality;
+        if (Number.isFinite(preferences.sensitivity)) sensitivity = THREE.MathUtils.clamp(preferences.sensitivity, 0.4, 1.8);
+        headBob = !reducedMotion && preferences.headBob === true;
       }
     } catch { /* Storage is optional. */ }
+    sensitivityInput.value = String(sensitivity); bobInput.checked = headBob;
+    pipeline.setQuality(qualitySelect.value as RenderQuality);
 
-    let route: Point[] = [];
-    let pendingInteraction: Interaction | null = null;
-    let nearestInteraction: Interaction | null = null;
-    let seatedAt: Interaction | null = null;
-    let selectedId: string | null = null;
-    let running = true, raf = 0, lastSave = 0, lastStats = 0;
-    let lastLocation = '', selectedUntil = 0;
-    let orbit = 0.48, elevation = 0.77, zoom = 1, frameCount = 0;
-    let frameTime = 0, qualitySamples = 0;
-    const cameraFocus = new THREE.Vector3(player.position.x * 0.7, 1.2, player.position.z - 4.4);
-    const desiredFocus = new THREE.Vector3();
-    const keys = new Set<string>();
-    const clock = new THREE.Clock();
-    const pointer = new THREE.Vector2();
-    const raycaster = new THREE.Raycaster();
-    const ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.3);
-    const intersection = new THREE.Vector3();
-    const pickTargets: THREE.Object3D[] = [];
-    const environmentOccluders: THREE.Mesh[] = [];
-    environment.root.traverse(object => { if (object instanceof THREE.Mesh) environmentOccluders.push(object); });
-    const pickMap = new WeakMap<THREE.Object3D, Interaction>();
-    for (const item of furniture.interactions) for (const mesh of item.meshes) {
-      pickTargets.push(mesh);
-      mesh.traverse(object => pickMap.set(object, item));
+    function clearMovement() {
+      keys.clear(); joystick.set(0, 0); velocity.set(0, 0);
+      const pointerId = press?.id; press = null;
+      if (pointerId !== undefined && canvas!.hasPointerCapture(pointerId)) canvas!.releasePointerCapture(pointerId);
+      const thumbId = stickPointer; stickPointer = null;
+      if (thumbId !== null && stick.hasPointerCapture(thumbId)) stick.releasePointerCapture(thumbId);
+      stickThumb.style.transform = 'translate(-50%, -50%)';
     }
-    const targetMarker = new THREE.Mesh(
-      new THREE.RingGeometry(0.23, 0.28, 40),
-      new THREE.MeshBasicMaterial({ color: 0xf4d39a, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }),
-    );
-    targetMarker.rotation.x = -Math.PI / 2; targetMarker.position.y = 0.335; targetMarker.visible = false; scene.add(targetMarker);
-
-    const save = () => {
-      const p = seatedAt?.approach || player.position;
-      try { sessionStorage.setItem(stateKey, JSON.stringify({ x: p.x, z: p.z, angle: player.rotation.y })); } catch {}
-    };
+    function cancelRoute() { route = []; destination = null; delete root.dataset.guided; }
+    function save() {
+      const p = seatedAt?.approach || position;
+      try { sessionStorage.setItem(stateKey, JSON.stringify({ x: p.x, z: p.z, yaw, pitch })); } catch {}
+    }
+    function setMode(value: Mode) {
+      mode = value; root.dataset.mode = value;
+      const visible = value === 'welcome' || value === 'paused';
+      entry.hidden = !visible;
+      if (visible) {
+        entryTitle.textContent = value === 'welcome' ? (en ? 'A quiet place, among the mountains.' : '山中有灯，且坐片刻。') : (en ? 'Stay a little longer.' : '稍作停留。');
+        entryCopy.textContent = value === 'welcome'
+          ? (en ? 'Step inside, find a book, and let the world slow down.' : '走入石窟，取一卷书，让山间的时光慢下来。')
+          : (en ? 'The study is waiting, just where you left it.' : '书斋仍在，回到刚才驻足的地方。');
+        enterButton.querySelector('[data-world-enter-label]')!.textContent = value === 'welcome' ? (en ? 'Enter the study' : '走进书斋') : (en ? 'Continue exploring' : '继续探索');
+      }
+      pauseButton.hidden = value !== 'exploring';
+      if (value !== 'exploring') {
+        clearMovement(); aimed = null; ui.setInteraction(null); root.dataset.aimed = 'false';
+      }
+    }
+    function unlock() { if (document.pointerLockElement === canvas) document.exitPointerLock(); }
+    function pause() {
+      if (mode === 'reading' || mode === 'welcome') return;
+      window.clearTimeout(interactionTimer); cancelRoute(); setMode('paused'); unlock(); save();
+      enterButton.focus({ preventScroll: true });
+    }
+    function enter() {
+      if (ui.isOpen()) return;
+      setMode('exploring'); canvas!.focus({ preventScroll: true });
+      if (coarse || !canvas!.requestPointerLock) { dragLook = true; return; }
+      try {
+        const request = canvas!.requestPointerLock();
+        request?.catch(() => {
+          if (mode !== 'exploring') return;
+          dragLook = true;
+          ui.showToast(en ? 'Drag to look around. WASD still moves you.' : '可按住画面拖动视角，WASD 仍可行走。');
+        });
+      } catch { dragLook = true; }
+    }
     function standUp() {
       if (!seatedAt) return;
-      player.position.set(seatedAt.approach.x, 0.3, seatedAt.approach.z);
+      position.copy(seatedAt.approach); position.y = FLOOR_HEIGHT;
       seatedAt = null;
     }
-    function walkTo(point: Point, item: Interaction | null = null) {
-      standUp();
-      route = navigation.findPath(player.position, point);
-      pendingInteraction = item;
-      if (route.length) {
-        const end = route[route.length - 1];
-        targetMarker.position.set(end.x, 0.335, end.z); targetMarker.visible = true;
-        root.dataset.walking = 'true';
-      } else {
-        pendingInteraction = null;
-        ui.showToast(config.isEn ? 'Choose a place along the stone path.' : '沿着石径，换一个落脚处吧。');
-      }
+    function face(item: Interaction) {
+      const direction = new THREE.Vector3().subVectors(item.position, camera.position);
+      yaw = Math.atan2(-direction.x, -direction.z);
+      pitch = THREE.MathUtils.clamp(Math.atan2(direction.y, Math.hypot(direction.x, direction.z)), -1.4, 1.4);
+    }
+    function updateCamera(delta: number, speed = 0) {
+      const targetEye = seatedAt ? position.y + SEATED_EYE_HEIGHT : FLOOR_HEIGHT + EYE_HEIGHT;
+      eyeY = THREE.MathUtils.lerp(eyeY, targetEye, reducedMotion ? 1 : 1 - Math.exp(-delta * 10));
+      const bob = headBob && !seatedAt && speed > 0.3 ? Math.sin(walked * 8) * 0.014 * Math.min(1, speed / 2.2) : 0;
+      camera.position.set(position.x, eyeY + bob, position.z);
+      camera.rotation.set(pitch, yaw, 0, 'YXZ');
+      camera.updateMatrixWorld();
+    }
+    function findAimed() {
+      if (mode !== 'exploring' || ui.isOpen()) return null;
+      scene.updateMatrixWorld();
+      return picker.pick(camera);
     }
     function activate(item: Interaction) {
-      route = []; pendingInteraction = null; targetMarker.visible = false; keys.clear();
-      selectedId = item.id; selectedUntil = clock.elapsedTime + 1.3;
-      const direction = new THREE.Vector3().subVectors(item.position, player.position);
-      if (Math.hypot(direction.x, direction.z) > 0.1) player.rotation.y = Math.atan2(direction.x, direction.z);
-      item.activate?.(); save();
+      cancelRoute(); clearMovement(); selectedId = item.id; selectedUntil = elapsed + 1.35;
+      item.activate?.(); lighting.sun.shadow.needsUpdate = true;
       if (item.kind === 'lantern') {
-        ui.showToast(config.isEn ? 'A little light in the mountains.' : '山间一盏灯。');
+        ui.showToast(en ? 'A little light in the mountains.' : '山间一盏灯。');
       } else if (item.kind === 'bench') {
         seatedAt = item;
-        if (item.sitPosition) player.position.copy(item.sitPosition);
-        if (item.sitYaw !== undefined) player.rotation.y = item.sitYaw;
-        ui.showToast(config.isEn ? 'Stay a while. Move when you are ready.' : '坐看云起。移动即可起身。');
+        if (item.sitPosition) position.copy(item.sitPosition);
+        if (item.sitYaw !== undefined) yaw = item.sitYaw;
+        pitch = -0.045;
+        ui.showToast(en ? 'Watch the clouds. Move or press E to stand.' : '坐看云起。移动或按 E 即可起身。');
       } else {
-        ui.openContent(item.kind);
+        setMode('transition'); unlock();
+        interactionTimer = window.setTimeout(() => {
+          if (alive && mode === 'transition') ui.openContent(item.kind);
+        }, reducedMotion ? 0 : 620);
       }
+      save();
     }
     interactionAction = () => {
-      if (ui.isOpen()) return;
-      if (nearestInteraction) activate(nearestInteraction);
+      if (mode !== 'exploring' || ui.isOpen()) return;
+      if (seatedAt) { standUp(); ui.showToast(en ? 'Back on the stone path.' : '起身，再走走。'); return; }
+      const item = findAimed();
+      if (item) activate(item);
+    };
+    readingAction = open => {
+      if (open) {
+        window.clearTimeout(interactionTimer); cancelRoute(); setMode('reading'); unlock(); save();
+      } else if (mode === 'reading') {
+        setMode('paused'); enterButton.focus({ preventScroll: true });
+      }
     };
     navigateAction = id => {
       const item = furniture.interactions.find(item => item.id === id || item.kind === id);
-      if (item) { walkTo(item.approach); ui.showToast(config.isEn ? `Walking to ${item.labelEn.toLowerCase()}.` : `向${item.label}走去。`); }
+      if (!item) return;
+      standUp(); cancelRoute();
+      const path = navigation.findPath(position, item.approach);
+      if (!path.length) {
+        setMode('paused'); ui.showToast(en ? 'There is no clear path from here. Return to the entrance and try again.' : '这里暂时没有通路，可以先回到洞口。'); return;
+      }
+      route = path; destination = item; root.dataset.guided = 'true';
+      enter(); ui.showToast(en ? `Walking to ${item.labelEn.toLowerCase()}. WASD stops the guide.` : `向${item.label}走去。按 W A S D 可随时自行行走。`);
     };
     resetAction = () => {
-      orbit = 0.48; elevation = 0.77; zoom = 1;
-      ui.showToast(config.isEn ? 'The view has settled.' : '镜头已归正。');
+      window.clearTimeout(interactionTimer);
+      if (mode === 'transition') setMode('paused');
+      standUp(); cancelRoute(); clearMovement();
+      position.set(spawn.x, FLOOR_HEIGHT, spawn.z); yaw = 0; pitch = -0.035; eyeY = FLOOR_HEIGHT + EYE_HEIGHT;
+      updateCamera(1); save(); ui.showToast(en ? 'Back at the cave entrance.' : '回到洞口，书斋就在眼前。');
     };
-
-    function resize() {
-      const rect = canvas!.getBoundingClientRect();
-      const width = Math.max(1, rect.width), height = Math.max(1, rect.height);
-      renderer.setPixelRatio(quality); renderer.setSize(width, height, false);
-      camera.aspect = width / height; camera.updateProjectionMatrix();
+    function savePreferences() {
+      try { localStorage.setItem('mountain-first-person:preferences', JSON.stringify({ quality: qualitySelect.value, sensitivity, headBob })); } catch {}
     }
-    const resizeObserver = new ResizeObserver(resize); resizeObserver.observe(canvas); resize();
-    let press: { id: number; x: number; y: number; lastX: number; lastY: number; moved: boolean } | null = null;
-    canvas.tabIndex = 0;
+    qualitySelect.addEventListener('change', () => {
+      pipeline.setQuality(qualitySelect.value as RenderQuality); qualityAdjustments = 0; savePreferences();
+    }, { signal });
+    sensitivityInput.addEventListener('input', () => { sensitivity = Number(sensitivityInput.value); savePreferences(); }, { signal });
+    bobInput.addEventListener('change', () => { headBob = bobInput.checked && !reducedMotion; savePreferences(); }, { signal });
+    enterButton.addEventListener('click', enter, { signal });
+    pauseButton.addEventListener('click', pause, { signal });
+    document.addEventListener('pointerlockchange', () => {
+      const locked = document.pointerLockElement === canvas;
+      if (locked) {
+        if (ui.isOpen() || mode !== 'exploring') { document.exitPointerLock(); return; }
+        dragLook = false;
+      } else if (hadPointerLock && mode === 'exploring') pause();
+      hadPointerLock = locked; root.dataset.pointerLocked = String(locked);
+    }, { signal });
+    document.addEventListener('pointerlockerror', () => { if (mode === 'exploring') dragLook = true; }, { signal });
+    document.addEventListener('mousemove', event => {
+      if (mode !== 'exploring' || document.pointerLockElement !== canvas || ui.isOpen()) return;
+      if (Math.abs(event.movementX) + Math.abs(event.movementY) > 2) cancelRoute();
+      yaw -= event.movementX * 0.0021 * sensitivity;
+      pitch = THREE.MathUtils.clamp(pitch - event.movementY * 0.0021 * sensitivity, -1.4, 1.4);
+    }, { signal });
     canvas.addEventListener('pointerdown', event => {
-      if (ui.isOpen() || (event.button !== 0 && event.button !== 2)) return;
+      if (mode !== 'exploring' || ui.isOpen() || (event.button !== 0 && event.button !== 2)) return;
       canvas.focus({ preventScroll: true });
-      press = { id: event.pointerId, x: event.clientX, y: event.clientY, lastX: event.clientX, lastY: event.clientY, moved: event.button === 2 };
+      if (document.pointerLockElement === canvas) { if (event.button === 0) interactionAction(); return; }
+      if (!dragLook && !coarse) { enter(); return; }
+      press = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
       canvas.setPointerCapture(event.pointerId);
     }, { signal });
     canvas.addEventListener('pointermove', event => {
-      if (!press || press.id !== event.pointerId || ui.isOpen()) return;
-      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 5) press.moved = true;
-      if (press.moved) {
-        orbit = THREE.MathUtils.clamp(orbit - (event.clientX - press.lastX) * 0.0055, -0.8, 1.35);
-        elevation = THREE.MathUtils.clamp(elevation + (event.clientY - press.lastY) * 0.003, 0.51, 1.02);
-        root.dataset.cameraMoved = 'true';
-      }
-      press.lastX = event.clientX; press.lastY = event.clientY;
+      if (!press || press.id !== event.pointerId || mode !== 'exploring') return;
+      const dx = event.clientX - press.x, dy = event.clientY - press.y;
+      if (Math.abs(dx) + Math.abs(dy) > 1) { press.moved = true; cancelRoute(); }
+      yaw -= dx * 0.0035 * sensitivity;
+      pitch = THREE.MathUtils.clamp(pitch - dy * 0.0035 * sensitivity, -1.4, 1.4);
+      press.x = event.clientX; press.y = event.clientY;
     }, { signal });
     canvas.addEventListener('pointerup', event => {
       if (!press || press.id !== event.pointerId) return;
-      const click = !press.moved; press = null;
+      if (!press.moved && event.button === 0) interactionAction();
+      press = null;
       if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-      if (!click || ui.isOpen()) return;
-      const rect = canvas.getBoundingClientRect();
-      pointer.set((event.clientX - rect.left) / rect.width * 2 - 1, -(event.clientY - rect.top) / rect.height * 2 + 1);
-      raycaster.setFromCamera(pointer, camera);
-      const hits = raycaster.intersectObjects(pickTargets, true);
-      const firstHit = hits[0];
-      const opaqueMeshes = environmentOccluders.filter(mesh => {
-        if (!mesh.visible) return false;
-        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        return materials.some(material => material.visible && (!material.transparent || material.opacity > 0.65));
-      });
-      const obstruction = firstHit ? raycaster.intersectObjects(opaqueMeshes, false)[0] : undefined;
-      const visibleTarget = firstHit && (!obstruction || obstruction.distance >= firstHit.distance - 0.08);
-      const item = visibleTarget ? pickMap.get(firstHit.object) : undefined;
-      if (item) {
-        if (Math.hypot(player.position.x - item.approach.x, player.position.z - item.approach.z) <= item.radius
-          && navigation.clearLine(player.position, item.approach)) activate(item);
-        else walkTo(item.approach, item);
-        return;
-      }
-      if (raycaster.ray.intersectPlane(ground, intersection)) {
-        const target = navigation.nearest(intersection, 1.2);
-        if (target) walkTo(target);
-      }
     }, { signal });
     canvas.addEventListener('pointercancel', () => { press = null; }, { signal });
+    canvas.addEventListener('lostpointercapture', () => { press = null; }, { signal });
     canvas.addEventListener('contextmenu', event => event.preventDefault(), { signal });
-    canvas.addEventListener('wheel', event => {
-      if (ui.isOpen()) return;
-      event.preventDefault(); zoom = THREE.MathUtils.clamp(zoom + event.deltaY * 0.0007, 0.72, 1.3);
-    }, { passive: false, signal });
-    window.addEventListener('keydown', event => {
-      if (ui.isOpen() || event.metaKey || event.ctrlKey || event.altKey) return;
-      const active = document.activeElement;
-      if (active instanceof HTMLElement && /INPUT|TEXTAREA|SELECT/.test(active.tagName)) return;
-      const key = event.key.toLowerCase();
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowleft', 'arrowdown', 'arrowright', 'shift'].includes(key)) {
-        event.preventDefault(); keys.add(key); standUp(); route = []; pendingInteraction = null; targetMarker.visible = false;
-      } else if (key === 'e' && !event.repeat) { event.preventDefault(); interactionAction(); }
-      else if (key === 'r' && !event.repeat) resetAction();
-    }, { signal });
-    window.addEventListener('keyup', event => keys.delete(event.key.toLowerCase()), { signal });
-    window.addEventListener('blur', () => { keys.clear(); press = null; save(); }, { signal });
-    window.addEventListener('pagehide', save, { signal });
-    document.addEventListener('visibilitychange', () => { if (document.hidden) { keys.clear(); save(); } ambience.setHidden(document.hidden); }, { signal });
     canvas.addEventListener('webglcontextlost', event => {
-      event.preventDefault(); running = false; cancelAnimationFrame(raf); save();
-      ui.setFailed(config.isEn ? 'The 3D view was interrupted. You can continue reading below.' : '三维画面暂时中断，仍可从目录继续阅读。');
+      event.preventDefault(); cancelAnimationFrame(frame); clearMovement(); unlock();
+      ui.setFailed('The graphics context was lost. Reload the page to restart the study.');
     }, { signal });
+    function updateStick(event: PointerEvent) {
+      const rect = stick.getBoundingClientRect();
+      const x = (event.clientX - rect.left - rect.width / 2) / 39;
+      const y = (event.clientY - rect.top - rect.height / 2) / 39;
+      const length = Math.max(1, Math.hypot(x, y));
+      joystick.set(x / length, -y / length);
+      stickThumb.style.transform = `translate(calc(-50% + ${joystick.x * 29}px), calc(-50% - ${joystick.y * 29}px))`;
+    }
+    stick.addEventListener('pointerdown', event => {
+      if (mode !== 'exploring') return;
+      event.preventDefault(); stickPointer = event.pointerId; cancelRoute();
+      stick.setPointerCapture(event.pointerId); updateStick(event);
+    }, { signal });
+    stick.addEventListener('pointermove', event => { if (mode === 'exploring' && event.pointerId === stickPointer) updateStick(event); }, { signal });
+    const endStick = (event: PointerEvent) => {
+      if (event.pointerId !== stickPointer) return;
+      stickPointer = null; joystick.set(0, 0); stickThumb.style.transform = 'translate(-50%, -50%)';
+    };
+    stick.addEventListener('pointerup', endStick, { signal });
+    stick.addEventListener('pointercancel', endStick, { signal });
+    stick.addEventListener('lostpointercapture', endStick, { signal });
+    window.addEventListener('keydown', event => {
+      if (ui.isOpen() || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.code === 'Escape') { if (mode === 'exploring' || mode === 'transition') pause(); return; }
+      if (mode !== 'exploring') return;
+      if (event.code === 'KeyM') { event.preventDefault(); ui.openContent('books'); return; }
+      if (event.code === 'KeyE') { event.preventDefault(); if (!event.repeat) interactionAction(); return; }
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(event.code)) {
+        event.preventDefault(); keys.add(event.code); cancelRoute();
+      }
+    }, { signal });
+    window.addEventListener('keyup', event => keys.delete(event.code), { signal });
+    window.addEventListener('blur', () => { clearMovement(); if (mode === 'exploring') pause(); }, { signal });
+    document.addEventListener('visibilitychange', () => {
+      ambience.setHidden(document.hidden); clearMovement();
+      if (document.hidden) { save(); if (mode === 'exploring') pause(); }
+      previousFrame = performance.now();
+    }, { signal });
+    suspendAction = () => {
+      save(); clearMovement(); pause(); ambience.setHidden(true);
+    };
+    resumeAction = () => {
+      clearMovement(); previousFrame = performance.now(); lastRender = 0;
+      ambience.setHidden(document.hidden);
+    };
 
-    function frame() {
-      if (!running) return;
-      raf = requestAnimationFrame(frame);
-      const rawDelta = clock.getDelta(), delta = Math.min(rawDelta, 0.04), time = clock.elapsedTime;
-      if (document.hidden) return;
-      const paused = ui.isOpen();
+    function resize() {
+      const rect = canvas!.getBoundingClientRect(); pipeline.resize(rect.width, rect.height);
+    }
+    const resizeObserver = new ResizeObserver(resize); resizeObserver.observe(canvas); resize();
+    resources.unshift(() => resizeObserver.disconnect());
+    updateCamera(1); scene.updateMatrixWorld(true);
+    let shaderFailed = false;
+    renderer.debug.onShaderError = (gl, program) => {
+      shaderFailed = true; console.error('Mountain study material could not compile:', gl.getProgramInfoLog(program));
+    };
+    await renderer.compileAsync(scene, camera);
+    if (!alive) { resources.forEach(dispose => dispose()); return; }
+    pipeline.render(0);
+    if (shaderFailed) throw new Error('A scene material shader could not compile.');
+    ui.setReady(); setMode(ui.isOpen() ? 'reading' : 'welcome');
+    teardown = () => {
+      save(); window.clearTimeout(interactionTimer); cancelAnimationFrame(frame); unlock();
+      resources.forEach(dispose => dispose());
+    };
+
+    function tick(now: number) {
+      if (!alive) return;
+      frame = requestAnimationFrame(tick);
+      if (document.hidden) { previousFrame = now; return; }
+      const minimumInterval = mode === 'reading' ? 100 : mode === 'paused' || mode === 'welcome' ? 33 : 0;
+      if (now - lastRender < minimumInterval) return;
+      const rawDelta = (now - previousFrame) / 1000;
+      const delta = Math.min(0.04, Math.max(0.001, rawDelta));
+      previousFrame = now; lastRender = now;
+      if (mode !== 'reading') elapsed += delta;
       let speed = 0;
-      if (!paused && !seatedAt) {
-        let dx = 0, dz = 0;
-        const vertical = +(keys.has('w') || keys.has('arrowup')) - +(keys.has('s') || keys.has('arrowdown'));
-        const horizontal = +(keys.has('d') || keys.has('arrowright')) - +(keys.has('a') || keys.has('arrowleft'));
-        if (vertical || horizontal) {
-          dx = -Math.sin(orbit) * vertical + Math.cos(orbit) * horizontal;
-          dz = -Math.cos(orbit) * vertical - Math.sin(orbit) * horizontal;
-          const length = Math.hypot(dx, dz), amount = (keys.has('shift') ? 5 : 3.5) * delta;
-          dx = dx / length * amount; dz = dz / length * amount;
-        } else if (route.length) {
-          const goal = route[0], vx = goal.x - player.position.x, vz = goal.z - player.position.z;
-          const distance = Math.hypot(vx, vz), amount = Math.min(distance, 3.6 * delta);
-          if (distance < 0.06) route.shift();
-          else { dx = vx / distance * amount; dz = vz / distance * amount; }
-        }
-        if (dx || dz) {
-          const next = navigation.move(player.position, dx, dz);
-          const mx = next.x - player.position.x, mz = next.z - player.position.z;
-          speed = Math.hypot(mx, mz) / Math.max(delta, 0.001);
-          player.position.set(next.x, 0.3, next.z);
-          if (speed > 0.05) {
-            const desired = Math.atan2(mx, mz);
-            const diff = Math.atan2(Math.sin(desired - player.rotation.y), Math.cos(desired - player.rotation.y));
-            player.rotation.y += diff * Math.min(1, delta * 14);
+      if (mode === 'exploring') {
+        yaw += (Number(keys.has('ArrowLeft')) - Number(keys.has('ArrowRight'))) * delta * 1.45;
+        pitch = THREE.MathUtils.clamp(pitch + (Number(keys.has('ArrowUp')) - Number(keys.has('ArrowDown'))) * delta * 1.05, -1.4, 1.4);
+        let forward = Number(keys.has('KeyW')) - Number(keys.has('KeyS')) + joystick.y;
+        let right = Number(keys.has('KeyD')) - Number(keys.has('KeyA')) + joystick.x;
+        if (Math.abs(forward) + Math.abs(right) > 0.01) standUp();
+        let movement = movementDirection(yaw, forward, right);
+        let pace = keys.has('ShiftLeft') || keys.has('ShiftRight') ? 3.6 : 2.2;
+        if (route.length && !seatedAt) {
+          let next = route[0];
+          if (Math.hypot(next.x - position.x, next.z - position.z) < 0.12) { route.shift(); next = route[0]; }
+          if (next) {
+            const dx = next.x - position.x, dz = next.z - position.z, distance = Math.hypot(dx, dz);
+            movement = { x: dx / distance, z: dz / distance }; pace = Math.min(2, distance / delta);
+            const targetYaw = Math.atan2(-dx, -dz);
+            yaw += Math.atan2(Math.sin(targetYaw - yaw), Math.cos(targetYaw - yaw)) * Math.min(1, delta * 4.5);
+            pitch = THREE.MathUtils.lerp(pitch, -0.035, delta * 3);
+          } else {
+            if (destination) { face(destination); ui.showToast(en ? 'Look at the object and press E.' : '看向眼前物件，按 E 细看。'); }
+            cancelRoute(); movement = { x: 0, z: 0 }; velocity.set(0, 0);
           }
         }
-        if (!route.length) {
-          targetMarker.visible = false; root.dataset.walking = 'false';
-          if (pendingInteraction) { const item = pendingInteraction; pendingInteraction = null; activate(item); }
+        const damping = 1 - Math.exp(-delta * 14);
+        velocity.x = THREE.MathUtils.lerp(velocity.x, movement.x * pace, damping);
+        velocity.y = THREE.MathUtils.lerp(velocity.y, movement.z * pace, damping);
+        if (!seatedAt) {
+          const next = navigation.move(position, velocity.x * delta, velocity.y * delta);
+          const distance = Math.hypot(next.x - position.x, next.z - position.z);
+          position.x = next.x; position.z = next.z;
+          speed = distance / delta; walked += distance;
         }
-      } else keys.clear();
-      const indoor = player.position.z < -1.25 && player.position.x < 6.1 && player.position.x > -6.1;
-      const locationName = indoor ? '书斋' : player.position.x > 7 && player.position.z < 8 ? '临崖小台' : player.position.z > 11.2 ? '山径' : '前庭';
-      if (locationName !== lastLocation) {
-        lastLocation = locationName;
-        ui.setLocation(locationName, ({ '书斋': 'The study', '临崖小台': 'Cloud terrace', '山径': 'Mountain path', '前庭': 'The courtyard' })[locationName]);
-        root.dataset.worldLocation = locationName;
       }
-      if (!paused) {
-        nearestInteraction = null;
-        let closest = Infinity;
-        for (const item of furniture.interactions) {
-          const distance = Math.hypot(item.approach.x - player.position.x, item.approach.z - player.position.z);
-          if (distance <= item.radius && distance < closest && navigation.clearLine(player.position, item.approach)) { nearestInteraction = item; closest = distance; }
-        }
-        if (seatedAt) nearestInteraction = null;
-        if (time > selectedUntil) selectedId = nearestInteraction?.id || null;
-      }
-      environment.update(reducedMotion ? 0 : time, delta, indoor);
-      furniture.update(reducedMotion ? 0 : time, delta, selectedId);
-      traveller.update(reducedMotion ? 0 : time, delta, speed, !!seatedAt);
+      updateCamera(delta, speed);
+      const indoor = position.z < -0.8 && position.x < 6.2 && position.x > -6.2;
+      environment.update(elapsed, delta, indoor);
+      const highlighted = elapsed < selectedUntil ? selectedId : mode === 'exploring' ? aimed?.id ?? null : null;
+      furniture.update(elapsed, delta, highlighted);
+      if (elapsed < selectedUntil) lighting.sun.shadow.needsUpdate = true;
       ambience.update(indoor, speed, delta);
-
-      const portrait = camera.aspect < 0.85;
-      const distance = (indoor ? 21 : seatedAt ? 31 : 34) * zoom * (portrait ? 1.22 : 1);
-      desiredFocus.set(player.position.x * 0.72, indoor ? 1.3 : 0.8, player.position.z - (indoor ? 2 : 4.4));
-      desiredFocus.x = THREE.MathUtils.clamp(desiredFocus.x, -5, 9);
-      desiredFocus.z = THREE.MathUtils.clamp(desiredFocus.z, -6.5, 4.5);
-      if (!paused) cameraFocus.lerp(desiredFocus, reducedMotion ? 1 : 1 - Math.exp(-delta * 3));
-      const lift = indoor ? elevation * 0.92 : elevation;
-      const cameraDestination = new THREE.Vector3(
-        cameraFocus.x + Math.sin(orbit) * Math.cos(lift) * distance,
-        cameraFocus.y + Math.sin(lift) * distance,
-        cameraFocus.z + Math.cos(orbit) * Math.cos(lift) * distance,
-      );
-      camera.position.lerp(cameraDestination, frameCount === 0 || reducedMotion ? 1 : 1 - Math.exp(-delta * 5));
-      camera.lookAt(cameraFocus);
-      if (nearestInteraction && !paused) {
-        const projected = nearestInteraction.position.clone().project(camera);
-        const rect = canvas!.getBoundingClientRect();
-        ui.setInteraction(nearestInteraction, { x: (projected.x * 0.5 + 0.5) * rect.width, y: (-projected.y * 0.5 + 0.5) * rect.height });
-      } else ui.setInteraction(null);
-      targetMarker.scale.setScalar(1 + Math.sin(time * 4) * 0.1);
-      if (!paused || frameCount % 4 === 0) renderer.render(scene, camera);
-      frameCount++;
-      if (frameCount === 2) { ui.setReady(); root.dataset.renderer = 'webgl'; }
-      if (time - lastSave > 2 && !paused) { save(); lastSave = time; }
-      if (time - lastStats > 0.5) {
-        root.dataset.playerPosition = `${player.position.x.toFixed(2)},${player.position.z.toFixed(2)}`;
-        root.dataset.nearby = nearestInteraction?.id || '';
-        root.dataset.seated = String(!!seatedAt);
-        root.dataset.drawCalls = String(renderer.info.render.calls);
-        lastStats = time;
+      if (elapsed - lastPick > 0.075) {
+        lastPick = elapsed; aimed = findAimed();
+        if (seatedAt && mode === 'exploring') {
+          ui.setInteraction({ ...seatedAt, id: 'stand-up', label: '起身，继续走走', labelEn: 'Stand up and explore' });
+        } else ui.setInteraction(aimed);
+        root.dataset.aimed = String(Boolean(aimed || seatedAt));
       }
-      // Only reduce resolution after a sustained slow sample; never trade away navigation.
-      if (!paused && frameCount > 100 && rawDelta < 0.3) {
-        frameTime += rawDelta; qualitySamples++;
-        if (qualitySamples === 120) {
-          if (frameTime / qualitySamples > 0.034 && quality > 0.85) { quality = Math.max(0.85, quality * 0.8); resize(); }
-          qualitySamples = 0; frameTime = 0;
+      if (seatedAt) ui.setLocation('临崖小坐', 'Among the clouds');
+      else if (indoor) ui.setLocation('灯下书斋', 'Inside the study');
+      else if (position.x > 6) ui.setLocation('松间露台', 'The pine terrace');
+      else ui.setLocation('洞前石径', 'The mountain path');
+      pipeline.render(delta);
+      if (elapsed - lastSave > 5) { lastSave = elapsed; save(); }
+      if (mode === 'exploring' && rawDelta < 0.15 && elapsed > 5) {
+        frameSum += rawDelta; frameSamples++;
+        if (frameSamples >= 180) {
+          if (frameSum / frameSamples > 0.029 && qualityAdjustments < 3 && pipeline.easeResolution()) qualityAdjustments++;
+          frameSum = 0; frameSamples = 0;
         }
       }
     }
-    disposeScene = () => {
-      running = false; cancelAnimationFrame(raf); save(); resizeObserver.disconnect();
-      environment.dispose(); furniture.dispose(); traveller.dispose();
-      targetMarker.geometry.dispose(); targetMarker.material.dispose(); renderer.dispose();
-      ambience.dispose(); ui.dispose(); abort.abort();
-    };
-    document.addEventListener('astro:before-swap', disposeScene, { once: true, signal });
-    frame();
+    previousFrame = performance.now(); frame = requestAnimationFrame(tick);
   } catch (error) {
-    console.error('Mountain scene could not start:', error);
-    renderer.dispose();
-    ui.setFailed(config.isEn ? 'The mountain view could not start. The reading room is still available.' : '山中景色暂时未能展开，你仍可以直接进入阅读。');
+    console.error('The mountain study could not open:', error);
+    resources.forEach(dispose => { try { dispose(); } catch {} });
+    if (alive) ui.setFailed(error instanceof Error ? error.message : 'The 3D scene could not start.');
   }
-  if (import.meta.hot) import.meta.hot.dispose(() => disposeScene());
 }
 
 function createAmbience() {

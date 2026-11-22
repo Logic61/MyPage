@@ -5,6 +5,7 @@ interface UIActions {
   onReset: () => void;
   onSound: () => boolean;
   onNavigate: (id: string) => void;
+  onReadingChange?: (open: boolean) => void;
 }
 
 export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: UIActions): WorldUI {
@@ -61,6 +62,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
       lastFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       dialog.showModal();
       root.classList.add('mw-reading');
+      actions.onReadingChange?.(true);
     }
     title.focus({ preventScroll: true });
   }
@@ -267,6 +269,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     cancelPageRequest();
     root.classList.remove('mw-reading');
     lastFocus?.focus({ preventScroll: true });
+    actions.onReadingChange?.(false);
   }, { signal });
 
   return {
@@ -301,7 +304,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
         const margin = Math.min(root.clientWidth / 2, Math.max(100, prompt.offsetWidth / 2 + 12));
         prompt.style.left = `${Math.max(margin, Math.min(root.clientWidth - margin, screen.x))}px`;
         prompt.style.top = `${Math.max(130, Math.min(root.clientHeight - 145, screen.y - 16))}px`;
-      } else { prompt.style.left = '50%'; prompt.style.top = '69%'; }
+      } else { prompt.style.left = '50%'; prompt.style.top = 'calc(50% + 42px)'; }
     },
     showToast,
     openContent,
