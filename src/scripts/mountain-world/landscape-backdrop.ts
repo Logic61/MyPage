@@ -22,7 +22,8 @@ export interface LandscapeBackdrop {
 }
 
 const IMAGE_ASPECT = 3;
-const IMAGE_HORIZON_FROM_TOP = .30;
+// Calibrated against this panorama's distant ridgeline, not the amount of sky in its prompt.
+const IMAGE_HORIZON_FROM_TOP = .46;
 
 function canvas(width: number, height: number) {
   const result = document.createElement('canvas');

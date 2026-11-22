@@ -147,20 +147,39 @@ export function pineSpray(seed: number) {
   result.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3)); result.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); result.computeVertexNormals(); return result;
 }
 
-/** A thin, scalloped needle mass. Three offset layers read as pine boughs, not round foliage balls. */
+/** An open bundle of needles around fine twigs; no enclosing sphere, skin or continuous rim. */
 export function pineCrown(seed: number) {
-  const geometry = new THREE.SphereGeometry(1, 32, 8), positions = geometry.attributes.position;
-  const colors: number[] = [], dark = new THREE.Color('#496b4e'), light = new THREE.Color('#829665');
-  for (let i = 0; i < positions.count; i++) {
-    const x = positions.getX(i), y = positions.getY(i), z = positions.getZ(i), angle = Math.atan2(z, x);
-    const edge = 1 + .12 * Math.sin(angle * 3 + seed) + .09 * Math.cos(angle * 5 - seed * .31)
-      + .035 * Math.sin(angle * 11 + seed * .73);
-    const yy = y * .19 + .035 * Math.sin(x * 4.2 + seed) * Math.cos(z * 3.6) * (1 - y * y);
-    positions.setXYZ(i, x * edge * (1 + .12 * Math.sin(z * 3.2 + seed)), yy, z * edge * .75);
-    const color = dark.clone().lerp(light, THREE.MathUtils.clamp(.34 + (y + 1) * .24 + Math.sin(x * 4 + z * 3 + seed) * .055, 0, 1));
-    colors.push(color.r, color.g, color.b);
+  const random = seeded(seed), positions: number[] = [], colors: number[] = [], uv: number[] = [];
+  const dark = new THREE.Color('#426648'), light = new THREE.Color('#819a66'), stem = new THREE.Color('#70734d');
+  const worldUp = new THREE.Vector3(0, 1, 0);
+  function triangle(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, color: THREE.Color) {
+    for (const p of [a, b, c]) { positions.push(p.x, p.y, p.z); colors.push(color.r, color.g, color.b); uv.push(p.x, p.z); }
   }
+  for (let twig = 0; twig < 9; twig++) {
+    const angle = twig * 2.399 + (random() - .5) * .75, length = .30 + random() * .22;
+    const start = new THREE.Vector3((random() - .5) * .17, -.065 + random() * .09, (random() - .5) * .14);
+    const end = start.clone().add(new THREE.Vector3(Math.cos(angle) * length, .035 + random() * .17, Math.sin(angle) * length * .76));
+    const axis = end.clone().sub(start).normalize(), across = new THREE.Vector3(-axis.z, 0, axis.x).normalize();
+    const around = new THREE.Vector3().crossVectors(axis, across).normalize();
+    triangle(start.clone().addScaledVector(across, .007), start.clone().addScaledVector(across, -.007), end, stem);
+    for (let tuft = 1; tuft <= 8; tuft++) {
+      const t = (tuft + random() * .4) / 9.5, base = start.clone().lerp(end, t);
+      for (let needle = 0; needle < 7; needle++) {
+        const a = needle / 7 * Math.PI * 2 + twig * .53 + random() * .5;
+        const direction = axis.clone().multiplyScalar(.30).addScaledVector(across, Math.cos(a) * .7)
+          .addScaledVector(around, Math.sin(a) * .53).addScaledVector(worldUp, .24).normalize();
+        const tip = base.clone().addScaledVector(direction, (.105 + random() * .11) * (1.06 - t * .24));
+        const ribbon = new THREE.Vector3().crossVectors(direction, axis).normalize();
+        const halfWidth = .009 + random() * .008;
+        const color = dark.clone().lerp(light, .24 + random() * .65);
+        triangle(base.clone().addScaledVector(ribbon, -halfWidth), tip, base.clone().addScaledVector(ribbon, halfWidth), color);
+      }
+    }
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   geometry.computeVertexNormals(); return geometry;
 }
 

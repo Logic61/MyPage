@@ -165,17 +165,20 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary)
         const size = height * (.17 - i * .008) * (.8 + r() * .35);
         sprays.push({ x: center.x, y: center.y + .13, z: center.z, sx: size, sy: size, sz: size, ry: angle + (r() - .5) * 1.2, rx: (r() - .5) * .15 });
       }
-    }
-    // Three asymmetric, flattened needle layers give the silhouette a living
-    // mass. The existing branch-tip sprays retain a fine, open fringe around it.
-    for (let layer = 0; layer < 3; layer++) {
-      const t = .65 + layer * .145, angle = seed * .61 + layer * 2.41;
-      const center = base.clone().lerp(top, t);
-      center.x += Math.cos(angle) * height * (.045 - layer * .009);
-      center.z += Math.sin(angle) * height * (.05 - layer * .008);
-      crowns.push({ x: center.x, y: center.y, z: center.z,
-        sx: height * (.27 - layer * .045), sy: height * (.30 - layer * .025), sz: height * (.27 - layer * .035),
-        ry: angle, rx: (r() - .5) * .10, rz: (r() - .5) * .08 });
+      // On three upper branches, two or three unequal bundles follow the actual
+      // branch curve. Empty spaces between them remain sky instead of a solid disk.
+      if (sparse ? i % 2 === 1 : i >= 2 && i % 2 === 0) {
+        const bough = new THREE.CatmullRomCurve3([start, elbow, end]);
+        for (let bud = 0; bud < (i % 3 === 0 ? 3 : 2); bud++) {
+          const center = bough.getPointAt(.61 + bud * .13), side = bud % 2 ? 1 : -1;
+          const size = height * (.154 - i * .006) * (.82 + r() * .30);
+          center.x += Math.sin(angle) * side * size * .12; center.z -= Math.cos(angle) * side * size * .12;
+          center.y += .035 + r() * .04;
+          crowns.push({ x: center.x, y: center.y, z: center.z,
+            sx: size, sy: size * (.85 + r() * .15), sz: size * (.75 + r() * .25),
+            ry: angle + (r() - .5) * .9, rx: (r() - .5) * .38, rz: (r() - .5) * .26 });
+        }
+      }
     }
     for (let i = 0; i < 5; i++) {
       const a = i * 1.256, end = base.clone().add(new THREE.Vector3(Math.cos(a) * .85, -.02, Math.sin(a) * .64));

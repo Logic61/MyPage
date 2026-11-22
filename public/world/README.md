@@ -24,7 +24,7 @@ The generated PNG is **2172 × 724 pixels**, exactly 3:1, and **2,116,399 bytes*
 
 ### 3D integration
 
-`landscape-backdrop.ts` maps one image across 180 degrees of a 108 m radius cylinder and mirrors the geometry's U coordinates across the other half. Its height is `π × radius / 3` (about 113.1 m), preserving the 3:1 ratio along each half-circumference. The image horizon, 30% from the top, is placed at world y=1.5 m. These dimensions keep the geometry within the default 230 m camera far plane.
+`landscape-backdrop.ts` maps one image across 180 degrees of a 108 m radius cylinder and mirrors the geometry's U coordinates across the other half. Its height is `π × radius / 3` (about 113.1 m), preserving the 3:1 ratio along each half-circumference. The distant ridgeline is calibrated at 46% from the image top and placed at world y=1.5 m, so mountains remain visible through the windows and above the terrace rail. These dimensions keep the geometry within the default 230 m camera far plane.
 
 The local texture is sRGB with `flipY=true`, `repeat=[1,1]` and clamped UV sampling. Ordinary `MeshBasicMaterial` uses the same tone mapping as the rest of the scene. A separate linear alpha map softens the sky/cloud edges and mirror folds. A closed gradient sky sphere and two translucent cloud surfaces at y=-11 m and -17 m complete the background above and below the island.
 
