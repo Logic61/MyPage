@@ -26,8 +26,12 @@ export function createStudyRenderer(renderer: THREE.WebGLRenderer, scene: THREE.
     samples: coarse ? 0 : Math.min(2, renderer.capabilities.maxSamples),
   });
   const composer = new EffectComposer(renderer, target);
+  // Size the composer in physical pixels so DPR and viewport changes are atomic.
+  composer.setPixelRatio(1);
   const beauty = new RenderPass(scene, camera);
   const ao = new GTAOPass(scene, camera, 512, 512);
+  const resizeAO = ao.setSize.bind(ao);
+  ao.setSize = (w, h) => resizeAO(Math.max(1, Math.floor(w * 0.65)), Math.max(1, Math.floor(h * 0.65)));
   ao.updateGtaoMaterial({ radius: 0.42, thickness: 0.7, distanceFallOff: 1, samples: 8, screenSpaceRadius: false });
   ao.updatePdMaterial({ lumaPhi: 8, depthPhi: 2, normalPhi: 4, radius: 4, rings: 2, samples: 8 });
   ao.blendIntensity = 0.62;
@@ -53,19 +57,23 @@ export function createStudyRenderer(renderer: THREE.WebGLRenderer, scene: THREE.
 
   let quality: RenderQuality = coarse ? 'smooth' : 'detail';
   let width = 1, height = 1, dynamicScale = 1;
+  let appliedWidth = 0, appliedHeight = 0, appliedRatio = 0;
   let postprocessing = true;
 
   function resize(w: number, h: number) {
     width = Math.max(1, w); height = Math.max(1, h);
     const cap = quality === 'detail' ? 1.5 : 1.1;
     const pixelBudget = quality === 'detail' ? 2_350_000 : 1_450_000;
-    const ratio = Math.max(0.65, Math.min(window.devicePixelRatio || 1, cap, Math.sqrt(pixelBudget / (width * height))) * dynamicScale);
-    renderer.setPixelRatio(ratio); renderer.setSize(width, height, false);
-    composer.setPixelRatio(ratio); composer.setSize(width, height);
-    ao.setSize(Math.max(1, Math.floor(width * ratio * 0.65)), Math.max(1, Math.floor(height * ratio * 0.65)));
+    // Keep each drawing-buffer axis at least one pixel without defeating the budget at large viewports.
+    const minimumRatio = (1 + Number.EPSILON) / Math.min(width, height);
+    const ratio = Math.max(minimumRatio, Math.min(window.devicePixelRatio || 1, cap, Math.sqrt(pixelBudget / (width * height))) * dynamicScale);
     ao.enabled = quality === 'detail';
     bloom.enabled = quality === 'detail';
+    if (width === appliedWidth && height === appliedHeight && ratio === appliedRatio) return;
     camera.aspect = width / height; camera.updateProjectionMatrix();
+    renderer.setDrawingBufferSize(width, height, ratio);
+    composer.setSize(Math.max(1, Math.floor(width * ratio)), Math.max(1, Math.floor(height * ratio)));
+    appliedWidth = width; appliedHeight = height; appliedRatio = ratio;
   }
 
   return {
@@ -82,7 +90,9 @@ export function createStudyRenderer(renderer: THREE.WebGLRenderer, scene: THREE.
     setQuality(value: RenderQuality) { quality = value; dynamicScale = 1; resize(width, height); },
     easeResolution() {
       if (dynamicScale <= 0.7) return false;
-      dynamicScale = Math.max(0.7, dynamicScale - 0.12); resize(width, height); return true;
+      const previousPixels = composer.renderTarget1.width * composer.renderTarget1.height;
+      dynamicScale = Math.max(0.7, dynamicScale - 0.12); resize(width, height);
+      return composer.renderTarget1.width * composer.renderTarget1.height < previousPixels;
     },
     dispose() {
       scene.environment = null; environment.dispose();

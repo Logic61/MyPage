@@ -7,6 +7,8 @@ import { createWorldUI } from './ui';
 import { createStudyLighting } from './lighting';
 import { createStudyRenderer, type RenderQuality } from './rendering';
 import { createInteractionPicker, movementDirection, FLOOR_HEIGHT, EYE_HEIGHT, SEATED_EYE_HEIGHT } from './first-person';
+import { LookController, DragLookGesture, StanceTransition } from './look-controls';
+import { createPointerLockRequest } from './pointer-lock';
 import type { Interaction, WorldConfig } from './types';
 
 type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition';
@@ -75,18 +77,20 @@ async function initializeWorld(root: HTMLElement) {
     const keys = new Set<string>();
     const joystick = new THREE.Vector2();
     const stateKey = `mountain-first-person-v2:${config.base}`;
-    let yaw = 0, pitch = -0.035, sensitivity = 1, headBob = false;
+    const look = new LookController();
+    const stance = new StanceTransition(reducedMotion ? 0.15 : 0.3);
+    let sensitivity = 1, headBob = false;
     let mode: Mode = 'welcome';
     let route: Point[] = [], destination: Interaction | null = null;
     let aimed: Interaction | null = null, seatedAt: Interaction | null = null;
+    let seatReturn: THREE.Vector3 | null = null;
     let selectedId: string | null = null, selectedUntil = 0;
     let elapsed = 0, walked = 0, interactionTimer = 0;
     let frame = 0, previousFrame = performance.now(), lastRender = 0, lastPick = -1, lastSave = 0;
     let frameSum = 0, frameSamples = 0, qualityAdjustments = 0;
     let hadPointerLock = false, dragLook = false;
-    let press: { id: number; x: number; y: number; moved: boolean } | null = null;
+    let press: DragLookGesture | null = null;
     let stickPointer: number | null = null;
-    let eyeY = FLOOR_HEIGHT + EYE_HEIGHT;
     const entry = root.querySelector<HTMLElement>('[data-world-entry]')!;
     const enterButton = root.querySelector<HTMLButtonElement>('[data-world-enter]')!;
     const entryTitle = root.querySelector<HTMLElement>('[data-world-entry-title]')!;
@@ -102,8 +106,7 @@ async function initializeWorld(root: HTMLElement) {
       const saved = JSON.parse(sessionStorage.getItem(stateKey) || 'null');
       if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.z) && navigation.canWalk(saved.x, saved.z)) {
         position.set(saved.x, FLOOR_HEIGHT, saved.z);
-        if (Number.isFinite(saved.yaw)) yaw = saved.yaw;
-        if (Number.isFinite(saved.pitch)) pitch = THREE.MathUtils.clamp(saved.pitch, -1.4, 1.4);
+        look.snap(Number.isFinite(saved.yaw) ? saved.yaw : 0, Number.isFinite(saved.pitch) ? saved.pitch : -0.035);
       } else if (location.hash === '#study') {
         const inside = navigation.nearest({ x: 0, z: -2.8 }, 4);
         if (inside) position.set(inside.x, FLOOR_HEIGHT, inside.z);
@@ -117,19 +120,33 @@ async function initializeWorld(root: HTMLElement) {
     } catch { /* Storage is optional. */ }
     sensitivityInput.value = String(sensitivity); bobInput.checked = headBob;
     pipeline.setQuality(qualitySelect.value as RenderQuality);
+    const pointerLock = createPointerLockRequest({
+      request: raw => raw ? canvas.requestPointerLock({ unadjustedMovement: true }) : canvas.requestPointerLock(),
+      isActive: () => alive && mode === 'exploring' && !ui.isOpen(),
+      onFallback: () => {
+        if (document.pointerLockElement === canvas) return;
+        dragLook = true;
+        ui.showToast(en ? 'Drag to look around. WASD still moves you.' : '可按住画面拖动视角，WASD 仍可行走。');
+      },
+    });
 
+    function clearDrag() {
+      const pointerId = press?.id;
+      if (press) look.end(press.source);
+      press = null;
+      if (pointerId !== undefined && canvas!.hasPointerCapture(pointerId)) canvas!.releasePointerCapture(pointerId);
+    }
     function clearMovement() {
       keys.clear(); joystick.set(0, 0); velocity.set(0, 0);
-      const pointerId = press?.id; press = null;
-      if (pointerId !== undefined && canvas!.hasPointerCapture(pointerId)) canvas!.releasePointerCapture(pointerId);
+      clearDrag();
       const thumbId = stickPointer; stickPointer = null;
       if (thumbId !== null && stick.hasPointerCapture(thumbId)) stick.releasePointerCapture(thumbId);
       stickThumb.style.transform = 'translate(-50%, -50%)';
     }
     function cancelRoute() { route = []; destination = null; delete root.dataset.guided; }
     function save() {
-      const p = seatedAt?.approach || position;
-      try { sessionStorage.setItem(stateKey, JSON.stringify({ x: p.x, z: p.z, yaw, pitch })); } catch {}
+      const p = seatReturn || position;
+      try { sessionStorage.setItem(stateKey, JSON.stringify({ x: p.x, z: p.z, yaw: look.yaw, pitch: look.pitch })); } catch {}
     }
     function setMode(value: Mode) {
       mode = value; root.dataset.mode = value;
@@ -144,6 +161,7 @@ async function initializeWorld(root: HTMLElement) {
       }
       pauseButton.hidden = value !== 'exploring';
       if (value !== 'exploring') {
+        pointerLock.cancel(); look.suspend();
         clearMovement(); aimed = null; ui.setInteraction(null); root.dataset.aimed = 'false';
       }
     }
@@ -156,32 +174,30 @@ async function initializeWorld(root: HTMLElement) {
     function enter() {
       if (ui.isOpen()) return;
       setMode('exploring'); canvas!.focus({ preventScroll: true });
+      if (document.pointerLockElement === canvas) { look.begin('locked', performance.now()); return; }
       if (coarse || !canvas!.requestPointerLock) { dragLook = true; return; }
-      try {
-        const request = canvas!.requestPointerLock();
-        request?.catch(() => {
-          if (mode !== 'exploring') return;
-          dragLook = true;
-          ui.showToast(en ? 'Drag to look around. WASD still moves you.' : '可按住画面拖动视角，WASD 仍可行走。');
-        });
-      } catch { dragLook = true; }
+      pointerLock.start();
+    }
+    function eyePosition() {
+      return { x: position.x, y: seatedAt ? position.y + SEATED_EYE_HEIGHT : FLOOR_HEIGHT + EYE_HEIGHT, z: position.z };
     }
     function standUp() {
       if (!seatedAt) return;
-      position.copy(seatedAt.approach); position.y = FLOOR_HEIGHT;
-      seatedAt = null;
+      position.copy(seatReturn || seatedAt.approach); position.y = FLOOR_HEIGHT;
+      seatedAt = null; seatReturn = null; look.cancelTurn();
+      stance.rebase(camera.position, eyePosition());
     }
     function face(item: Interaction) {
-      const direction = new THREE.Vector3().subVectors(item.position, camera.position);
-      yaw = Math.atan2(-direction.x, -direction.z);
-      pitch = THREE.MathUtils.clamp(Math.atan2(direction.y, Math.hypot(direction.x, direction.z)), -1.4, 1.4);
+      // The displayed camera may still be between sitting and standing positions.
+      const eye = eyePosition();
+      const dx = item.position.x - eye.x, dy = item.position.y - eye.y, dz = item.position.z - eye.z;
+      look.turnTo(Math.atan2(-dx, -dz), Math.atan2(dy, Math.hypot(dx, dz)));
     }
     function updateCamera(delta: number, speed = 0) {
-      const targetEye = seatedAt ? position.y + SEATED_EYE_HEIGHT : FLOOR_HEIGHT + EYE_HEIGHT;
-      eyeY = THREE.MathUtils.lerp(eyeY, targetEye, reducedMotion ? 1 : 1 - Math.exp(-delta * 10));
+      const eye = stance.apply(eyePosition(), delta);
       const bob = headBob && !seatedAt && speed > 0.3 ? Math.sin(walked * 8) * 0.014 * Math.min(1, speed / 2.2) : 0;
-      camera.position.set(position.x, eyeY + bob, position.z);
-      camera.rotation.set(pitch, yaw, 0, 'YXZ');
+      camera.position.set(eye.x, eye.y + bob, eye.z);
+      camera.rotation.set(look.pitch, look.yaw, 0, 'YXZ');
       camera.updateMatrixWorld();
     }
     function findAimed() {
@@ -195,10 +211,11 @@ async function initializeWorld(root: HTMLElement) {
       if (item.kind === 'lantern') {
         ui.showToast(en ? 'A little light in the mountains.' : '山间一盏灯。');
       } else if (item.kind === 'bench') {
+        seatReturn = position.clone();
         seatedAt = item;
         if (item.sitPosition) position.copy(item.sitPosition);
-        if (item.sitYaw !== undefined) yaw = item.sitYaw;
-        pitch = -0.045;
+        stance.rebase(camera.position, eyePosition());
+        if (!reducedMotion) look.turnTo(item.sitYaw ?? look.yaw, -0.045);
         ui.showToast(en ? 'Watch the clouds. Move or press E to stand.' : '坐看云起。移动或按 E 即可起身。');
       } else {
         setMode('transition'); unlock();
@@ -230,13 +247,13 @@ async function initializeWorld(root: HTMLElement) {
         setMode('paused'); ui.showToast(en ? 'There is no clear path from here. Return to the entrance and try again.' : '这里暂时没有通路，可以先回到洞口。'); return;
       }
       route = path; destination = item; root.dataset.guided = 'true';
-      enter(); ui.showToast(en ? `Walking to ${item.labelEn.toLowerCase()}. WASD stops the guide.` : `向${item.label}走去。按 W A S D 可随时自行行走。`);
+      enter(); ui.showToast(en ? `Walking to ${item.labelEn.toLowerCase()}. Look around or use WASD to take control.` : `向${item.label}走去。移动鼠标或按 W A S D 即可接管。`);
     };
     resetAction = () => {
       window.clearTimeout(interactionTimer);
       if (mode === 'transition') setMode('paused');
       standUp(); cancelRoute(); clearMovement();
-      position.set(spawn.x, FLOOR_HEIGHT, spawn.z); yaw = 0; pitch = -0.035; eyeY = FLOOR_HEIGHT + EYE_HEIGHT;
+      position.set(spawn.x, FLOOR_HEIGHT, spawn.z); look.snap(0, -0.035); stance.reset();
       updateCamera(1); save(); ui.showToast(en ? 'Back at the cave entrance.' : '回到洞口，书斋就在眼前。');
     };
     function savePreferences() {
@@ -252,45 +269,53 @@ async function initializeWorld(root: HTMLElement) {
     document.addEventListener('pointerlockchange', () => {
       const locked = document.pointerLockElement === canvas;
       if (locked) {
+        pointerLock.onLocked();
         if (ui.isOpen() || mode !== 'exploring') { document.exitPointerLock(); return; }
-        dragLook = false;
-      } else if (hadPointerLock && mode === 'exploring') pause();
+        clearDrag(); look.begin('locked', performance.now()); dragLook = false;
+      } else {
+        pointerLock.cancel(); look.suspend(); clearDrag();
+        if (hadPointerLock && mode === 'exploring') pause();
+      }
       hadPointerLock = locked; root.dataset.pointerLocked = String(locked);
     }, { signal });
-    document.addEventListener('pointerlockerror', () => { if (mode === 'exploring') dragLook = true; }, { signal });
+    document.addEventListener('pointerlockerror', () => pointerLock.onError(), { signal });
+    function eventTime(event: Event) {
+      // Older engines use epoch timestamps; keep input and performance.now on one clock.
+      return event.timeStamp > performance.timeOrigin ? event.timeStamp - performance.timeOrigin : event.timeStamp;
+    }
     document.addEventListener('mousemove', event => {
       if (mode !== 'exploring' || document.pointerLockElement !== canvas || ui.isOpen()) return;
-      if (Math.abs(event.movementX) + Math.abs(event.movementY) > 2) cancelRoute();
-      yaw -= event.movementX * 0.0021 * sensitivity;
-      pitch = THREE.MathUtils.clamp(pitch - event.movementY * 0.0021 * sensitivity, -1.4, 1.4);
+      if (look.sample('locked', event.movementX, event.movementY, eventTime(event), performance.now(), sensitivity)) cancelRoute();
     }, { signal });
     canvas.addEventListener('pointerdown', event => {
       if (mode !== 'exploring' || ui.isOpen() || (event.button !== 0 && event.button !== 2)) return;
       canvas.focus({ preventScroll: true });
       if (document.pointerLockElement === canvas) { if (event.button === 0) interactionAction(); return; }
       if (!dragLook && !coarse) { enter(); return; }
-      press = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+      if (press) return;
+      press = new DragLookGesture(event.pointerId, event.clientX, event.clientY, event.pointerType === 'mouse' ? 'drag' : 'touch');
+      look.begin(press.source, eventTime(event));
       canvas.setPointerCapture(event.pointerId);
     }, { signal });
-    canvas.addEventListener('pointermove', event => {
-      if (!press || press.id !== event.pointerId || mode !== 'exploring') return;
-      const dx = event.clientX - press.x, dy = event.clientY - press.y;
-      if (Math.abs(dx) + Math.abs(dy) > 1) { press.moved = true; cancelRoute(); }
-      yaw -= dx * 0.0035 * sensitivity;
-      pitch = THREE.MathUtils.clamp(pitch - dy * 0.0035 * sensitivity, -1.4, 1.4);
-      press.x = event.clientX; press.y = event.clientY;
-    }, { signal });
+    function dragMove(event: PointerEvent) {
+      if (!press || press.id !== event.pointerId || mode !== 'exploring' || document.pointerLockElement === canvas || ui.isOpen()) return;
+      const { dx, dy } = press.move(event.clientX, event.clientY);
+      if (look.sample(press.source, dx, dy, eventTime(event), performance.now(), sensitivity)) cancelRoute();
+    }
+    canvas.addEventListener('pointermove', dragMove, { signal });
     canvas.addEventListener('pointerup', event => {
       if (!press || press.id !== event.pointerId) return;
-      if (!press.moved && event.button === 0) interactionAction();
-      press = null;
-      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      dragMove(event);
+      const tap = !press.moved && event.button === 0;
+      clearDrag();
+      if (tap) interactionAction();
     }, { signal });
-    canvas.addEventListener('pointercancel', () => { press = null; }, { signal });
-    canvas.addEventListener('lostpointercapture', () => { press = null; }, { signal });
+    const endDrag = (event: PointerEvent) => { if (event.pointerId === press?.id) clearDrag(); };
+    canvas.addEventListener('pointercancel', endDrag, { signal });
+    canvas.addEventListener('lostpointercapture', endDrag, { signal });
     canvas.addEventListener('contextmenu', event => event.preventDefault(), { signal });
     canvas.addEventListener('webglcontextlost', event => {
-      event.preventDefault(); cancelAnimationFrame(frame); clearMovement(); unlock();
+      event.preventDefault(); cancelAnimationFrame(frame); pointerLock.cancel(); look.suspend(); clearMovement(); unlock();
       ui.setFailed('The graphics context was lost. Reload the page to restart the study.');
     }, { signal });
     function updateStick(event: PointerEvent) {
@@ -303,7 +328,7 @@ async function initializeWorld(root: HTMLElement) {
     }
     stick.addEventListener('pointerdown', event => {
       if (mode !== 'exploring') return;
-      event.preventDefault(); stickPointer = event.pointerId; cancelRoute();
+      event.preventDefault(); stickPointer = event.pointerId; cancelRoute(); look.cancelTurn();
       stick.setPointerCapture(event.pointerId); updateStick(event);
     }, { signal });
     stick.addEventListener('pointermove', event => { if (mode === 'exploring' && event.pointerId === stickPointer) updateStick(event); }, { signal });
@@ -321,7 +346,7 @@ async function initializeWorld(root: HTMLElement) {
       if (event.code === 'KeyM') { event.preventDefault(); ui.openContent('books'); return; }
       if (event.code === 'KeyE') { event.preventDefault(); if (!event.repeat) interactionAction(); return; }
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(event.code)) {
-        event.preventDefault(); keys.add(event.code); cancelRoute();
+        event.preventDefault(); keys.add(event.code); cancelRoute(); look.cancelTurn();
       }
     }, { signal });
     window.addEventListener('keyup', event => keys.delete(event.code), { signal });
@@ -355,7 +380,7 @@ async function initializeWorld(root: HTMLElement) {
     if (shaderFailed) throw new Error('A scene material shader could not compile.');
     ui.setReady(); setMode(ui.isOpen() ? 'reading' : 'welcome');
     teardown = () => {
-      save(); window.clearTimeout(interactionTimer); cancelAnimationFrame(frame); unlock();
+      save(); window.clearTimeout(interactionTimer); cancelAnimationFrame(frame); pointerLock.cancel(); look.suspend(); unlock();
       resources.forEach(dispose => dispose());
     };
 
@@ -371,27 +396,28 @@ async function initializeWorld(root: HTMLElement) {
       if (mode !== 'reading') elapsed += delta;
       let speed = 0;
       if (mode === 'exploring') {
-        yaw += (Number(keys.has('ArrowLeft')) - Number(keys.has('ArrowRight'))) * delta * 1.45;
-        pitch = THREE.MathUtils.clamp(pitch + (Number(keys.has('ArrowUp')) - Number(keys.has('ArrowDown'))) * delta * 1.05, -1.4, 1.4);
+        look.rotate((Number(keys.has('ArrowLeft')) - Number(keys.has('ArrowRight'))) * delta * 1.45,
+          (Number(keys.has('ArrowUp')) - Number(keys.has('ArrowDown'))) * delta * 1.05);
         let forward = Number(keys.has('KeyW')) - Number(keys.has('KeyS')) + joystick.y;
         let right = Number(keys.has('KeyD')) - Number(keys.has('KeyA')) + joystick.x;
         if (Math.abs(forward) + Math.abs(right) > 0.01) standUp();
-        let movement = movementDirection(yaw, forward, right);
+        let movement = movementDirection(look.yaw, forward, right);
         let pace = keys.has('ShiftLeft') || keys.has('ShiftRight') ? 3.6 : 2.2;
-        if (route.length && !seatedAt) {
+        const guided = route.length > 0 && !seatedAt;
+        if (guided) {
           let next = route[0];
           if (Math.hypot(next.x - position.x, next.z - position.z) < 0.12) { route.shift(); next = route[0]; }
           if (next) {
             const dx = next.x - position.x, dz = next.z - position.z, distance = Math.hypot(dx, dz);
             movement = { x: dx / distance, z: dz / distance }; pace = Math.min(2, distance / delta);
-            const targetYaw = Math.atan2(-dx, -dz);
-            yaw += Math.atan2(Math.sin(targetYaw - yaw), Math.cos(targetYaw - yaw)) * Math.min(1, delta * 4.5);
-            pitch = THREE.MathUtils.lerp(pitch, -0.035, delta * 3);
+            look.turnTo(Math.atan2(-dx, -dz), -0.035);
           } else {
             if (destination) { face(destination); ui.showToast(en ? 'Look at the object and press E.' : '看向眼前物件，按 E 细看。'); }
             cancelRoute(); movement = { x: 0, z: 0 }; velocity.set(0, 0);
           }
         }
+        look.advance(rawDelta);
+        if (!guided) movement = movementDirection(look.yaw, forward, right);
         const damping = 1 - Math.exp(-delta * 14);
         velocity.x = THREE.MathUtils.lerp(velocity.x, movement.x * pace, damping);
         velocity.y = THREE.MathUtils.lerp(velocity.y, movement.z * pace, damping);
@@ -402,7 +428,7 @@ async function initializeWorld(root: HTMLElement) {
           speed = distance / delta; walked += distance;
         }
       }
-      updateCamera(delta, speed);
+      updateCamera(Math.min(0.05, Math.max(0, rawDelta)), speed);
       const indoor = position.z < -0.8 && position.x < 6.2 && position.x > -6.2;
       environment.update(elapsed, delta, indoor);
       const highlighted = elapsed < selectedUntil ? selectedId : mode === 'exploring' ? aimed?.id ?? null : null;
