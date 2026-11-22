@@ -1,6 +1,9 @@
 ---
 import '../styles/global.css';
+import '../styles/study-pages.css';
+import '../styles/study-collections.css';
 import InkLandscape from '../components/InkLandscape.astro';
+import StudyBackdrop from '../components/StudyBackdrop.astro';
 interface Props {
   title?: string;
   description?: string;
@@ -15,9 +18,10 @@ const {
   title = 'Shane Lorien',
   description = isEn ? 'Notes on mathematics, computer science, and reading by Shane Lorien.' : 'Shane Lorien 的个人博客，记录数学、计算机与阅读中的思考。',
 } = Astro.props;
+const studyPage = !spatial && ['archive', 'article', 'cv', 'projects'].includes(section ?? '');
 ---
 <!doctype html>
-<html lang={isEn ? 'en' : 'zh-CN'} data-section={section} class:list={{ 'archive-catalogue': section === 'archive', 'spatial-home': spatial }}>
+<html lang={isEn ? 'en' : 'zh-CN'} data-section={section} class:list={{ 'archive-catalogue': section === 'archive', 'spatial-home': spatial, 'study-page': studyPage }}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -33,6 +37,7 @@ const {
     </script>
   </head>
   <body>
+    {studyPage && <StudyBackdrop />}
     <slot name="background">{!section && <InkLandscape />}</slot>
     <a class="skip-link" href="#main-content">{isEn ? 'Skip to content' : '跳至正文'}</a>
     <slot />

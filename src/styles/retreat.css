@@ -1,14 +1,14 @@
-/* A separate visual language for the two scenes. Reading pages keep their
-   existing typography, palette and layout. */
+/* The mountain, study and open catalogue share jade, paper and lamplight. */
 html.spatial-home[data-section="home"] {
   --page: #eee5d1;
-  --surface: #f4eee1;
-  --soft: #eae2d2;
+  --surface: #faf8ef;
+  --soft: #eef0e3;
   --ink: #28362d;
   --body: #3b453b;
-  --muted: #736f61;
-  --line: #d5cbb8;
-  --accent: #92523a;
+  --muted: #657166;
+  --line: #c8c8ae;
+  --accent: #365e51;
+  --retreat-gold: #9a7442;
   --scene-ink: #f5efdf;
   --scene-muted: #ded9c6;
   --mountain-ink: #2b3b30;
@@ -19,13 +19,14 @@ html.spatial-home[data-section="home"] {
 }
 html.spatial-home.dark[data-section="home"] {
   --page: #18251f;
-  --surface: #242b25;
-  --soft: #30382e;
+  --surface: #21392f;
+  --soft: #2b4337;
   --ink: #f0e8d6;
   --body: #e0dacb;
   --muted: #b5b3a1;
-  --line: #465044;
-  --accent: #dab394;
+  --line: #496050;
+  --accent: #d1c697;
+  --retreat-gold: #d6c29a;
   --mountain-ink: #f1e9d5;
   --mountain-muted: #d0d5bc;
   --retreat-paper: #18251f;
@@ -85,22 +86,29 @@ html.spatial-home:not([data-retreat-scene="study"]) .retreat-chrome .site-nav :i
 html.spatial-home:not([data-retreat-scene="study"]) .retreat-chrome .site-nav .icon-button:hover { background: #42634b18; }
 .retreat-chrome .search-dialog { color: var(--ink); background: var(--surface); text-shadow: none; }
 .retreat-introduction {
-  position: absolute; z-index: 3; top: clamp(160px, 27vh, 320px); left: clamp(38px, 7.2vw, 142px);
+  position: absolute; z-index: 3; top: clamp(140px, 18vw, 240px); left: clamp(38px, 7.2vw, 142px);
   width: min(600px, 48vw); color: var(--mountain-ink); text-shadow: none;
 }
 .retreat-eyebrow { font-family: var(--font-sans); font-size: 12px; font-weight: 400; letter-spacing: .22em; line-height: 1.7; }
 .retreat-introduction > .retreat-eyebrow { color: var(--mountain-muted); }
 .retreat-introduction h1 { margin-top: 22px; font-size: clamp(58px, 6.2vw, 102px); font-weight: 400; line-height: .98; letter-spacing: -.035em; text-wrap: nowrap; }
-.retreat-motto { display: flex; flex-wrap: wrap; gap: 0 .65em; margin-top: 30px; font-size: clamp(21px, 2vw, 29px); font-weight: 400; line-height: 1.7; letter-spacing: .16em; }
+.retreat-motto { display: flex; flex-wrap: wrap; gap: 0 .65em; margin-top: 24px; font-size: clamp(21px, 2vw, 29px); font-weight: 400; line-height: 1.7; letter-spacing: .16em; }
 html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size: clamp(20px, 1.8vw, 27px); letter-spacing: 0; line-height: 1.45; }
 .retreat-enter {
-  display: inline-flex; align-items: center; justify-content: space-between; gap: 46px;
-  min-height: 50px; margin-top: 34px; padding: 8px 2px 12px;
-  border-bottom: 1px solid currentColor; min-width: 165px; color: var(--mountain-ink); font-size: 18px; letter-spacing: .14em;
+  display: inline-flex; align-items: center; justify-content: flex-start; gap: 20px;
+  min-height: 78px; min-width: 242px; margin-top: 26px; padding: 12px 29px 12px 20px;
+  color: #fff4dc; background: linear-gradient(125deg, #416554, #254b3c);
+  border: 1px solid #b49a67; outline: 1px solid #e2d3a966; outline-offset: -5px;
+  box-shadow: 0 9px 28px #314b352e, inset 0 0 28px #f4d79609;
+  transition: background 220ms, box-shadow 220ms, transform 220ms;
 }
-.retreat-enter svg { width: 23px; height: 23px; transition: transform 200ms; }
-.retreat-enter:hover svg { transform: translateX(5px); }
-.retreat-invitation { max-width: 370px; margin-top: 18px; color: var(--mountain-muted); font-size: 16px; line-height: 1.8; letter-spacing: .05em; }
+.retreat-enter-seal { display: grid; place-items: center; flex: none; width: 37px; height: 43px; border: 1px solid #e3cb9a9c; color: #f1d4a0; font-size: 24px; line-height: 1; }
+.retreat-enter-copy { display: grid; gap: 5px; text-align: left; }
+.retreat-enter-copy strong { font-size: 20px; line-height: 1.35; font-weight: 400; letter-spacing: .12em; }
+.retreat-enter-copy small { color: #e3d9ba; font-size: 13px; letter-spacing: .17em; line-height: 1.35; }
+.retreat-enter:hover { background: linear-gradient(125deg, #4a725d, #2b5544); box-shadow: 0 11px 36px #314b3540, 0 0 25px #dec08822; transform: translateY(-2px); }
+.retreat-enter:focus-visible { outline: 3px solid var(--mountain-ink); outline-offset: 5px; }
+.retreat-invitation { max-width: 390px; margin-top: 17px; color: var(--mountain-muted); font-size: 16px; line-height: 1.8; letter-spacing: .03em; }
 .retreat-scene-note { position: absolute; left: clamp(38px, 7.2vw, 142px); bottom: 38px; display: flex; align-items: center; gap: 18px; font-size: 12px; letter-spacing: .16em; color: var(--mountain-muted); }
 .retreat-note-line { height: 1px; width: 64px; background: currentColor; opacity: .5; }
 .retreat-spot {
@@ -124,8 +132,10 @@ html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size:
 .retreat-spot-detail { display: block; max-width: 0; overflow: hidden; opacity: 0; font-family: var(--font-sans); font-size: 13px; letter-spacing: .02em; transition: max-width 200ms, opacity 200ms; }
 .retreat-spot:is(:hover,:focus-visible) .retreat-spot-label { background: #263224ee; transform: translate(-50%, -2px); }
 .retreat-spot:is(:hover,:focus-visible) .retreat-spot-detail { max-width: 140px; opacity: .8; }
-.retreat-door::before { background: radial-gradient(ellipse, #ffdc7b11, transparent 68%); border-radius: 45% 45% 20% 20%; }
-.retreat-door .retreat-spot-label { padding-inline: 15px; background: #412d1dd4; border-color: #ffe1a4b3; }
+.retreat-door::before { inset: -7px; background: radial-gradient(ellipse, #ffdc7b24, transparent 72%); border: 1px solid #ffe2a9c4; border-radius: 46% 46% 22% 22%; box-shadow: 0 0 18px #f5d28d45, inset 0 0 14px #ffda9440; animation: retreat-door-light 4.8s ease-in-out infinite alternate; }
+.retreat-door:is(:hover,:focus-visible)::before { border-color: #fff3d3; background: #efd39220; box-shadow: 0 0 28px #f5d28d78, inset 0 0 18px #ffda9466; }
+.retreat-door .retreat-spot-label { padding: 9px 16px; color: #fff3d8; background: #493a22ed; border: 1px solid #e4c78a; font-size: 16px; letter-spacing: .09em; box-shadow: 0 5px 20px #30231240; }
+@keyframes retreat-door-light { from { opacity: .65; } to { opacity: 1; } }
 .retreat-study-heading { position: absolute; z-index: 3; top: 138px; left: clamp(38px, 6.2vw, 120px); text-shadow: 0 2px 18px #080e09c9; }
 .retreat-study-heading .retreat-eyebrow { color: #dfdbc9; font-size: 13px; letter-spacing: .16em; }
 .retreat-study-heading h2 { margin-top: 12px; font-size: clamp(36px, 3.8vw, 58px); line-height: 1.2; font-weight: 400; letter-spacing: .18em; }
@@ -143,41 +153,65 @@ html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size:
 .retreat-transition { position: fixed; inset: 0; z-index: 50; background: #17231d; opacity: 0; pointer-events: none; transition: opacity 220ms ease; }
 .retreat[data-switching] .retreat-transition { opacity: 1; pointer-events: auto; }
 
-/* The catalogue is a quiet reading surface, rather than another scene. */
+/* An illustrated cover stays beside the scrollable folio of real entries. */
 .retreat-catalogue {
-  width: min(940px, calc(100% - 64px)); height: min(800px, calc(100dvh - 64px));
+  width: min(1120px, calc(100% - 64px)); height: min(820px, calc(100dvh - 64px));
   max-width: none; max-height: none; margin: auto; padding: 0;
-  color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 2px;
-  box-shadow: 0 24px 100px #050d08a8; text-shadow: none;
+  overflow: hidden; color: var(--ink); background: var(--surface); border: 1px solid #ad986b; border-radius: 3px;
+  box-shadow: 0 26px 100px #050d08a8, 0 0 0 5px #d8c59d1f; text-shadow: none;
 }
-.retreat-catalogue[open] { display: grid; grid-template-rows: auto auto auto minmax(0,1fr) auto; }
-.retreat-catalogue::backdrop { background: #0b160ecc; backdrop-filter: blur(7px); }
+.retreat-catalogue[open] { display: grid; grid-template-columns: minmax(190px, .31fr) minmax(0, 1fr); }
+.retreat-catalogue::backdrop { background: #0d2119b8; backdrop-filter: blur(8px); }
 .spatial-home:has(.retreat-catalogue[open]), .spatial-home:has(.search-dialog[open]) { overflow: hidden; }
 .retreat-catalogue :focus-visible { outline-color: var(--accent); }
-.retreat-catalogue-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 32px 40px 24px; }
-.retreat-catalogue-heading .retreat-eyebrow { color: var(--muted); font-size: 12px; }
-.retreat-catalogue-heading h2 { margin-top: 8px; font-size: clamp(28px, 4vw, 42px); line-height: 1.2; font-weight: 500; letter-spacing: .04em; }
-.retreat-close { display: grid; place-items: center; width: 44px; height: 44px; color: var(--muted); background: transparent; border: 1px solid var(--line); }
-.retreat-close svg { width: 22px; height: 22px; }
-.retreat-close:hover { color: var(--accent); border-color: var(--accent); }
-.retreat-catalogue-controls { display: flex; justify-content: space-between; align-items: center; gap: 24px; padding: 0 40px 16px; border-bottom: 1px solid var(--line); }
-.retreat-catalogue-views { display: flex; gap: 20px; }
-.retreat-catalogue-views button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 3px 0; border: 0; border-bottom: 1px solid transparent; background: transparent; color: var(--muted); font-size: 16px; white-space: nowrap; }
-.retreat-catalogue-views button[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
-.retreat-catalogue-views button span { color: var(--muted); font-family: var(--font-sans); font-size: 13px; }
+.retreat-catalogue-cover { position: relative; min-width: 0; overflow: hidden; isolation: isolate; padding: 34px 28px; color: #29453b; background: #e3e6d3; border-right: 1px solid #acaf8b; }
+.retreat-catalogue-cover > img { position: absolute; z-index: -2; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; object-position: 66% center; opacity: .75; }
+.retreat-catalogue-cover::before { content: ''; position: absolute; z-index: -1; inset: 0; background: linear-gradient(180deg, #f4f1deef, #edf0df9c 36%, #e4ead677 62%, #e7ebddec); pointer-events: none; }
+.retreat-catalogue-cover::after { content: ''; position: absolute; inset: 12px; border: 1px solid #9d986f6b; pointer-events: none; }
+.retreat-cover-seal { display: grid; place-items: center; width: 34px; min-height: 64px; border: 1px solid #947449a3; font-size: 18px; line-height: 1.4; letter-spacing: .1em; writing-mode: vertical-rl; color: #84623c; }
+.retreat-cover-copy > .retreat-eyebrow { margin-top: 28px; font-size: 12px; letter-spacing: .08em; color: #53634d; }
+.retreat-cover-title { margin-top: 22px; white-space: pre-line; font-size: 32px; line-height: 1.8; letter-spacing: .16em; }
+html[lang="en"] .retreat-cover-title { font-size: 34px; line-height: 1.2; letter-spacing: 0; }
+.retreat-cover-note { margin-top: 26px; white-space: pre-line; font-size: 16px; line-height: 1.85; color: #53634d; }
+.retreat-cover-colophon { position: absolute; inset: auto 28px 32px; display: grid; gap: 7px; font-size: 17px; }
+.retreat-cover-colophon > span:last-child { font-size: 12px; font-family: var(--font-sans); color: #53634d; }
+.dark .retreat-catalogue-cover { color: #eae9ce; background: #294234; }
+.dark .retreat-catalogue-cover > img { opacity: .65; }
+.dark .retreat-catalogue-cover::before { background: linear-gradient(180deg, #203d30ec, #2c4735a8 38%, #203d3080 68%, #203d30ee); }
+.dark .retreat-cover-seal { color: #e5cea0; border-color: #c2ae7d; }
+.dark .retreat-cover-copy > .retreat-eyebrow, .dark .retreat-cover-note, .dark .retreat-cover-colophon > span:last-child { color: #d3d8bc; }
+.retreat-catalogue-folio { position: relative; min-width: 0; min-height: 0; display: grid; grid-template-rows: auto auto auto minmax(0,1fr) auto; background: radial-gradient(ellipse at 100% 0%, #b8c8a71c, transparent 50%), var(--surface); border-left: 5px double color-mix(in srgb, var(--retreat-gold) 27%, transparent); }
+.retreat-catalogue-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; padding: 30px 34px 24px; }
+.retreat-catalogue-heading .retreat-eyebrow { color: var(--retreat-gold); font-size: 12px; letter-spacing: .17em; }
+.retreat-catalogue-heading h2 { margin-top: 8px; font-size: clamp(28px, 3.1vw, 39px); line-height: 1.3; font-weight: 500; letter-spacing: .08em; }
+.retreat-catalogue-intro { margin-top: 10px; font-size: 16px; line-height: 1.5; color: var(--muted); }
+.retreat-close { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 76px; min-height: 44px; padding: 7px 9px; color: var(--muted); background: transparent; border: 1px solid var(--line); font-size: 14px; white-space: nowrap; }
+.retreat-close svg { width: 17px; height: 17px; }
+.retreat-close:hover { color: var(--accent); border-color: var(--retreat-gold); background: var(--soft); }
+.retreat-catalogue-controls { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-inline: 34px; padding-bottom: 17px; border-bottom: 3px double var(--line); }
+.retreat-catalogue-views { display: flex; gap: 7px; }
+.retreat-catalogue-views button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 7px 12px; border: 1px solid transparent; background: transparent; color: var(--muted); font-size: 16px; white-space: nowrap; }
+.retreat-catalogue-views button[aria-pressed="true"] { color: var(--ink); border-color: var(--line); background: var(--soft); box-shadow: inset 0 -2px var(--retreat-gold); }
+.retreat-catalogue-views button:hover { color: var(--accent); }
+.retreat-catalogue-views button span { font-family: var(--font-sans); font-size: 12px; opacity: .85; }
 .retreat-category-label { display: flex; align-items: center; gap: 10px; color: var(--muted); font-family: var(--font-sans); font-size: 14px; }
-.retreat-category-label select { min-height: 40px; max-width: 190px; padding: 6px 28px 6px 10px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); font: inherit; font-size: 14px; }
-.retreat-catalogue-status { padding: 12px 40px 0; font-family: var(--font-sans); font-size: 13px; color: var(--muted); }
-.retreat-catalogue-list { margin: 0; padding: 0 40px 14px; list-style: none; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-.retreat-catalogue-list li a { display: grid; grid-template-columns: minmax(0,1fr); align-items: center; gap: 18px; padding: 20px 0; border-bottom: 1px solid var(--line); color: var(--ink); }
+.retreat-category-label select { appearance: none; min-height: 44px; max-width: 170px; padding: 6px 30px 6px 11px; background-color: var(--surface); background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 15px) 19px, calc(100% - 11px) 19px; background-size: 4px 4px; background-repeat: no-repeat; border: 1px solid var(--line); border-radius: 0; color: var(--ink); font: inherit; font-size: 14px; }
+.retreat-catalogue-status { padding: 12px 34px 3px; font-family: var(--font-sans); font-size: 13px; color: var(--muted); }
+.retreat-catalogue-list { min-height: 0; margin: 0; padding: 0 34px 14px; list-style: none; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+.retreat-catalogue-list li a { display: grid; grid-template-columns: 42px minmax(0,1fr) auto; align-items: center; gap: 19px; padding: 20px 0; border-bottom: 1px solid var(--line); color: var(--ink); }
 .retreat-catalogue-list li a:hover { color: var(--accent); }
-.retreat-catalogue-list li a > svg { width: 18px; height: 18px; color: var(--muted); }
+.retreat-entry-book { position: relative; display: grid; place-items: center; width: 40px; height: 54px; border: 1px solid #728573; border-left: 4px double #9ca88e; background: linear-gradient(110deg, #476554, #365242); color: #f2e8c9; box-shadow: 2px 2px 0 #c1bba4, 3px 3px 0 #d1ccba; transform: rotate(-3deg); transition: transform 180ms; }
+.retreat-entry-book[data-binding="1"] { background: linear-gradient(110deg, #7a7255, #5b5c43); border-color: #a59c7d; }
+.retreat-entry-book[data-binding="2"] { background: linear-gradient(110deg, #536770, #3a5158); border-color: #8a9a94; }
+.retreat-entry-book > span { display: grid; place-items: center; min-width: 19px; min-height: 29px; padding: 2px; border: 1px solid #e7d6ab78; font-size: 16px; }
+html[lang="en"] .retreat-entry-book > span { font-size: 12px; }
+.retreat-catalogue-list a:is(:hover,:focus-visible) .retreat-entry-book { transform: rotate(0) translateY(-2px); }
 .retreat-entry-text { min-width: 0; }
-.retreat-entry-text strong { display: block; font-weight: 500; font-size: clamp(18px, 2vw, 23px); line-height: 1.5; overflow-wrap: anywhere; }
-.retreat-entry-text > span { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; color: var(--muted); font-family: var(--font-sans); font-size: 13px; }
-.retreat-catalogue-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 17px 40px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
-.retreat-catalogue-footer a { display: inline-flex; gap: 8px; align-items: center; min-height: 44px; color: var(--accent); font-size: 14px; }
-.retreat-catalogue-footer svg { width: 17px; height: 17px; }
+.retreat-entry-text strong { display: block; font-weight: 500; font-size: clamp(18px, 1.65vw, 22px); line-height: 1.55; overflow-wrap: anywhere; }
+.retreat-entry-text > span { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 7px; color: var(--muted); font-family: var(--font-sans); font-size: 13px; }
+.retreat-entry-open { color: var(--retreat-gold); font-size: 14px; }
+.retreat-catalogue-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 12px 34px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--soft) 55%, transparent); font-size: 13px; color: var(--muted); }
+.retreat-catalogue-footer a { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent); font-size: 14px; white-space: nowrap; text-decoration: underline; text-underline-offset: 5px; text-decoration-color: var(--line); }
 .retreat-noscript { padding: 18px 7vw; color: var(--mountain-ink); font-size: 14px; background: var(--retreat-paper); }
 
 /* Portrait layouts retain the full painting: object coordinates never drift
@@ -201,8 +235,10 @@ html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size:
   .retreat-introduction .retreat-eyebrow { font-size: 12px; letter-spacing: .16em; }
   .retreat-motto { margin-top: 12px; font-size: 18px; line-height: 1.4; }
   html[lang="en"].spatial-home .retreat-motto { font-size: 18px; line-height: 1.32; }
-  .retreat-enter { margin-top: 10px; min-height: 44px; font-size: 16px; gap: 42px; }
-  .retreat-invitation { display: none; }
+  .retreat-enter { margin-top: 20px; min-height: 70px; min-width: 228px; gap: 18px; padding: 10px 22px 10px 17px; }
+  .retreat-enter-copy strong { font-size: 19px; }
+  .retreat-enter-seal { width: 33px; height: 39px; font-size: 22px; }
+  .retreat-invitation { display: block; max-width: 36em; margin-top: 12px; font-size: 16px; line-height: 1.65; }
   .retreat-scene-note { display: none; }
   .retreat-spot { border-radius: 24%; }
   .retreat-spot-label { top: calc(100% + 1px); gap: 0; padding: 5px 8px; font-size: 14px; letter-spacing: .02em; background: #162118dc; }
@@ -210,7 +246,8 @@ html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size:
   .retreat-spot-name { display: none; }
   .retreat-spot-touch-name { display: inline; }
   .retreat-object-notebook .retreat-spot-label, .retreat-object-letter .retreat-spot-label { top: calc(100% - 12px); }
-  .retreat-door .retreat-spot-label { top: auto; bottom: calc(100% + 4px); gap: 7px; }
+  .retreat-door .retreat-spot-label { top: auto; bottom: calc(100% + 7px); gap: 7px; padding: 7px 11px; font-size: 14px; }
+  .retreat-door::before { inset: -4px; }
   .retreat-door .retreat-spot-label svg { width: 14px; height: 14px; }
   .retreat-study-heading { position: relative; inset: auto; order: -1; padding: 24px 7vw; text-shadow: none; color: var(--mountain-ink); }
   .retreat-study-heading .retreat-eyebrow { color: var(--mountain-muted); }
@@ -226,24 +263,55 @@ html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size:
   .retreat-touch-directory svg { width: 14px; height: 14px; color: #c7c8ac; }
   .retreat-colophon { flex-direction: column; align-items: flex-start; gap: 10px; padding: 20px 7vw; border-top: 1px solid var(--line); font-size: 13px; }
 }
+@media (min-width: 901px) and (max-width: 1100px) {
+  .retreat-scene-note { display: none; }
+  .retreat-invitation { max-width: 350px; }
+}
+@media (max-width: 1000px) {
+  .retreat-catalogue-cover { padding-inline: 23px; }
+  .retreat-cover-title { font-size: 27px; }
+  html[lang="en"] .retreat-cover-title { font-size: 29px; }
+  .retreat-catalogue-heading { padding-inline: 26px; }
+  .retreat-catalogue-controls { flex-wrap: wrap; gap: 10px; margin-inline: 26px; }
+  .retreat-catalogue-list, .retreat-catalogue-status, .retreat-catalogue-footer { padding-inline: 26px; }
+}
+@media (max-width: 760px) {
+  .retreat-catalogue[open] { grid-template-columns: minmax(0, 1fr); grid-template-rows: 86px minmax(0, 1fr); }
+  .retreat-catalogue-cover { padding: 17px 25px; border-right: 0; border-bottom: 1px solid #adab87; }
+  .retreat-catalogue-cover > img { object-position: center 49%; opacity: .6; }
+  .retreat-catalogue-cover::before { background: linear-gradient(90deg, #eff0dfe6, #e3ead67d 75%); }
+  .dark .retreat-catalogue-cover::before { background: linear-gradient(90deg, #203d30ed, #2c4735c7 75%); }
+  .retreat-catalogue-cover::after { inset: 7px; }
+  .retreat-cover-copy { display: grid; grid-template-columns: 32px minmax(0,1fr); column-gap: 14px; }
+  .retreat-cover-seal { grid-row: span 2; min-height: 50px; width: 29px; font-size: 16px; }
+  .retreat-cover-copy > .retreat-eyebrow { margin-top: 0; font-size: 12px; letter-spacing: .08em; }
+  .retreat-cover-title, html[lang="en"] .retreat-cover-title { margin-top: 2px; font-size: 20px; line-height: 1.5; white-space: normal; letter-spacing: .05em; }
+  .retreat-cover-note, .retreat-cover-colophon { display: none; }
+  .retreat-catalogue-folio { border-left: 0; }
+}
 @media (max-width: 600px) {
   .retreat-chrome .site-nav .brand { font-size: 21px; }
   .retreat-chrome .site-nav .nav-tools { gap: 0; }
   .retreat-chrome .site-nav .icon-button { width: 44px; }
   .retreat-catalogue { width: calc(100% - 20px); height: calc(100dvh - 24px); }
-  .retreat-catalogue-heading { padding: 22px 20px 16px; }
-  .retreat-catalogue-heading h2 { font-size: 30px; }
-  .retreat-catalogue-controls { flex-wrap: wrap; gap: 12px; padding: 0 20px 16px; }
-  .retreat-catalogue-views { gap: 20px; }
-  .retreat-catalogue-views button { font-size: 14px; }
+  .retreat-catalogue-heading { padding: 20px 18px 16px; gap: 12px; }
+  .retreat-catalogue-heading h2 { font-size: 27px; letter-spacing: .04em; }
+  .retreat-catalogue-intro { font-size: 16px; margin-top: 7px; }
+  .retreat-close { min-width: 67px; gap: 4px; padding-inline: 7px; }
+  .retreat-catalogue-controls { flex-wrap: wrap; gap: 10px; margin-inline: 18px; padding: 0 0 14px; }
+  .retreat-catalogue-views { gap: 6px; }
+  .retreat-catalogue-views button { padding-inline: 11px; font-size: 16px; }
   .retreat-category-label { width: 100%; }
   .retreat-category-label select { flex: 1; max-width: none; }
-  .retreat-catalogue-status { padding: 11px 20px 0; }
-  .retreat-catalogue-list { padding-inline: 20px; }
-  .retreat-catalogue-list li a { grid-template-columns: minmax(0,1fr); gap: 9px; padding-block: 17px; }
+  .retreat-catalogue-status { padding: 11px 18px 0; }
+  .retreat-catalogue-list { padding-inline: 18px; }
+  .retreat-catalogue-list li a { grid-template-columns: 35px minmax(0,1fr); gap: 14px; padding-block: 17px; }
+  .retreat-entry-book { width: 33px; height: 47px; }
+  .retreat-entry-book > span { min-width: 17px; min-height: 25px; font-size: 15px; }
+  .retreat-entry-open { display: none; }
   .retreat-entry-text strong { font-size: 18px; }
-  .retreat-catalogue-footer { padding: 12px 20px; gap: 8px; font-size: 13px; }
-  .retreat-catalogue-footer > span { max-width: 45%; }
+  .retreat-catalogue-footer { padding: 9px 18px; gap: 12px; font-size: 13px; }
+  .retreat-catalogue-footer > span { max-width: 55%; }
 }
 @media (max-width: 360px) {
   .retreat-introduction h1 { font-size: 40px; }

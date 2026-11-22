@@ -3,9 +3,7 @@ import { Icon } from 'astro-icon/components';
 import Layout from '../layouts/Layout.astro';
 import Navigation from './Navigation.astro';
 import Footer from './Footer.astro';
-import ReturnToStudy from './ReturnToStudy.astro';
-import SectionHero from './SectionHero.astro';
-import viaduct from '../assets/projects-viaduct.webp';
+import StudyPrelude from './StudyPrelude.astro';
 
 interface Props {
   isEn?: boolean;
@@ -19,24 +17,31 @@ const title = isEn ? 'Projects' : '项目';
   <div class="site-shell section-shell projects-shell">
     <Navigation />
     <main id="main-content" class="site-content">
-      <div class="section-wrap"><ReturnToStudy {isEn} /></div>
-      <SectionHero art={viaduct} title={title} class="projects-heading"
-        description={isEn ? 'Selected open-source repositories and academic experiments.' : '一些开源仓库。'} />
-      <div class="section-wrap">
-        <nav class="project-index" aria-label={isEn ? 'On this page' : '本页项目'}>
-          {entries.map(project => <a href={`#${project.id}`}>{project.name}<Icon name="mdi:arrow-down" /></a>)}
-        </nav>
+      <StudyPrelude {isEn} title={isEn ? 'At the workbench' : '手边造物'}
+        eyebrow={isEn ? 'The mountain study · Projects' : '山中书斋 · 项目'} seal="造"
+        description={isEn ? 'A few ideas made into things, gathered here on the desk.' : '把一些念头做成东西，留在案上，慢慢打磨。'} />
+      <div class="section-wrap workbench-collection">
+        <div class="workbench-directory">
+          <p>{isEn ? 'On the desk' : '案上目录'}</p>
+          <nav class="project-index" aria-label={isEn ? 'On this page' : '本页项目'}>
+            {entries.map(project => <a href={`#${project.id}`}>{project.name}</a>)}
+          </nav>
+        </div>
         <div class="project-list">
           {entries.map(project => (
-            <section id={project.id} class="project">
+            <section id={project.id} class="project project-folio" aria-labelledby={`${project.id}-title`}>
               <div class="project-summary">
+                <span class="project-glyph" aria-hidden="true"><Icon name="mdi:code-braces" /></span>
                 <div class="project-stack">{project.stack}</div>
-                <h2>{project.name}</h2>
+                <h2 id={`${project.id}-title`}>{project.name}</h2>
                 <p>{project.desc}</p>
                 <a class="project-repo text-link" href={project.github} target="_blank" rel="noopener noreferrer"
-                  aria-label={`GitHub · ${project.name}`}>GitHub<Icon name="mdi:arrow-top-right" /></a>
+                  aria-label={`GitHub · ${project.name}`}><Icon name="mdi:github" />{isEn ? 'View repository' : '查看仓库'}</a>
               </div>
-              <ul>{project.points.map(point => <li>{point}</li>)}</ul>
+              <div class="project-notes">
+                <p class="project-notes-label">{isEn ? 'Project notes' : '造物手记'}</p>
+                <ul>{project.points.map(point => <li>{point}</li>)}</ul>
+              </div>
             </section>
           ))}
         </div>

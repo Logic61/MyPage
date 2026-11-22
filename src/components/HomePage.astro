@@ -38,8 +38,8 @@ const objects = [
         <div class="retreat-image-frame">
           <div class="retreat-canvas" data-scene-canvas>
             <img class="retreat-painting" src={`${base}/scenes/mountain-gate.webp`} width="1672" height="941" alt={isEn ? 'A winding mountain path leads to a warmly lit study beneath the cliffs.' : '青绿山间，一条石径通向崖下亮着暖灯的书斋。'} fetchpriority="high" decoding="async" />
-            <a class="retreat-spot retreat-door" href="#study" data-enter-study style="--spot-x:83.2%;--spot-y:76.8%;--spot-width:7%;--spot-height:14.5%" aria-label={isEn ? 'Enter the mountain study' : '推门，进入书斋'}>
-              <span class="retreat-spot-label"><span>{isEn ? 'Enter' : '入室'}</span></span>
+            <a class="retreat-spot retreat-door" href="#study" data-enter-study style="--spot-x:83.2%;--spot-y:76.8%;--spot-width:7%;--spot-height:14.5%" aria-label={isEn ? 'Enter the mountain study' : '推门，进入书斋'} aria-describedby="retreat-enter-help">
+              <span class="retreat-spot-label"><span>{isEn ? 'Open the door' : '推门入室'}</span></span>
             </a>
           </div>
           <div class="retreat-atmosphere" aria-hidden="true"></div>
@@ -48,8 +48,8 @@ const objects = [
           <p class="retreat-eyebrow">{isEn ? 'Notes from a mountain study' : '山中书斋 · 随笔与札记'}</p>
           <h1 id="mountain-title" tabindex="-1">Shane Lorien</h1>
           <blockquote class="retreat-motto">{isEn ? <><span>What power has the light of night?</span><span>It dies. How is it born again?</span></> : <><span>夜光何德？</span><span>死则又育？</span></>}</blockquote>
-          <a class="retreat-enter" href="#study" data-enter-study><span>{isEn ? 'Come into the study' : '循灯入室'}</span></a>
-          <p class="retreat-invitation">{isEn ? 'A few books, a quiet desk, and things still taking shape.' : '有书可翻，有事可记。且进来坐坐。'}</p>
+          <a class="retreat-enter" href="#study" data-enter-study aria-describedby="retreat-enter-help"><span class="retreat-enter-seal" aria-hidden="true">入</span><span class="retreat-enter-copy"><strong>{isEn ? 'Enter the study' : '进入书斋'}</strong><small>{isEn ? 'Follow the lamplight' : '循灯入室'}</small></span></a>
+          <p class="retreat-invitation" id="retreat-enter-help">{isEn ? 'Click the button or mountain doorway to explore the books, projects, and a letter inside.' : '点击按钮或山中洞门。入内可翻书、看项目，也读一封小笺。'}</p>
         </header>
         <div class="retreat-scene-note" aria-hidden="true"><span>{isEn ? 'Beyond the clouds' : '云深处'}</span><span class="retreat-note-line"></span><span>{isEn ? 'A light is on' : '灯尚明'}</span></div>
       </section>
@@ -75,13 +75,20 @@ const objects = [
     </main>
     <footer class="retreat-colophon"><p>{isEn ? 'Mathematics, computer science, and reading.' : '数学、计算机，以及阅读中的思考。'}</p><div><span>© {new Date().getFullYear()} Shane Lorien</span><a href={`${prefix}/blog`}>{isEn ? 'All writing' : '全部文章'}</a></div></footer>
     <dialog id="study-catalogue" class="retreat-catalogue" aria-labelledby="catalogue-title" data-study-catalogue>
-      <header class="retreat-catalogue-heading"><div><p class="retreat-eyebrow">{isEn ? 'From the shelves' : '书斋藏书'}</p><h2 id="catalogue-title" tabindex="-1">{isEn ? 'Writing & notes' : '随笔与札记'}</h2></div><form method="dialog"><button class="retreat-close" type="submit" aria-label={isEn ? 'Close and return to the study' : '合上目录，回到书斋'}><Icon name="mdi:close" /></button></form></header>
-      <div class="retreat-catalogue-controls"><div class="retreat-catalogue-views" role="group" aria-label={isEn ? 'Choose a collection' : '选择文章范围'}><button type="button" data-catalogue-view="all" aria-pressed="true">{isEn ? 'All writing' : '全部文章'}<span>{posts.length}</span></button><button type="button" data-catalogue-view="recent" aria-pressed="false">{isEn ? 'Recent entries' : '案头近作'}<span>{recentCount}</span></button></div><label class="retreat-category-label" for="study-category"><span>{isEn ? 'Topic' : '分类'}</span><select id="study-category"><option value="">{isEn ? 'All topics' : '所有分类'}</option>{categories.map(category => <option value={category}>{category}</option>)}</select></label></div>
-      <p class="retreat-catalogue-status" role="status" data-catalogue-status>{isEn ? `${posts.length} entries` : `共 ${posts.length} 篇`}</p>
-      <ol class="retreat-catalogue-list" data-catalogue-list>{posts.map((post, index) => (
-        <li data-catalogue-post data-category={post.data.category || ''} data-recent={index < recentCount ? 'true' : 'false'}><a href={`${prefix}/blog/${postSlug(post)}`}><span class="retreat-entry-text"><strong>{post.data.title}</strong><span>{post.data.category}<time datetime={post.data.pubDate.toISOString()}>{postDate(post.data.pubDate, isEn)}</time></span></span></a></li>
-      ))}</ol>
-      <footer class="retreat-catalogue-footer"><span>{isEn ? 'Open a page; the room will be here when you return.' : '书斋在此，随时回来。'}</span><a href={`${prefix}/blog`}>{isEn ? 'Go to the full archive' : '前往文章目录'}</a></footer>
+      <aside class="retreat-catalogue-cover" aria-hidden="true">
+        <img src={`${base}/scenes/mountain-gate.webp`} width="1672" height="941" alt="" loading="lazy" decoding="async" />
+        <div class="retreat-cover-copy"><span class="retreat-cover-seal">藏书</span><p class="retreat-eyebrow">{isEn ? 'A mountain study' : '云深处 · 山中书斋'}</p><p class="retreat-cover-title">{isEn ? 'Between the pages' : '书页之间\n另有天地'}</p><p class="retreat-cover-note">{isEn ? 'Mathematics, computer science, and thoughts from reading.' : '数学、计算机\n与阅读中的思考。'}</p></div>
+        <div class="retreat-cover-colophon"><span>Shane Lorien</span><span>{isEn ? `${posts.length} collected entries` : `随笔与札记 · ${posts.length} 篇`}</span></div>
+      </aside>
+      <div class="retreat-catalogue-folio">
+        <header class="retreat-catalogue-heading"><div><p class="retreat-eyebrow">{isEn ? 'From the shelves' : '拂尘开卷'}</p><h2 id="catalogue-title" tabindex="-1">{isEn ? 'Writing & notes' : '随笔与札记'}</h2><p class="retreat-catalogue-intro">{isEn ? 'Choose a page. Let the mountains wait.' : '选一册，慢慢读。'}</p></div><form method="dialog"><button class="retreat-close" type="submit" aria-label={isEn ? 'Close and return to the study' : '合上目录，回到书斋'}><Icon name="mdi:close" /><span>{isEn ? 'Close' : '合卷'}</span></button></form></header>
+        <div class="retreat-catalogue-controls"><div class="retreat-catalogue-views" role="group" aria-label={isEn ? 'Choose a collection' : '选择文章范围'}><button type="button" data-catalogue-view="all" aria-pressed="true">{isEn ? 'All writing' : '全部文章'}<span>{posts.length}</span></button><button type="button" data-catalogue-view="recent" aria-pressed="false">{isEn ? 'Recent entries' : '案头近作'}<span>{recentCount}</span></button></div><label class="retreat-category-label" for="study-category"><span>{isEn ? 'Topic' : '分类'}</span><select id="study-category"><option value="">{isEn ? 'All topics' : '所有分类'}</option>{categories.map(category => <option value={category}>{category}</option>)}</select></label></div>
+        <p class="retreat-catalogue-status" role="status" data-catalogue-status>{isEn ? `${posts.length} entries` : `共 ${posts.length} 篇`}</p>
+        <ol class="retreat-catalogue-list" data-catalogue-list>{posts.map((post, index) => (
+          <li data-catalogue-post data-category={post.data.category || ''} data-recent={index < recentCount ? 'true' : 'false'}><a href={`${prefix}/blog/${postSlug(post)}`}><span class="retreat-entry-book" data-binding={index % 3} aria-hidden="true"><span>{isEn ? 'S.L.' : '札'}</span></span><span class="retreat-entry-text"><strong>{post.data.title}</strong><span>{post.data.category}<time datetime={post.data.pubDate.toISOString()}>{postDate(post.data.pubDate, isEn)}</time></span></span><span class="retreat-entry-open" aria-hidden="true">{isEn ? 'Read' : '阅'}</span></a></li>
+        ))}</ol>
+        <footer class="retreat-catalogue-footer"><span>{isEn ? 'The study will be here when you return.' : '书斋在此，随时回来。'}</span><a href={`${prefix}/blog`}>{isEn ? 'Full archive' : '前往藏书阁'}</a></footer>
+      </div>
     </dialog>
     <div class="retreat-transition" aria-hidden="true"></div>
   </div>

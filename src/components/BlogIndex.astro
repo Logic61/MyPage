@@ -2,12 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import Navigation from './Navigation.astro';
 import Footer from './Footer.astro';
-import ReturnToStudy from './ReturnToStudy.astro';
 import BlogCard from './BlogCard.astro';
-import ArchiveStudyPreview from './ArchiveStudyPreview.astro';
-import ArchiveIndexPreview from './ArchiveIndexPreview.astro';
-import SectionHero from './SectionHero.astro';
-import volumes from '../assets/archive-volumes.webp';
+import StudyPrelude from './StudyPrelude.astro';
 import { getBlogPosts } from '../utils/posts';
 import { Icon } from 'astro-icon/components';
 interface Props { isEn?: boolean; }
@@ -26,22 +22,21 @@ const entryCount = isEn ? `${posts.length} ${posts.length === 1 ? 'entry' : 'ent
 const topicCount = isEn ? `${categories.length} ${categories.length === 1 ? 'topic' : 'topics'}` : `${categories.length} 个分类`;
 ---
 <Layout title={`${isEn ? 'Blog' : '博客'} - Shane Lorien`} section="archive">
-  <ArchiveStudyPreview />
-  <ArchiveIndexPreview />
   <div class="site-shell section-shell archive-shell">
     <Navigation />
     <main id="main-content" class="site-content">
-      <div class="section-wrap archive-room-return"><ReturnToStudy {isEn} /></div>
-      <SectionHero art={volumes} title={isEn ? 'Blog' : '博客'} class="archive-heading"
-        description={isEn ? 'Mathematics, computer science, and reading.' : '数学、计算机，以及阅读中的思考。'}>
+      <StudyPrelude {isEn} title={isEn ? 'From the bookshelves' : '架上藏书'}
+        eyebrow={isEn ? 'Writing & notes' : '文章与札记'} seal="藏书"
+        description={isEn ? 'Pages on mathematics, computer science, and the things found along the way.' : '数学、计算机，以及阅读途中拾得的思考。'}>
         {posts.length > 0 && <p class="archive-counts">{entryCount} <span>·</span> {topicCount}</p>}
-      </SectionHero>
+      </StudyPrelude>
       <div class="blog-layout section-wrap">
         <nav class="category-filter" id="category-filter" aria-label={isEn ? 'Filter by category' : '按分类筛选文章'}>
-          <h2 class="catalogue-only catalogue-title">{isEn ? 'Contents' : '分卷目录'}</h2>
-          <button class="category-btn" type="button" data-target="all" aria-pressed="true"><span class="catalogue-only catalogue-number" aria-hidden="true">00</span><span>{isEn ? 'All' : '全部'}</span> <span class="topic-count">{posts.length}</span></button>
-          {categories.map((category, i) => (
-            <button class="category-btn" type="button" data-target={category} aria-pressed="false"><span class="catalogue-only catalogue-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><span>{category}</span><span class="catalogue-only topic-count">{categoryCounts.get(category)}</span></button>
+          <h2 class="catalogue-only catalogue-title">{isEn ? 'Browse the shelves' : '分卷寻书'}</h2>
+          <p class="catalogue-shelf-note">{isEn ? 'Choose a subject. Open a page.' : '循类而入，随意翻阅。'}</p>
+          <button class="category-btn" type="button" data-target="all" aria-pressed="true"><span>{isEn ? 'All writing' : '全部文章'}</span> <span class="topic-count">{posts.length}</span></button>
+          {categories.map(category => (
+            <button class="category-btn" type="button" data-target={category} aria-pressed="false"><span>{category}</span><span class="catalogue-only topic-count">{categoryCounts.get(category)}</span></button>
           ))}
         </nav>
         <label class="catalogue-only catalogue-picker" for="catalogue-select">
@@ -76,7 +71,6 @@ const topicCount = isEn ? `${categories.length} ${categories.length === 1 ? 'top
   </div>
 </Layout>
 <style>
-  .archive-room-return { padding-bottom: 12px; }
   .blog-card-list { display: grid; gap: 14px; }
   .archive-pagination[hidden] { display: none; }
   .archive-pagination { gap: clamp(6px, 2vw, 18px); }
