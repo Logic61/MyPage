@@ -4,7 +4,7 @@ import Navigation from './Navigation.astro';
 import Footer from './Footer.astro';
 import TableOfContents from './TableOfContents.astro';
 import StudyPrelude from './StudyPrelude.astro';
-import { postDate, postDescription, type BlogPostEntry } from '../utils/posts';
+import { getBlogPosts, postDate, postDescription, postSlug, type BlogPostEntry } from '../utils/posts';
 import { Icon } from 'astro-icon/components';
 interface Props {
   post: BlogPostEntry;
@@ -15,6 +15,13 @@ interface Props {
 const { post, headings, languagePath, isEn = false } = Astro.props;
 const directory = headings.filter(heading => heading.depth <= 3);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const archiveHref = base + (isEn ? '/en' : '') + '/blog';
+// Match the newest-first ordering in the blog archive.
+const posts = (await getBlogPosts(isEn))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const postIndex = posts.findIndex(candidate => candidate.id === post.id && candidate.collection === post.collection);
+const olderPost = postIndex >= 0 ? posts[postIndex + 1] : undefined;
+const newerPost = postIndex > 0 ? posts[postIndex - 1] : undefined;
 ---
 <Layout title={`${post.data.title} - Shane Lorien`} description={postDescription(post) || undefined} section="article">
   <div class="site-shell section-shell article-shell">
@@ -25,7 +32,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       <div class:list={['reading-grid', { 'reading-grid--single': directory.length === 0 }]}>
         <article class="article">
           <nav class="article-return-links" aria-label={isEn ? 'Return links' : '返回导航'}>
-            <a class="back-link" href={`${base}${isEn ? '/en' : ''}/blog`}>{isEn ? 'Back to blog' : '返回博客'}</a>
+            <a class="back-link" href={archiveHref}><Icon name="mdi:arrow-left" />{isEn ? 'Back to blog list' : '返回博客列表'}</a>
           </nav>
           <header class="article-header">
             <div class="article-tags">
@@ -45,6 +52,30 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
             </details>
           )}
           <div class="prose article-body"><slot /></div>
+          <footer class="article-end">
+            {(olderPost || newerPost) && (
+              <>
+                <h2 class="article-end-title">{isEn ? 'Continue reading' : '继续阅读'}</h2>
+                <nav class="article-neighbors" aria-label={isEn ? 'Previous and next articles' : '上一篇与下一篇文章'}>
+                  {olderPost && (
+                    <a class="article-neighbor article-neighbor--older" href={archiveHref + '/' + postSlug(olderPost)}>
+                      <span class="article-neighbor-direction"><Icon name="mdi:arrow-left" />{isEn ? 'Previous article' : '上一篇文章'}</span>
+                      <strong>{olderPost.data.title}</strong>
+                      <time datetime={olderPost.data.pubDate.toISOString()}>{postDate(olderPost.data.pubDate, isEn)}</time>
+                    </a>
+                  )}
+                  {newerPost && (
+                    <a class="article-neighbor article-neighbor--newer" href={archiveHref + '/' + postSlug(newerPost)}>
+                      <span class="article-neighbor-direction">{isEn ? 'Next article' : '下一篇文章'}<Icon name="mdi:arrow-right" /></span>
+                      <strong>{newerPost.data.title}</strong>
+                      <time datetime={newerPost.data.pubDate.toISOString()}>{postDate(newerPost.data.pubDate, isEn)}</time>
+                    </a>
+                  )}
+                </nav>
+              </>
+            )}
+            <a class="article-back-list" href={archiveHref}><Icon name="mdi:arrow-left" />{isEn ? 'Back to all posts' : '返回博客列表'}</a>
+          </footer>
         </article>
         {directory.length > 0 && (
           <aside class="toc">
@@ -60,8 +91,27 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 </Layout>
 <style>
   .article-return-links { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; margin-bottom: 24px; }
-  .article-return-links .back-link { margin: 0; min-height: 44px; }
-  @media print { .article-return-links { display: none; } }
+  .article-return-links .back-link { display: inline-flex; align-items: center; gap: 9px; margin: 0; min-height: 44px; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 5px; }
+  .article-return-links .back-link svg { width: 18px; height: 18px; flex: none; }
+  .article-end { margin-top: clamp(3rem, 6vw, 5rem); padding-top: 1.7rem; border-top: 1px solid var(--line); }
+  .article-end-title { margin: 0 0 1rem; color: var(--ink); font-family: var(--font-serif); font-size: clamp(1.3rem, 2vw, 1.65rem); font-weight: 500; }
+  .article-neighbors { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  .article-neighbor { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; min-width: 0; min-height: 148px; padding: 1.25rem; border: 1px solid var(--line); color: var(--ink); background: color-mix(in srgb, var(--soft) 32%, var(--surface)); text-decoration: none; transition: border-color 160ms ease, background-color 160ms ease; }
+  .article-neighbor:hover { border-color: var(--study-gold, var(--accent)); background: var(--soft); }
+  .article-neighbor-direction { display: inline-flex; align-items: center; gap: .45rem; color: var(--accent); font-family: var(--font-serif); font-size: .95rem; }
+  .article-neighbor-direction svg { width: 16px; height: 16px; flex: none; }
+  .article-neighbor strong { font-family: var(--font-serif); font-size: clamp(1.05rem, 1.7vw, 1.28rem); font-weight: 500; line-height: 1.55; overflow-wrap: anywhere; }
+  .article-neighbor time { margin-top: auto; color: var(--muted); font-family: var(--font-sans); font-size: .78rem; }
+  .article-neighbor--newer { grid-column: 2; align-items: flex-end; text-align: right; }
+  .article-back-list { display: inline-flex; align-items: center; gap: .6rem; min-height: 44px; margin-top: 1.35rem; color: var(--accent); font-family: var(--font-serif); font-size: 1rem; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 5px; }
+  .article-back-list svg { width: 18px; height: 18px; }
+  .article-back-list:hover, .article-return-links .back-link:hover { text-decoration-color: currentColor; }
+  @media (max-width: 600px) {
+    .article-neighbors { grid-template-columns: minmax(0, 1fr); }
+    .article-neighbor { min-height: 125px; }
+    .article-neighbor--newer { grid-column: auto; align-items: flex-start; text-align: left; }
+  }
+  @media print { .article-return-links, .article-end { display: none; } }
 </style>
 <script>
   const back = document.getElementById('back-to-top')!;
