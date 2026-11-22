@@ -1,0 +1,111 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getBlogPosts, postDate, postDescription, postSlug } from '../utils/posts';
+import '../styles/mountain-world.css';
+
+interface Props { isEn?: boolean; }
+const { isEn = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const prefix = `${base}${isEn ? '/en' : ''}`;
+const posts = (await getBlogPosts(isEn))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .map(post => ({
+    title: post.data.title,
+    href: `${prefix}/blog/${postSlug(post)}`,
+    category: post.data.category || (isEn ? 'Notes' : '手记'),
+    date: postDate(post.data.pubDate, isEn),
+    description: postDescription(post),
+  }));
+const categories = [...new Set(posts.map(post => post.category))];
+const config = JSON.stringify({ isEn, prefix, base, posts }).replace(/</g, '\\u003c');
+const languageHref = `${base}${isEn ? '' : '/en'}/`;
+const destinations = [
+  { id: 'books', title: isEn ? 'Bookshelf' : '藏书架', subtitle: isEn ? 'All writing' : '文章与分类' },
+  { id: 'latest', title: isEn ? 'Writing desk' : '案头手记', subtitle: isEn ? 'Recent writing' : '最近更新' },
+  { id: 'projects', title: isEn ? 'Workbench' : '工作案', subtitle: isEn ? 'Projects' : '作品与实践' },
+  { id: 'about', title: isEn ? 'A letter' : '一纸信笺', subtitle: isEn ? 'About & CV' : '关于与简历' },
+  { id: 'bench', title: isEn ? 'Cliffside bench' : '临崖小坐', subtitle: isEn ? 'Stay a while' : '看看远山' },
+];
+---
+
+<Layout title={isEn ? 'A mountain study · Shane Lorien' : '山中书斋 · Shane Lorien'} section="home" spatial>
+  <div class="mountain-world" data-mountain-world data-state="loading" data-language={isEn ? 'en' : 'zh'}>
+    <main id="main-content" class="mw-stage" tabindex="-1" aria-label={isEn ? 'Explore the mountain study' : '探索山中书斋'}>
+      <canvas id="mountain-canvas" tabindex="0" aria-label={isEn ? 'A three-dimensional mountain study. Move with WASD or click the ground. Drag to look around. Press E near an object to interact.' : '三维山中书斋。WASD 或点击地面行走，拖动调整视角，靠近物件后按 E 交互。'}></canvas>
+      <div class="mw-vignette" aria-hidden="true"></div>
+    </main>
+
+    <header class="mw-header">
+      <a class="mw-brand" href={`${prefix}/`} aria-label={isEn ? 'Mountain study · home' : '山中书斋 · 首页'}>
+        <span class="mw-seal" aria-hidden="true">山<br />居</span>
+        <span class="mw-brand-type"><strong>{isEn ? 'A mountain study' : '山中书斋'}</strong><span>SHANE LORIEN</span></span>
+      </a>
+      <nav class="mw-tools" aria-label={isEn ? 'Study controls' : '书斋操作'}>
+        <a href={`${prefix}/blog`} class="mw-directory-button" data-world-action="directory"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5h14M5 12h14M5 19h14" /></svg><span>{isEn ? 'Directory' : '目录'}</span></a>
+        <button type="button" class="mw-tool-button" data-world-action="sound" aria-label={isEn ? 'Turn ambient sound on' : '开启环境声音'} aria-pressed="false" disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path class="mw-sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" /><path class="mw-sound-cross" d="m16 9 5 6m0-6-5 6" /></svg><span class="mw-sr-only" data-sound-label>{isEn ? 'Sound off' : '声音关闭'}</span></button>
+        <button type="button" class="mw-tool-button" data-world-action="reset" aria-label={isEn ? 'Reset the camera' : '重置镜头'} disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></svg></button>
+        <a class="mw-language" href={languageHref} lang={isEn ? 'zh-CN' : 'en'} aria-label={isEn ? '中文版本' : 'English version'}>{isEn ? '中' : 'EN'}</a>
+      </nav>
+    </header>
+
+    <div class="mw-loading" data-world-loading role="status">
+      <span class="mw-loading-orbit" aria-hidden="true"></span>
+      <p>{isEn ? 'A light in the mountains' : '山中有灯'}</p>
+      <span>{isEn ? 'Opening the path to the study…' : '正在铺开石径与书斋…'}</span>
+    </div>
+
+    <section class="mw-fallback" data-world-fallback aria-labelledby="mw-fallback-title" hidden>
+      <img src={`${base}/scenes/mountain-gate.webp`} width="1672" height="941" alt="" loading="lazy" decoding="async" />
+      <div class="mw-fallback-copy">
+        <p class="mw-eyebrow">{isEn ? 'Beyond the clouds' : '云深处，灯尚明'}</p>
+        <h1 id="mw-fallback-title">{isEn ? 'Come in. Stay a while.' : '山中书斋'}</h1>
+        <p data-world-failure>{isEn ? 'The 3D scene is unavailable in this browser. The writing is still here.' : '此浏览器暂时无法展开三维场景，仍可直接翻阅这里的文字。'}</p>
+        <nav aria-label={isEn ? 'Read the site' : '直接阅读'}><a href={`${prefix}/blog`}>{isEn ? 'Read the blog' : '翻阅文章'}</a><a href={`${prefix}/projects`}>{isEn ? 'Projects' : '查看项目'}</a><a href={`${prefix}/cv`}>{isEn ? 'About & CV' : '关于我'}</a></nav>
+      </div>
+    </section>
+
+    <footer class="mw-hud">
+      <div class="mw-place"><span class="mw-place-overline">{isEn ? 'YOU ARE HERE' : '此刻所在'}</span><strong data-world-location>{isEn ? 'The mountain path' : '山径初至'}</strong><span class="mw-place-note">{isEn ? 'Take your time.' : '此间无事，随意走走。'}</span></div>
+      <div class="mw-hint" data-world-hint>
+        <p class="mw-hint-desktop"><span><kbd>W A S D</kbd> {isEn ? 'walk' : '行走'}</span><span>{isEn ? 'Click ground to move' : '点地行走'}</span><span>{isEn ? 'Drag to look' : '拖动视角'}</span><span><kbd>E</kbd> {isEn ? 'interact' : '交互'}</span></p>
+        <p class="mw-hint-touch">{isEn ? 'Tap the ground to walk · drag to look · tap a nearby object' : '点地行走 · 拖动视角 · 轻触附近物件'}</p>
+        <button type="button" data-world-action="dismiss-hint" aria-label={isEn ? 'Dismiss movement guide' : '收起操作提示'}>×</button>
+      </div>
+      <button type="button" class="mw-map-button" data-world-action="map"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="m5 9 8-3 10 3 8-3v22l-8 3-10-3-8 3V9Zm8-3v22m10-19v22" /><path d="m9 20 9-6 9 7" stroke-dasharray="2 3" /></svg><span>{isEn ? 'Around here' : '山居小引'}</span></button>
+    </footer>
+
+    <button type="button" class="mw-interact" data-world-interaction data-world-action="interact" aria-keyshortcuts="E" hidden><kbd>E</kbd><span data-world-interaction-label></span><span class="mw-interact-touch">{isEn ? 'Tap' : '轻触'}</span></button>
+    <div class="mw-toast" data-world-toast role="status" hidden></div>
+
+    <dialog class="mw-reader" data-world-reader aria-labelledby="mw-reader-title">
+      <div class="mw-reader-frame">
+        <header class="mw-reader-header">
+          <div><span class="mw-eyebrow" data-reader-eyebrow>{isEn ? 'FROM THE BOOKSHELF' : '书架之间'}</span><h2 id="mw-reader-title" tabindex="-1" data-reader-title>{isEn ? 'The collected pages' : '藏书与手记'}</h2></div>
+          <button type="button" class="mw-reader-close" data-world-action="close" aria-label={isEn ? 'Put the book down and return to the study' : '合上书，回到书斋'}><span>{isEn ? 'Return' : '回到书斋'}</span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg></button>
+        </header>
+        <div class="mw-reader-toolbar" data-reader-toolbar hidden><button type="button" data-world-action="back">{isEn ? 'Bookshelf' : '返回书目'}</button><a href={`${prefix}/blog`} data-reader-original target="_blank" rel="noopener noreferrer">{isEn ? 'Open original page' : '独立页面阅读'}</a></div>
+        <div class="mw-reader-scroll" data-reader-scroll>
+          <section data-reader-directory>
+            <div class="mw-wayfinding">
+              <p>{isEn ? 'A few places to pause' : '去一个地方，慢慢看看'}</p>
+              <div class="mw-destinations">{destinations.map(place => <button type="button" data-world-destination={place.id}><strong>{place.title}</strong><span>{place.subtitle}</span></button>)}</div>
+            </div>
+            <div class="mw-catalogue-controls">
+              <label class="mw-search"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><span class="mw-sr-only">{isEn ? 'Search the writing' : '搜索文章'}</span><input type="search" data-world-search placeholder={isEn ? 'Find a title or a thought…' : '找一篇文章，或一个念头…'} autocomplete="off" /></label>
+              <label class="mw-topic"><span class="mw-sr-only">{isEn ? 'Topic' : '分类'}</span><select data-world-category><option value="">{isEn ? 'All topics' : '全部分类'}</option>{categories.map(category => <option value={category}>{category}</option>)}</select><svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 8 5 5 5-5" /></svg></label>
+            </div>
+            <p class="mw-catalogue-count" data-world-count aria-live="polite">{isEn ? `${posts.length} pages` : `共 ${posts.length} 篇`}</p>
+            <ol class="mw-posts" data-world-posts>{posts.map((post, index) => <li data-world-post data-post-index={index} data-post-category={post.category}><a href={post.href} data-world-article><span class="mw-post-topic">{post.category}</span><h3>{post.title}</h3>{post.description && <p>{post.description}</p>}<time>{post.date}</time></a></li>)}</ol>
+            <p class="mw-empty" data-world-empty hidden>{isEn ? 'No matching pages. Try another word or topic.' : '暂时没有找到，换个词或分类试试。'}</p>
+          </section>
+          <div class="mw-article" data-reader-article hidden></div>
+          <p class="mw-reader-status" data-reader-status role="status" hidden></p>
+        </div>
+        <footer class="mw-reader-footer"><span>{isEn ? 'Your place in the study is waiting.' : '合上书，仍在来时的位置。'}</span><span>{isEn ? 'Esc to return' : 'Esc 返回'}</span></footer>
+      </div>
+    </dialog>
+    <script is:inline type="application/json" id="mountain-world-config" set:html={config}></script>
+  </div>
+  <noscript><style is:inline>.mountain-world .mw-loading,.mountain-world .mw-hud{display:none}.mountain-world .mw-fallback[hidden]{display:flex!important}.mountain-world .mw-stage{display:none}</style></noscript>
+  <script>import '../scripts/mountain-world/main';</script>
+</Layout>

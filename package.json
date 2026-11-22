@@ -9,7 +9,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check:world": "tsc -p tsconfig.world.json",
+    "test:world": "node --experimental-strip-types --test tests/world-navigation.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/eb-garamond": "^5.3.0",
@@ -19,10 +21,13 @@
     "astro-icon": "^1.1.5",
     "rehype-mathjax": "^7.1.0",
     "remark-math": "^6.0.0",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^4.2.2",
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "@iconify-json/mdi": "^1.2.3",
-    "@tailwindcss/typography": "^0.5.19"
+    "@tailwindcss/typography": "^0.5.19",
+    "@types/three": "^0.180.0",
+    "typescript": "^5.9.3"
   }
 }
