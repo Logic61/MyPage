@@ -232,3 +232,23 @@
   .retreat-catalogue-views { gap: 18px; }
 }
 @media print { .retreat-catalogue { display: none !important; } }
+
+.study-volumes {
+  grid-row: 3 / 5;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 22px var(--catalogue-gutter);
+}
+.study-volumes .notes-shelf { display: block; padding: 0; border: 0; }
+.study-volumes .shelf-intro { display: none; }
+.study-volumes .shelf-books {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.4rem clamp(1rem, 2.3vw, 2rem);
+  padding: 6px 12px 12px;
+  background: none;
+}
+.study-volumes .shelf-cover { max-width: 132px; }
+.retreat-catalogue-footer { grid-row: 5; }
+@media (max-width: 600px) {
+  .study-volumes .shelf-books { grid-template-columns: repeat(2, minmax(0,1fr)); }
+}

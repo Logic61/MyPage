@@ -1,14 +1,14 @@
 ---
 import { Icon } from 'astro-icon/components';
 import PostIllustration from './PostIllustration.astro';
-import { getBlogPosts, postDate, postSlug } from '../utils/posts';
+import NotesShelf from './NotesShelf.astro';
+import { postDate, postSlug, type BlogPostEntry } from '../utils/posts';
 import '../styles/study-catalogue.css';
 
-interface Props { isEn?: boolean; }
-const { isEn = false } = Astro.props;
+interface Props { posts: BlogPostEntry[]; isEn?: boolean; }
+const { posts, isEn = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const prefix = `${base}${isEn ? '/en' : ''}`;
-const posts = (await getBlogPosts(isEn)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 const categories = [...new Set(posts.map(post => post.data.category).filter((category): category is string => !!category))];
 const recentCount = Math.min(8, posts.length);
 ---
@@ -21,8 +21,7 @@ const recentCount = Math.min(8, posts.length);
   <div class="retreat-catalogue-folio">
     <header class="retreat-catalogue-heading">
       <div>
-        <h2 id="catalogue-title" tabindex="-1">{isEn ? 'Blog' : '博客'}</h2>
-        <p class="retreat-catalogue-intro">{isEn ? 'Mathematics, computer science, and thoughts from reading.' : '数学、计算机，以及阅读中的思考。'}</p>
+        <h2 id="catalogue-title" tabindex="-1">{isEn ? 'The bookcase' : '架上藏书'}</h2>
       </div>
       <form method="dialog">
         <button class="retreat-close" type="submit" aria-label={isEn ? 'Close and return to the study' : '关闭，回到书斋'}>
@@ -32,6 +31,7 @@ const recentCount = Math.min(8, posts.length);
     </header>
     <div class="retreat-catalogue-controls">
       <div class="retreat-catalogue-views" role="group" aria-label={isEn ? 'Choose posts' : '选择文章范围'}>
+        <button type="button" data-catalogue-view="shelf" aria-pressed="false">{isEn ? 'Volumes' : '分册'}</button>
         <button type="button" data-catalogue-view="all" aria-pressed="true">{isEn ? 'All posts' : '全部文章'}<span>{posts.length}</span></button>
         <button type="button" data-catalogue-view="recent" aria-pressed="false">{isEn ? 'Latest' : '最新文章'}<span>{recentCount}</span></button>
       </div>
@@ -43,10 +43,11 @@ const recentCount = Math.min(8, posts.length);
         </select>
       </label>
     </div>
+    <div class="study-volumes" data-study-volumes hidden><NotesShelf {posts} {isEn} /></div>
     <p class="retreat-catalogue-status" role="status" data-catalogue-status>{isEn ? `${posts.length} entries` : `共 ${posts.length} 篇`}</p>
     <ol class="retreat-catalogue-list" data-catalogue-list>
       {posts.map((post, index) => (
-        <li data-catalogue-post data-category={post.data.category || ''} data-recent={index < recentCount ? 'true' : 'false'}>
+        <li data-catalogue-post data-post-id={post.id} data-category={post.data.category || ''} data-recent={index < recentCount ? 'true' : 'false'}>
           <a href={`${prefix}/blog/${postSlug(post)}`}>
             <div class="retreat-entry-art"><PostIllustration {post} /></div>
             <span class="retreat-entry-text">

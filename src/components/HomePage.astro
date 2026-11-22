@@ -2,19 +2,38 @@
 import Layout from '../layouts/Layout.astro';
 import Navigation from './Navigation.astro';
 import StudyCatalogue from './StudyCatalogue.astro';
+import { getImage } from 'astro:assets';
+import { getBlogPosts, postSlug } from '../utils/posts';
+import coast from '../content/blog/游记/images/骑往海边/b81e02e8e51f4c257b4f11d38eafe00e.jpeg';
+import garden from '../content/blog/游记/images/园博苑7.8/651a7f495df17760f7656fa67b716670_720.jpg';
 import '../styles/retreat.css';
 interface Props { isEn?: boolean; }
 const { isEn = false } = Astro.props;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const prefix = `${base}${isEn ? '/en' : ''}`;
 const stateKey = `shane-retreat:${base}`;
+const posts = (await getBlogPosts(isEn)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const latest = posts[0];
+const articleUrl = (post: typeof latest) => `${prefix}/blog/${postSlug(post)}`;
+const photos = await Promise.all([
+  { id: '游记/骑往海边', image: coast },
+  { id: '游记/骑行与园博苑', image: garden },
+].flatMap(({id, image}) => {
+  const post = posts.find(entry => entry.id === id);
+  return post ? [getImage({src: image, width: 320, format: 'webp'}).then(({src}) => ({post, src}))] : [];
+}));
 // Image and links share the complete 1672 × 941 canvas on every screen.
 const objects = [
-  { id: 'books', x: 25.6, y: 55.2, w: 14.7, h: 16.5, label: isEn ? 'Blog' : '博客', detail: isEn ? 'Browse all posts' : '阅读全部文章', href: `${prefix}/blog`, view: 'all' },
-  { id: 'notebook', x: 48.1, y: 72.1, w: 29.6, h: 16.8, label: isEn ? 'Latest posts' : '最新文章', detail: isEn ? 'The latest eight posts' : '最近更新的八篇文章', href: `${prefix}/blog`, view: 'recent' },
-  { id: 'workbench', x: 83.8, y: 47.2, w: 11.3, h: 11.7, label: isEn ? 'Projects' : '项目', detail: isEn ? 'Code and experiments' : '代码与实践', href: `${prefix}/projects` },
-  { id: 'letter', x: 77.9, y: 77.4, w: 18.3, h: 11.4, label: isEn ? 'CV' : '简历', detail: isEn ? 'Education and experience' : '经历与研究兴趣', href: `${prefix}/cv` },
+  { id: 'books', x: 18, y: 62, w: 26, h: 27, label: isEn ? 'Bookshelf' : '藏书', detail: isEn ? 'Choose a volume' : '取一册，翻阅各章', href: `${prefix}/blog`, view: 'shelf' },
+  { id: 'notebook', x: 52, y: 75, w: 42, h: 23, label: isEn ? 'On the desk' : '案头手稿', detail: latest?.data.title ?? (isEn ? 'All posts' : '全部文章'), href: latest ? articleUrl(latest) : `${prefix}/blog` },
+  { id: 'workbench', x: 89, y: 46.5, w: 17, h: 16, label: isEn ? 'Projects' : '项目', detail: isEn ? 'Code and experiments' : '代码与实践', href: `${prefix}/projects` },
+  { id: 'letter', x: 85, y: 78, w: 16, h: 11, label: isEn ? 'CV' : '简历', detail: isEn ? 'Education and experience' : '经历与研究兴趣', href: `${prefix}/cv` },
 ];
+const spines = [
+  {id: 'discrete', y: 55.1, category: isEn ? 'Discrete Math' : '离散', title: isEn ? 'Discrete Math' : '离散数学'},
+  {id: 'algebra', y: 62.7, category: isEn ? 'Linear Algebra' : '线代', title: isEn ? 'Linear Algebra' : '线性代数'},
+  {id: 'poetry', y: 70.6, category: isEn ? 'Poetry' : '诗词', title: isEn ? 'Poetry' : '诗词'},
+].filter(book => posts.some(post => post.data.category === book.category));
 ---
 <Layout title={isEn ? 'Shane Lorien · A mountain study' : 'Shane Lorien · 山中书斋'} section="home" spatial>
   <script is:inline define:vars={{ stateKey }}>
@@ -32,44 +51,57 @@ const objects = [
       <section class="retreat-scene retreat-mountain" id="mountain" data-scene="mountain" aria-labelledby="mountain-title">
         <div class="retreat-image-frame">
           <div class="retreat-canvas" data-scene-canvas>
-            <img class="retreat-painting" src={`${base}/scenes/mountain-gate.webp`} width="1672" height="941" alt={isEn ? 'A winding mountain path leads to a warmly lit study beneath the cliffs.' : '青绿山间，一条石径通向崖下亮着暖灯的书斋。'} fetchpriority="high" decoding="async" />
-            <a class="retreat-spot retreat-door" href="#study" data-enter-study style="--spot-x:83.2%;--spot-y:76.8%;--spot-width:7%;--spot-height:14.5%" aria-label={isEn ? 'Enter the mountain study' : '推门，进入书斋'} aria-describedby="retreat-enter-help">
+            <img class="retreat-painting" src={`${base}/scenes/mountain-gate.webp`} width="1672" height="941" alt={isEn ? 'Under a crescent moon, stone steps lead to a lamplit door in the mountainside.' : '弯月照着远处的双峰，石阶尽头，崖壁上的一扇门亮着灯。'} fetchpriority="high" decoding="async" />
+            <a class="retreat-spot retreat-door" href="#study" data-enter-study style="--spot-x:76.5%;--spot-y:54.5%;--spot-width:14%;--spot-height:32%" aria-label={isEn ? 'Enter the mountain study' : '推门，进入书斋'}>
               <span class="retreat-door-cue">{isEn ? 'Enter the study' : '进入书斋'}</span>
             </a>
           </div>
           <div class="retreat-atmosphere" aria-hidden="true"></div>
         </div>
         <header class="retreat-introduction">
-          <p class="retreat-eyebrow">{isEn ? 'A mountain study' : '山中书斋'}</p>
-          <h1 id="mountain-title" tabindex="-1">Shane Lorien</h1>
+          <h1 id="mountain-title" tabindex="-1">{isEn ? 'Mountain study' : '山中书斋'}</h1>
           <blockquote class="retreat-motto">{isEn ? <><span>What power has the light of night?</span><span>It dies. How is it born again?</span></> : <><span>夜光何德？</span><span>死则又育？</span></>}</blockquote>
-          <a class="retreat-enter" href="#study" data-enter-study aria-describedby="retreat-enter-help"><span>{isEn ? 'Enter the study' : '进入书斋'}</span><svg viewBox="0 0 24 28" fill="none" aria-hidden="true"><path d="M5 24V10a7 7 0 0 1 14 0v14M3 24h18M9 24V11l7-2v15M12 17h.01" /></svg></a>
-          <p class="retreat-invitation" id="retreat-enter-help">{isEn ? 'Step inside to explore the blog, projects, and CV.' : '点击进入，探索博客、项目与简历。'}</p>
+          <a class="retreat-enter" href="#study" data-enter-study><span>{isEn ? 'Step inside' : '循灯入室'}</span></a>
         </header>
-        <div class="retreat-scene-note" aria-hidden="true"><span>{isEn ? 'Beyond the clouds' : '云深处'}</span><span class="retreat-note-line"></span><span>{isEn ? 'A light is on' : '灯尚明'}</span></div>
       </section>
       <section class="retreat-scene retreat-study" id="study" data-scene="study" aria-labelledby="study-title">
         <header class="retreat-study-heading"><h2 id="study-title" tabindex="-1">{isEn ? 'The study' : '书斋'}</h2><p>{isEn ? 'Choose an object to explore.' : '点击物件，随意翻阅。'}</p></header>
         <div class="retreat-image-frame">
           <div class="retreat-canvas" data-scene-canvas>
             <img class="retreat-painting" src={`${base}/scenes/cave-study.webp`} width="1672" height="941" alt={isEn ? 'Inside the study: stacked books on the left, an open notebook on the desk, a small workbench and a letter on the right, with mountains beyond the window.' : '书斋内景：左侧堆着书，桌上摊着笔记，右侧是工作台与信笺，窗外仍是远山。'} fetchpriority="low" decoding="async" />
+            <a class="retreat-window" href="#mountain" data-leave-study aria-label={isEn ? 'Look out over the mountains' : '循窗望山，回到山间'}><span>{isEn ? 'The mountains' : '望山'}</span></a>
+            {spines.map(book => (
+              <a class="study-spine" style={`--spine-y:${book.y}%`} href={`${prefix}/blog?category=${encodeURIComponent(book.category)}`} data-catalogue-open="shelf" data-volume-id={book.id}>{book.title}</a>
+            ))}
+            {photos.map(({post, src}, index) => (
+              <a class:list={['study-photo', `study-photo-${index}`]} href={articleUrl(post)} aria-label={post.data.title}>
+                <img src={src} alt="" width="160" height="104" decoding="async" />
+                <span>{post.data.title}</span>
+              </a>
+            ))}
             {objects.map(object => (
               <a class:list={['retreat-spot', `retreat-object-${object.id}`]} href={object.href} style={`--spot-x:${object.x}%;--spot-y:${object.y}%;--spot-width:${object.w}%;--spot-height:${object.h}%`} data-catalogue-open={object.view} data-study-destination={object.id} aria-label={`${object.label} · ${object.detail}`}>
-                <span class="retreat-object-title">{object.label}</span>
+                {object.id === 'notebook' ? (
+                  <span class="desk-leaves">
+                    <span class="desk-writing" data-desk-title>{object.detail}</span>
+                    <span class="desk-stamp" data-desk-label>{isEn ? 'Latest' : '近作'}</span>
+                  </span>
+                ) : <span class="retreat-object-title">{object.label}</span>}
               </a>
             ))}
           </div>
         </div>
         <nav class="retreat-touch-directory" aria-label={isEn ? 'Study navigation' : '书斋导航'}>
           {objects.map(object => (
-            <a href={object.href} data-catalogue-open={object.view} data-study-destination={object.id}><span><strong>{object.label}</strong><small>{object.detail}</small></span></a>
+            <a href={object.href} data-catalogue-open={object.view} data-study-destination={object.id}><span><strong data-desk-label={object.id === 'notebook' ? '' : undefined}>{object.label}</strong><small data-desk-title={object.id === 'notebook' ? '' : undefined}>{object.detail}</small></span></a>
           ))}
+          {photos.map(({ post, src }) => <a class="directory-photo" href={articleUrl(post)}><img src={src} alt="" width="60" height="46" loading="lazy" /><span>{post.data.title}</span></a>)}
         </nav>
-        <div class="retreat-study-bottom"><a class="retreat-outside" href="#mountain" data-leave-study>{isEn ? 'Back to the mountains' : '回到山间'}</a><p class="retreat-desktop-hint">{isEn ? 'Books for the blog. A workbench for projects. A letter for the CV.' : '书册里是博客，工作台上是项目，信笺里是简历。'}</p></div>
+        <div class="retreat-study-bottom"><a class="retreat-outside" href="#mountain" data-leave-study>{isEn ? 'Back to the mountains' : '回到山间'}</a><div class="desk-index"><a class="retreat-outside" data-catalogue-open="shelf" href={`${prefix}/blog`}>{isEn ? 'All volumes' : '全架藏书'}</a><a class="retreat-outside" data-catalogue-open="recent" href={`${prefix}/blog`}>{isEn ? 'Recent manuscripts' : '近期手稿'}</a></div></div>
       </section>
     </main>
     <footer class="retreat-colophon"><p>{isEn ? 'Mathematics, computer science, and reading.' : '数学、计算机，以及阅读中的思考。'}</p><div><span>© {new Date().getFullYear()} Shane Lorien</span><a href={`${prefix}/blog`}>{isEn ? 'All posts' : '全部文章'}</a></div></footer>
-    <StudyCatalogue {isEn} />
+    <StudyCatalogue {posts} {isEn} />
     <div class="retreat-transition" aria-hidden="true"></div>
   </div>
   <noscript><style is:inline>.retreat-chrome #search-btn,.retreat-chrome #theme-toggle{display:none}</style><p class="retreat-noscript">{isEn ? 'Follow the links in the study to read the blog, explore projects, or view the CV.' : '点击书斋中的物件，即可阅读博客、查看项目或简历。'}</p></noscript>

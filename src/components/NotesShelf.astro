@@ -20,10 +20,12 @@ const books = [
   { id: 'algebra', category: '线代', title: isEn ? 'Linear Algebra' : '线性代数' },
   { id: 'calculus', category: '高数', title: isEn ? 'Advanced Calculus' : '高等数学' },
   { id: 'travel', category: '游记', title: isEn ? 'Travel Notes' : '游记' },
+  { id: 'poetry', category: '诗词', title: isEn ? 'Poetry' : '诗词' },
+  { id: 'essays', category: '随笔', title: isEn ? 'Essays' : '随笔' },
 ].map(book => {
   const category = isEn ? book.title : book.category;
   const chapters = posts.filter(post => post.data.category === category).sort((a, b) => {
-    if (book.id === 'travel') return a.data.pubDate.valueOf() - b.data.pubDate.valueOf();
+    if (['travel', 'poetry', 'essays'].includes(book.id)) return a.data.pubDate.valueOf() - b.data.pubDate.valueOf();
     return chapterNumber(a.data.title) - chapterNumber(b.data.title) || a.data.title.localeCompare(b.data.title, isEn ? 'en' : 'zh-CN');
   });
   const spreads = Array.from({ length: Math.ceil(chapters.length / perSpread) }, (_, index) => {
@@ -51,6 +53,8 @@ const books = [
               <span class="cover-title">{book.title}</span>
               <span class="cover-plate" aria-hidden="true">
                 {book.id === 'travel' && <Image src={shoreline} width={384} format="webp" alt="" class="cover-photo" />}
+                {book.id === 'poetry' && <span class="poetry-moon"></span>}
+                {book.id === 'essays' && <span class="essay-lines"></span>}
               </span>
               <span class="cover-author" aria-hidden="true">Shane Lorien</span>
             </span>
@@ -161,6 +165,10 @@ const books = [
   .algebra { --book-ink: #843f30; --jacket: #eeded1; --print: #f4d9ba; --proportion: .71; }
   .calculus { --book-ink: #2e4664; --jacket: #e2e6e5; --print: #b6cee0; --proportion: .77; }
   .travel { --book-ink: #66543a; --jacket: #eee2c7; --proportion: .75; }
+  .poetry { --book-ink: #3e4565; --jacket: #e1dfec; }
+  .essays { --book-ink: #794b45; --jacket: #ecdccd; }
+  .poetry-moon { position: absolute; top: 17%; right: 16%; width: 38%; aspect-ratio: 1; border-radius: 50%; background: #e6d5ac; }
+  .essay-lines { position: absolute; inset: 20% 17%; transform: rotate(-8deg); background: repeating-linear-gradient(0deg, transparent 0 15%, #e4cba8 16% 18%); }
   .shelf-cover { display: block; width: min(100%, 164px); margin-inline: auto; color: var(--ink); container-type: inline-size; }
   .cover-face {
     position: relative;

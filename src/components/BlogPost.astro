@@ -44,7 +44,7 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
               <TableOfContents headings={directory} isEn={isEn} />
             </details>
           )}
-          <div class="prose article-body"><slot /></div>
+          <div class="prose article-body" data-reading-id={post.id}><slot /></div>
         </article>
         {directory.length > 0 && (
           <aside class="toc">
@@ -55,18 +55,28 @@ const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       </div>
     </main>
     <Footer />
+    <a class="reading-leave" href={`${base}${isEn ? '/en' : ''}/#study`} hidden>{isEn ? 'Back to the study' : '回到书斋'}</a>
     <button id="back-to-top" class="icon-button back-to-top" hidden aria-label={isEn ? 'Back to top' : '返回顶部'}><Icon name="mdi:arrow-up" /></button>
   </div>
 </Layout>
 <style>
   .article-return-links { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; margin-bottom: 24px; }
   .article-return-links .back-link { margin: 0; min-height: 44px; }
+  .reading-leave { position: fixed; right: 78px; bottom: 24px; z-index: 20; display: grid; place-items: center; min-height: 44px; padding-inline: 14px; border: 1px solid var(--line); border-radius: 30px; background: var(--surface); color: var(--text); font-size: .82rem; }
+  .reading-leave[hidden] { display: none; }
+  @media print { .reading-leave { display: none; } }
   @media print { .article-return-links { display: none; } }
 </style>
 <script>
+  import { keepPlace } from '../scripts/study-bookmark';
+  const articleBody = document.querySelector<HTMLElement>('[data-reading-id]');
+  if (articleBody) keepPlace(articleBody);
   const back = document.getElementById('back-to-top')!;
   const sentinel = document.getElementById('top-sentinel')!;
-  const observer = new IntersectionObserver(([entry]) => { back.hidden = entry.isIntersecting; }, { rootMargin: '300px 0px 0px 0px' });
+  const leave = document.querySelector<HTMLAnchorElement>('.reading-leave')!;
+  const observer = new IntersectionObserver(([entry]) => {
+    back.hidden = leave.hidden = entry.isIntersecting;
+  }, { rootMargin: '300px 0px 0px 0px' });
   observer.observe(sentinel);
   back.addEventListener('click', () => window.scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }));
   const links = Array.from(document.querySelectorAll<HTMLAnchorElement>('.toc-links a'));

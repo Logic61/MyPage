@@ -1,5 +1,6 @@
+import { readBookmark } from './study-bookmark';
 type RetreatScene = 'mountain' | 'study';
-type CatalogueView = 'all' | 'recent';
+type CatalogueView = 'shelf' | 'all' | 'recent';
 
 const ordinaryClick = (event: MouseEvent) => event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
 
@@ -17,6 +18,7 @@ function mountRetreat(host: HTMLElement) {
   const entries = [...catalogue.querySelectorAll<HTMLElement>('[data-catalogue-post]')];
   const category = catalogue.querySelector<HTMLSelectElement>('#study-category')!;
   const status = catalogue.querySelector<HTMLElement>('[data-catalogue-status]')!;
+  const volumes = catalogue.querySelector<HTMLElement>('[data-study-volumes]')!;
   const views = [...catalogue.querySelectorAll<HTMLButtonElement>('[data-catalogue-view]')];
   let current: RetreatScene = root.dataset.retreatScene === 'study' ? 'study' : 'mountain';
   let view: CatalogueView = 'all';
@@ -65,8 +67,9 @@ function mountRetreat(host: HTMLElement) {
     };
     if (motion.matches) { finish(); return; }
     main.inert = true;
+    host.dataset.passage = scene === 'study' ? 'enter' : 'leave';
     host.setAttribute('data-switching', '');
-    transitionTimer = window.setTimeout(finish, 190);
+    transitionTimer = window.setTimeout(finish, 360);
   };
 
   host.querySelectorAll<HTMLAnchorElement>('[data-enter-study], [data-leave-study]').forEach(link => {
@@ -88,6 +91,7 @@ function mountRetreat(host: HTMLElement) {
     main.inert = false;
     main.removeAttribute('aria-busy');
     host.removeAttribute('data-switching');
+    catalogue.querySelector<HTMLDialogElement>('dialog[open]')?.close();
     if (catalogue.open) catalogue.close();
     renderScene(next);
   };
@@ -96,6 +100,10 @@ function mountRetreat(host: HTMLElement) {
   window.addEventListener('pageshow', event => { if (event.persisted) fromLocation(); });
 
   const renderCatalogue = () => {
+    const showShelf = view === 'shelf';
+    volumes.hidden = !showShelf;
+    catalogueList.hidden = status.hidden = showShelf;
+    category.closest('label')!.hidden = showShelf;
     let count = 0;
     entries.forEach(entry => {
       const visible = (view === 'all' || entry.dataset.recent === 'true') && (!category.value || entry.dataset.category === category.value);
@@ -115,16 +123,21 @@ function mountRetreat(host: HTMLElement) {
       if (!ordinaryClick(event)) return;
       event.preventDefault();
       opener = link;
-      view = link.dataset.catalogueOpen === 'recent' ? 'recent' : 'all';
+      view = (link.dataset.catalogueOpen as CatalogueView) || 'all';
       category.value = '';
       renderCatalogue();
       remember('study');
       catalogue.showModal();
       catalogueTitle.focus({ preventScroll: true });
+      if (link.dataset.volumeId) {
+        const cover = Array.from(volumes.querySelectorAll<HTMLAnchorElement>('[data-shelf-open]'))
+          .find(book => book.dataset.shelfOpen === link.dataset.volumeId);
+        if (cover) { cover.focus({preventScroll: true}); cover.click(); }
+      }
     });
   });
   views.forEach(button => button.addEventListener('click', () => {
-    view = button.dataset.catalogueView === 'recent' ? 'recent' : 'all';
+    view = button.dataset.catalogueView as CatalogueView;
     category.value = '';
     renderCatalogue();
   }));
@@ -140,10 +153,13 @@ function mountRetreat(host: HTMLElement) {
     if (opener?.isConnected && opener.getClientRects().length) opener.focus({ preventScroll: true });
   });
   catalogue.querySelectorAll<HTMLAnchorElement>('a[href]').forEach(link => link.addEventListener('click', event => {
-    if (ordinaryClick(event)) { remember('study'); catalogue.close(); }
+    if (ordinaryClick(event) && !link.hasAttribute('data-shelf-open')) { remember('study'); catalogue.close(); }
   }));
   document.addEventListener('keydown', event => {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && catalogue.open) catalogue.close();
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k' && catalogue.open) {
+      catalogue.querySelector<HTMLDialogElement>('dialog[open]')?.close();
+      catalogue.close();
+    }
   }, { capture: true });
 
   // Move the whole canvas, including its links. No object-fit/coordinate drift.
@@ -188,6 +204,27 @@ function mountRetreat(host: HTMLElement) {
     resetDrift();
   });
 
+  // The article list is the authority for titles and links, including translated slugs.
+  const manuscripts = [...host.querySelectorAll<HTMLAnchorElement>('[data-study-destination="notebook"]')];
+  const deskTitle = manuscripts[0]?.querySelector('[data-desk-title]')?.textContent || '';
+  const deskHref = manuscripts[0]?.href || '';
+  const updateDesk = () => {
+    const mark = readBookmark(document.documentElement.lang);
+    const item = entries.find(entry => entry.dataset.postId === mark?.id);
+    const article = item?.querySelector<HTMLAnchorElement>('a') || null;
+    const title = article?.querySelector('strong')?.textContent || deskTitle;
+    const label = article ? (isEn ? 'Resume' : '续读') : (isEn ? 'Latest' : '近作');
+    for (const manuscript of manuscripts) {
+      manuscript.href = article ? article.href + '#study-bookmark' : deskHref;
+      manuscript.toggleAttribute('data-bookmarked', !!article);
+      manuscript.setAttribute('aria-label', label + ' · ' + title);
+      manuscript.querySelector('[data-desk-title]')!.textContent = title;
+      manuscript.querySelector('[data-desk-label]')!.textContent = label;
+    }
+  };
+  updateDesk();
+  window.addEventListener('pageshow', updateDesk);
+  window.addEventListener('storage', updateDesk);
   renderScene(current);
   history.replaceState({ ...historyState(), retreatScene: current }, '', location.href);
   root.classList.add('retreat-js');

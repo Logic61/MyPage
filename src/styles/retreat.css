@@ -57,7 +57,7 @@ html.spatial-home.dark[data-section="home"] {
   background: linear-gradient(180deg, #101e19a3, transparent 22%, transparent 76%, #101c1680);
 }
 .retreat-mountain .retreat-image-frame::after {
-  background: none;
+  background: linear-gradient(180deg, #0d17268c, transparent 20%), linear-gradient(24deg, #0c172bcc, transparent 50%);
 }
 .dark .retreat-mountain .retreat-image-frame::after {
   background: linear-gradient(90deg, #0d231a72, #10251d19 48%, transparent 68%), linear-gradient(180deg, #1020199c, transparent 25%, transparent 75%, #17271d65);
@@ -82,12 +82,12 @@ html.spatial-home.dark[data-section="home"] {
 .retreat-chrome .site-nav .icon-button { color: var(--scene-ink); border-radius: 0; width: 44px; height: 44px; }
 .retreat-chrome .site-nav .icon-button:hover { background: #f6eed51c; }
 .retreat-chrome .site-nav .nav-tools { gap: 5px; }
-html.spatial-home:not([data-retreat-scene="study"]) .retreat-chrome .site-nav :is(.brand, .nav-links a, .icon-button) { color: var(--mountain-ink); }
+html.spatial-home:not([data-retreat-scene="study"]) .retreat-chrome .site-nav :is(.brand, .nav-links a, .icon-button) { color: #fff1d9; }
 html.spatial-home:not([data-retreat-scene="study"]) .retreat-chrome .site-nav .icon-button:hover { background: #42634b18; }
 .retreat-chrome .search-dialog { color: var(--ink); background: var(--surface); text-shadow: none; }
 .retreat-introduction {
-  position: absolute; z-index: 3; top: clamp(140px, 18vw, 240px); left: clamp(38px, 7.2vw, 142px);
-  width: min(600px, 48vw); color: var(--mountain-ink); text-shadow: none;
+  position: absolute; z-index: 3; bottom: 12%; left: clamp(38px, 7.2vw, 142px);
+  width: min(620px, 48vw); color: #fff0d9; text-shadow: 0 2px 18px #15203166;
 }
 .retreat-eyebrow { font-family: var(--font-sans); font-size: 12px; font-weight: 400; letter-spacing: .22em; line-height: 1.7; }
 .retreat-introduction > .retreat-eyebrow { color: var(--mountain-muted); }
@@ -104,7 +104,7 @@ html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size:
   transition: border-color 180ms, color 180ms;
 }
 .retreat-enter svg { width: 24px; height: 28px; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
-.retreat-enter:hover { color: var(--accent); border-bottom-color: currentColor; }
+.retreat-enter, .retreat-enter:hover { color: #fff0d9; border-bottom-color: #e3b67d; }
 .retreat-enter:focus-visible { outline: 2px solid var(--mountain-ink); outline-offset: 7px; }
 .retreat-invitation { max-width: 390px; margin-top: 14px; color: var(--mountain-muted); font-size: 16px; line-height: 1.8; letter-spacing: .03em; }
 .retreat-scene-note { position: absolute; left: clamp(38px, 7.2vw, 142px); bottom: 38px; display: flex; align-items: center; gap: 18px; font-size: 12px; letter-spacing: .16em; color: var(--mountain-muted); }
@@ -146,7 +146,7 @@ html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size:
 .retreat-door-cue::before { content: ''; position: absolute; left: 50%; bottom: 100%; height: 20px; width: 1px; background: linear-gradient(transparent, #f8e8be); }
 .retreat-door-cue::after { content: ''; position: absolute; bottom: 2px; inset-inline: 0; height: 1px; background: #efdeb7a8; }
 @keyframes retreat-door-light { from { opacity: .42; } to { opacity: .85; } }
-.retreat-study-heading { position: absolute; z-index: 3; top: 125px; left: clamp(38px, 6.2vw, 120px); text-shadow: 0 2px 18px #080e09c9; }
+.retreat-study-heading { position: absolute; z-index: 3; top: 17%; left: 23%; text-shadow: 0 2px 10px #0d121b; pointer-events: none; }
 .retreat-study-heading h2 { font-size: clamp(32px, 3vw, 46px); line-height: 1.2; font-weight: 400; letter-spacing: .18em; }
 .retreat-study-heading > p { margin-top: 13px; color: #e8e0cb; font-size: 16px; letter-spacing: .06em; }
 .retreat-study-bottom { position: absolute; z-index: 4; bottom: 30px; inset-inline: clamp(38px, 4.8vw, 92px); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
@@ -231,6 +231,104 @@ html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size:
 }
 @media (prefers-reduced-motion: reduce) and (max-width: 900px) {
   .retreat-canvas { transform: none; }
+}
+.retreat-door .retreat-door-cue { top: auto; bottom: -1.2rem; }
+.desk-index { display: flex; align-items: center; gap: 1.6rem; }
+.retreat-study-bottom .retreat-outside { text-shadow: 0 1px 6px #100d09; }
+.retreat .retreat-enter:focus-visible { outline-color: #ffe6b7; }
+.retreat[data-switching][data-passage="enter"] .retreat-mountain .retreat-image-frame {
+  transform-origin: 76% 55%; animation: retreat-approach 370ms ease-in forwards;
+}
+.retreat[data-switching][data-passage="leave"] .retreat-study .retreat-image-frame {
+  transform-origin: 58% 28%; animation: retreat-approach 370ms ease-in forwards;
+}
+@keyframes retreat-approach { to { transform: scale(1.13); } }
+.retreat-transition { transition-duration: 340ms; }
+.retreat-window {
+  position: absolute; z-index: 2; left: 45%; top: 18%; width: 26%; height: 24%;
+  display: grid; place-items: center; color: #fff2cf;
+}
+.retreat-window span {
+  opacity: 0; padding: .25em .7em; background: #182a38c9;
+  font-size: 1rem; letter-spacing: .12em;
+}
+.retreat-window:is(:focus-visible,:hover) span { opacity: 1; }
+.study-spine {
+  position: absolute; z-index: 4; left: 6%; width: 25%; top: var(--spine-y); height: 7%;
+  transform: translateY(-50%); display: flex; align-items: center; justify-content: center;
+  padding-left: 4.6%; box-sizing: border-box; color: #3b2c24;
+  font: 650 clamp(13px,1.25vw,22px)/1 var(--font-serif); letter-spacing: .08em;
+}
+.study-spine:is(:hover,:focus-visible) { color: #842d19; text-decoration: underline; text-underline-offset: .16em; }
+.retreat-object-books { display: none; }
+html[lang="en"] .study-spine { font-size: clamp(12px,1.03vw,18px); letter-spacing: -.02em; }
+.desk-leaves {
+  position: absolute; inset: 0; transform: perspective(560px) rotateX(19deg);
+  display: grid; grid-template-columns: 1fr 1fr; align-items: center; color: #564034;
+}
+.desk-writing {
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  max-width: 90%; padding-inline: 10% 4%; text-align: center; text-wrap: balance;
+  font: 600 clamp(15px,1.7vw,29px)/1.5 var(--font-serif); letter-spacing: .04em;
+}
+.desk-stamp {
+  justify-self: center; color: #8b3826; border: 1px solid currentColor; padding: .16em .35em;
+  font: 500 clamp(12px,.96vw,18px)/1.25 var(--font-serif); letter-spacing: .11em; transform: rotate(3deg);
+}
+.retreat-object-notebook[data-bookmarked]::after {
+  content: ''; position: absolute; left: 68%; top: 86%; width: 2.7%; height: 26%;
+  background: #903f2c; clip-path: polygon(0 0,100% 0,100% 100%,48% 77%,0 100%);
+  transform: rotate(-5deg);
+}
+.study-photo {
+  position: absolute; z-index: 3; left: 43%; bottom: 46.2%; width: 7.9%;
+  padding: .3% .3% .8%; background: #e5cfaa; color: #422f23;
+  transform: rotate(-7deg); transform-origin: bottom; box-shadow: 0 2px 5px #17130bac;
+}
+.study-photo-1 { left: 50.5%; bottom: 46%; transform: rotate(6deg); }
+.study-photo img { width: 100%; aspect-ratio: 1.6; object-fit: cover; filter: saturate(.7) sepia(.17); }
+.study-photo span {
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%) rotate(6deg);
+  white-space: nowrap; opacity: 0; color: #fff1dc; background: #281c15e8; padding: .2em .65em; font-size: .85rem;
+}
+.study-photo:is(:hover,:focus-visible) { z-index: 5; transform: rotate(0deg) translateY(-3px); }
+.study-photo:is(:hover,:focus-visible) span { opacity: 1; transform: translateX(-50%); }
+.retreat-object-workbench .retreat-object-title { top: 94%; font-size: clamp(13px,1.1vw,21px); transform: translate(-50%,-50%); }
+.retreat-object-letter .retreat-object-title { top: 70%; left: 22%; }
+.dark .desk-leaves { color: #35261d; }
+@media (max-width: 900px) {
+  .spatial-home:not([data-retreat-scene="study"]) .retreat-chrome { background: #1d2d3a; }
+  .retreat-mountain { height: clamp(440px, 78svh, 780px); overflow: hidden; background: #283341; }
+  .retreat-mountain .retreat-image-frame { position: absolute; inset: 0; height: 100%; aspect-ratio: auto; }
+  .retreat-mountain .retreat-canvas {
+    position: absolute; left: 50%; top: 50%; width: max(100%, 138.6svh); height: auto;
+    max-width: 1386px; min-width: 782px; transform: translate(-68%, -50%);
+  }
+  .retreat-mountain .retreat-image-frame::after { background: linear-gradient(0deg,#101d2be6,transparent 57%); }
+  .retreat-mountain .retreat-introduction { position: absolute; inset: auto 0 0; padding: 1.2rem 7vw 1.5rem; width: 100%; pointer-events: none; }
+  .retreat-mountain .retreat-enter { pointer-events: auto; }
+  .retreat-mountain .retreat-introduction h1 { font-size: clamp(40px,9vw,64px); }
+  .retreat-study-heading { padding: .8rem 7vw 1rem; }
+  .retreat-study-heading > p { margin-top: .2rem; }
+  .study-spine { display: none; }
+  .retreat-object-books { display: block; }
+  .retreat-object-books .retreat-object-title { left: 61%; top: 50%; color: #463325; text-shadow: none; border: 0; }
+  .retreat-study-bottom { gap: 1rem; flex-wrap: wrap; }
+  .retreat-study-bottom .retreat-outside { text-shadow: none; }
+  .retreat-window { min-height: 44px; }
+  .desk-writing { font-size: clamp(10px,2.5vw,17px); line-height: 1.25; padding-inline: 1%; }
+  .desk-stamp { font-size: clamp(9px,1.8vw,13px); }
+  .directory-photo { gap: .5rem; font-size: .95rem; }
+  .directory-photo img { width: 32%; aspect-ratio: 1.4; object-fit: cover; border: 2px solid #dbc8a9; }
+}
+@media (min-width: 600px) and (max-width: 900px) {
+  .retreat-mountain .retreat-canvas { transform: translate(-58%, -50%); }
+}
+@media (min-width: 901px) {
+  .retreat-study-heading { top: 30%; left: 19.5%; }
+  .retreat-study-heading h2 { font-size: clamp(20px,1.6vw,29px); writing-mode: vertical-rl; color: #f0d5a7; }
+  .retreat-study-heading > p { display: none; }
+  html[lang="en"] .retreat-study-heading h2 { writing-mode: horizontal-tb; letter-spacing: .02em; }
 }
 @media print {
   .retreat-chrome, .retreat-transition, .retreat-spot, .retreat-catalogue { display: none !important; }
