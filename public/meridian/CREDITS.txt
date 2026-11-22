@@ -1,0 +1,16 @@
+Meridian Observatory
+
+Original scene geometry, instrument models, engravings, book bindings and charts were authored for this project. The alpine panorama combines two generated ridgelines and an aerial valley plate in a full-sphere projection, with independent high-resolution charts for the summit and the valley floor. The vellum texture and high cirrus plate were also generated for the observatory. The valley mist uses a periodic procedural density field. The arrival image is a frame from the actual scene.
+
+The following Poly Haven assets are distributed under CC0. The surface maps were resized, color-graded and encoded as WebP for this scene.
+
+Concrete Floor Worn 001 — https://polyhaven.com/a/concrete_floor_worn_001
+Aerial Rocks 02 (blended into the limestone) — https://polyhaven.com/a/aerial_rocks_02
+Wood Table Worn — https://polyhaven.com/a/wood_table_worn
+Beige Wall 001 — https://polyhaven.com/a/beige_wall_001
+Green Metal Rust — https://polyhaven.com/a/green_metal_rust
+Spruit Sunrise (reflection lighting) — https://polyhaven.com/a/spruit_sunrise
+License information — https://polyhaven.com/license
+
+Terrace cobbles use Paving Stones 150 by ambientCG (CC0), resized and color-graded.
+https://ambientcg.com/view?id=PavingStones150

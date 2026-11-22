@@ -1,0 +1,104 @@
+---
+import MeridianFolio from './MeridianFolio.astro';
+import MeridianGlyph from './MeridianGlyph.astro';
+import '../styles/meridian.css';
+import '../styles/meridian-folio.css';
+
+interface Props { isEn?: boolean }
+const { isEn = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const prefix = base + (isEn ? '/en' : '');
+const t = (zh: string, en: string) => isEn ? en : zh;
+const places = [
+  {id:'blog', station:'shelf', object:t('藏书架','Bookcase'), label:t('博客','Blog')},
+  {id:'projects', station:'scope', object:t('折射望远镜','Refractor'), label:t('项目','Projects')},
+  {id:'cv', station:'desk', object:t('手稿桌','Writing desk'), label:t('简历','CV')}
+ ] as const;
+const title = t('子午观象台','Meridian Observatory');
+const qualityLevels=[
+  ['low',t('低','Low'),t('较低分辨率、简化云雾','Lower resolution and simpler clouds')],
+  ['medium',t('中','Medium'),t('标准分辨率与分层云雾','Standard resolution and layered clouds')],
+  ['high',t('高','High'),t('更清晰的目镜与精细阴影','Sharper optics and finer shadows')]
+];
+---
+<!doctype html>
+<html lang={isEn ? 'en' : 'zh-CN'}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#1d2420" />
+    <meta name="description" content={t('走进 Shane Lorien 的山中观象台，翻阅博客、项目与手稿。','Walk through Shane Lorien’s mountain observatory to find writing, projects and a CV.')} />
+    <title>{title} · Shane Lorien</title>
+    <link rel="icon" href={base+'/favicon.svg'} />
+    <link rel="preload" as="image" href={base+'/meridian/arrival.webp'} />
+  </head>
+  <body>
+    <main id="observatory" data-mode="arrival" data-assets={base+'/meridian/'} data-lang={isEn ? 'en':'zh'}>
+      <img id="arrival-photo" src={base+'/meridian/arrival.webp'} alt="" fetchpriority="high" />
+      <canvas id="world" tabindex="0" aria-label={t('可步行的三维观象台','Walkable three-dimensional observatory')}></canvas>
+      <div class="shade" aria-hidden="true"></div>
+      <header class="topline">
+        <div class="identity"><span class="windrose" aria-hidden="true">✧</span><span>Shane Lorien</span></div>
+        <nav aria-label={t('站点导航','Site navigation')}>
+          <a id="language" lang={isEn?'zh-CN':'en'} hreflang={isEn?'zh-CN':'en'} href={base+(isEn?'/':'/en/')}>{isEn?'中文':'EN'}</a>
+          <button id="open-settings" type="button" aria-haspopup="dialog" aria-controls="render-settings" aria-keyshortcuts="G" aria-label={t('画面设置 (G)','Graphics settings (G)')} title={t('画面设置 (G)','Graphics settings (G)')}>
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.35"><path d="M3 6h7m4 0h7M3 12h2m4 0h12M3 18h11m4 0h3"/><circle cx="12" cy="6" r="2"/><circle cx="7" cy="12" r="2"/><circle cx="16" cy="18" r="2"/></svg><span>{t('设置','Settings')}</span>
+          </button>
+          <button id="index" class="index-toggle" type="button" aria-haspopup="dialog">
+            <span class="fold-icon" aria-hidden="true"><i></i><i></i><i></i></span>{t('地图与目录','Map & index')}
+          </button>
+        </nav>
+      </header>
+      <section class="arrival" aria-labelledby="world-title">
+        <p class="overline"><span></span>{t('Meridian Observatory','A mountain study')}</p>
+        <h1 id="world-title">{isEn ? <>Meridian<br/>Observatory</> : '子午观象台'}</h1>
+        <div class="entry-actions">
+          <button type="button" id="enter"><i class="walk-mark" aria-hidden="true"></i><span>{t('开始漫游','Start walking')}</span></button>
+          <a href={prefix+'/blog/'} data-open-folio="blog">{t('直接读博客','Read the blog')}</a>
+        </div>
+        <p id="load-status" role="status"></p>
+      </section>
+      <nav class="scene-guides" aria-label={t('场景里的入口','Places in the observatory')}>
+        {places.map(p=><a class="scene-guide" href={prefix+'/'+p.id+'/'} data-station={p.station} data-open-folio={p.id}>
+          <span class="guide-direction" aria-hidden="true"></span><span class="guide-symbol"><MeridianGlyph name={p.id}/></span>
+          <span class="guide-caption"><strong>{p.label}</strong><small>{p.object}</small></span>
+        </a>)}
+      </nav>
+      <div class="hud" aria-hidden="true">
+        <div class="bearing"><span id="bearing-label">N</span><i></i><span id="bearing-number">000°</span></div>
+        <span class="reticle"></span>
+      </div>
+      <button type="button" id="interact" hidden><kbd>E</kbd><span></span></button>
+      <div id="walk-help">
+        <span class="desktop-help">{t('WASD 行走 · 鼠标环顾 · E 互动 · G 设置 · Esc 暂停','WASD move · Mouse look · E interact · G settings · Esc pause')}</span>
+        <span class="drag-help">{t('WASD 行走 · 按住左键环顾 · E 互动 · Esc 暂停','WASD move · Drag to look · E interact · Esc pause')}</span>
+        <span class="touch-help">{t('左手移动 · 右侧滑动环顾','Left thumb to move · Swipe right side to look')}</span>
+      </div>
+      <div id="joystick" role="presentation"><i></i></div>
+      <button id="pause-touch" type="button" aria-label={t('暂停','Pause')}>Ⅱ</button>
+      <div id="optics" hidden>
+        <div class="glass-mask" aria-hidden="true"></div><div class="crosshair" aria-hidden="true"></div>
+        <div class="optical-controls" role="group" aria-label={t('望远镜操作','Telescope controls')}>
+          <span class="optic-drag-hint">{t('按住拖动瞄准','Click and drag to aim')}</span>
+          <div class="optical-power" role="group" aria-label={t('目镜倍率','Eyepiece magnification')} title={t('滚轮或加减键变倍','Use the wheel or + / − to zoom')}><button type="button" data-power="3" aria-pressed="true" aria-keyshortcuts="-">3×</button><button type="button" data-power="5" aria-pressed="false" aria-keyshortcuts="+">5×</button></div>
+          <div class="optical-links">
+            <button type="button" id="optic-menu" aria-keyshortcuts="Tab"><kbd>Tab</kbd>{t('操作','Controls')}</button>
+            <button type="button" id="resume-optic">{t('继续观测','Resume aiming')}</button>
+            <a href={prefix+'/projects/'} data-open-folio="projects" aria-keyshortcuts="P"><kbd>P</kbd>{t('翻阅项目','Project folio')}</a>
+            <button type="button" id="leave-optic" aria-keyshortcuts="E Escape"><kbd>E</kbd>{t('离开目镜','Step back')}</button>
+          </div>
+        </div>
+      </div>
+      <MeridianFolio {isEn}/>
+      <dialog id="render-settings" aria-labelledby="settings-title">
+        <div class="settings-heading"><h2 id="settings-title">{t('画面设置','Graphics settings')}</h2><button id="close-settings" type="button" aria-label={t('关闭设置','Close settings')}>×</button></div>
+        <fieldset class="quality-options">
+          <legend>{t('渲染质量','Render quality')}</legend>
+          {qualityLevels.map(([value,label,description])=><label><input type="radio" name="render-quality" value={value} /><span class="quality-mark" aria-hidden="true"></span><strong>{label}</strong><span class="quality-note">{description}</span></label>)}
+        </fieldset>
+      </dialog>
+      <noscript><nav class="offline-links">{places.map(p=><a href={prefix+'/'+p.id}>{p.label}</a>)}</nav><style is:inline>#enter,#index,#open-settings{display:none!important}</style></noscript>
+    </main>
+    <script>import '../scripts/meridian/visit.js';</script>
+  </body>
+</html>
