@@ -1,0 +1,76 @@
+---
+import MeridianGlyph from './MeridianGlyph.astro';
+import {getBlogPosts, postSlug, postDate} from '../utils/posts';
+interface Props { isEn: boolean; }
+const {isEn}=Astro.props;
+const t=(zh:string,en:string)=>isEn?en:zh;
+const base=import.meta.env.BASE_URL.replace(/\/$/,'');
+const prefix=base+(isEn?'/en':'');
+const posts=(await getBlogPosts(isEn)).sort((a,b)=>b.data.pubDate.valueOf()-a.data.pubDate.valueOf());
+// Bind recent work from across the local catalogue, keeping both its titles
+// and its language in sync with the manuscripts in the reader.
+const boundIds=new Set<string>(),perSubject=new Map<string,number>();
+for(const {id,data} of posts){
+  const subject=data.category||'',count=perSubject.get(subject)||0;
+  if(count>=2)continue;
+  boundIds.add(id);perSubject.set(subject,count+1);
+  if(boundIds.size===24)break;
+}
+const categories=[...new Set(posts.map(p=>p.data.category).filter(Boolean))];
+const places=[
+  {id:'blog', station:'shelf',name:t('博客','Blog'),object:t('西侧 · 藏书架','West · Bookcase')},
+  {id:'projects',station:'scope',name:t('项目','Projects'),object:t('厅中 · 折射望远镜','Hall · Refractor')},
+  {id:'cv',station:'desk',name:t('简历','CV'),object:t('东侧 · 手稿桌','East · Writing desk')},
+] as const;
+---
+<dialog id="folio" aria-labelledby="folio-title" data-prefix={prefix} data-tab="blog">
+  <div class="parchment">
+    <div class="scroll-rod upper" aria-hidden="true"></div>
+    <div class="parchment-leaf">
+      <header class="folio-bar">
+        <nav aria-label={t('卷宗','Folio sections')}>
+          {places.map(p=><a href={prefix+'/'+p.id+'/'} data-section-link={p.id}><MeridianGlyph name={p.id}/><span>{p.name}</span></a>)}
+          <button type="button" data-section-link="map"><MeridianGlyph name="map"/><span>{t('地图','Map')}</span></button>
+        </nav>
+        <button type="button" id="close" aria-label={t('合卷，返回原处','Roll up and return')}><span>{t('收卷','Close')}</span><i aria-hidden="true">×</i></button>
+      </header>
+      <h2 id="folio-title" class="sr-only">{t('观象台卷宗','Observatory folio')}</h2>
+      <div class="manuscript" data-catalogue="closed">
+        <aside class="folio-catalogue" aria-label={t('藏书目录','Writing index')}>
+          <div class="catalogue-top"><h3>{t('藏书目录','Contents')}</h3><button type="button" id="hide-contents">{t('回到正文','Return to text')}</button></div>
+          <div class="catalogue-tools">
+            <input id="find-writing" type="search" placeholder={t('查找篇名','Find a title')} aria-label={t('查找篇名','Find a title')}/>
+            <select id="category" aria-label={t('文章分类','Filter by subject')}><option value="">{t('全部分类','All subjects')}</option>{categories.map(value=><option value={value}>{value}</option>)}</select>
+          </div>
+          <div class="catalogue-list">
+            {posts.map(p=><a href={prefix+'/blog/'+postSlug(p)+'/'} data-article data-bound={boundIds.has(p.id)?'':undefined} data-alias={isEn?prefix+'/blog/'+p.id+'/':undefined} data-category={p.data.category||''} data-date={postDate(p.data.pubDate,isEn)} data-author={p.data.author} data-slug={postSlug(p)}><span>{p.data.title}</span></a>)}
+            <p id="empty-catalogue" hidden>{t('没有找到匹配的文章。','No matching titles.')}</p>
+          </div>
+        </aside>
+        <div class="folio-text-side">
+          <button type="button" id="show-contents" aria-expanded="false">{t('选篇 · 藏书目录','Choose a text')}</button>
+          <div id="folio-reading" tabindex="0" role="region" aria-label={t('卷轴正文','Manuscript text')}>
+            <div id="folio-document">
+              <header class="document-title"><p id="rubric"></p><h2 id="reading-title"></h2><p id="byline"></p></header>
+              <div id="folio-body" class="scroll-prose"></div>
+              <nav id="reading-neighbours" aria-label={t('相邻文章','Adjacent articles')} hidden><button type="button" id="newer"></button><button type="button" id="older"></button></nav>
+            </div>
+            <section id="folio-map" hidden>
+              <header class="document-title"><h2>{t('观象台平面图','Plan of the observatory')}</h2></header>
+              <div class="map-layout">
+                <svg class="floorplan" viewBox="0 0 260 208" role="img" aria-label={t('北边是露台，金色标记为当前位置','Terrace to the north; the gold marker shows your position')}>
+                  <defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M0 6L6 0" stroke="currentColor" opacity=".17"/></pattern></defs>
+                  <g fill="none" stroke="currentColor"><path d="M49 30H211V165H49Z" fill="url(#hatch)"/><path d="M45 30V169H215V30M49 34H211M49 77h9m42 0h6m48 0h6m42 0h9" stroke-width="3"/><path d="M56 87h9v64h-9zM183 117h11v25h-11z"/><circle cx="144" cy="104" r="9"/><circle cx="130" cy="51" r="8"/><path d="M123 51h14m-7-7v14"/></g>
+                  <g class="map-labels"><text x="131" y="70">{t('露台','Terrace')}</text><text x="84" y="128">{t('博客','Blog')}</text><text x="144" y="127">{t('项目','Projects')}</text><text x="181" y="156">{t('简历','CV')}</text><text x="130" y="21">N</text></g>
+                  <g id="map-player" transform="translate(105 149)"><circle r="4"/><path d="M0-10l-3.5 6h7z"/></g>
+                </svg>
+                <div class="map-directory">{places.map(p=><div><a href={prefix+'/'+p.id+'/'} data-section-link={p.id}><MeridianGlyph name={p.id}/><span><strong>{p.name}</strong><small>{p.object}</small></span></a><button type="button" data-guide={p.station}>{t('指路','Guide me')}</button></div>)}</div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="scroll-rod lower" aria-hidden="true"></div>
+  </div>
+</dialog>
