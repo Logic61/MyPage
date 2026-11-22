@@ -1,7 +1,16 @@
 ---
-import { Image } from 'astro:assets';
-import landscape from '../assets/heritage-landscape.png';
+import { getImage } from 'astro:assets';
+import InkLandscape from './InkLandscape.astro';
+import landscape from '../assets/home-cloudscape.webp';
+import mist from '../assets/drifting-mist.webp';
+
+const portrait = await getImage({
+  src: landscape, width: 740, height: 888, fit: 'cover', position: 'right', format: 'webp', quality: 84,
+});
 ---
-<div class="page-landscape" aria-hidden="true">
-  <Image src={landscape} alt="" width={1440} height={1920} format="webp" quality={80} loading="eager" decoding="async" />
-</div>
+<InkLandscape mistSrc={mist.src}>
+  <picture class="home-cloudscape">
+    <source media="(max-width: 760px) and (orientation: portrait)" srcset={portrait.src} width="740" height="888" />
+    <img src={landscape.src} width={landscape.width} height={landscape.height} alt="" fetchpriority="high" decoding="async" />
+  </picture>
+</InkLandscape>

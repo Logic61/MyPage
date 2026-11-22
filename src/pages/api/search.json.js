@@ -1,14 +1,13 @@
-import { getCollection } from 'astro:content';
-import { postDescription } from '../../utils/posts';
+import { getBlogPosts, postDescription, postSlug } from '../../utils/posts';
 
-export const GET = async () => {
-  const posts = await getCollection('blog', ({ data }) => !data.draft);
+export const GET = async ({ url }) => {
+  const posts = await getBlogPosts(url.pathname.endsWith('/en/api/search.json'));
   
   const searchIndex = posts.map(post => ({
     title: post.data.title,
     description: postDescription(post),
     category: post.data.category || '',
-    slug: post.id,
+    slug: postSlug(post),
   }));
 
   return new Response(JSON.stringify(searchIndex), {

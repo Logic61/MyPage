@@ -1,0 +1,74 @@
+---
+import { getEntry } from 'astro:content';
+import type { BlogPostEntry } from '../utils/posts';
+import SpernerPrint from './SpernerPrint.astro';
+import { articleCardImage } from '../utils/blog-card-image';
+import { art, englishArtLabels } from '../utils/blog-card-art';
+
+interface Props { post: BlogPostEntry; }
+const { post } = Astro.props;
+const title = post.data.title.normalize('NFC');
+const source = post.collection === 'blogEn' ? await getEntry('blog', post.id) : post;
+const sourceTitle = source?.data.title.normalize('NFC') ?? title;
+const topic = sourceTitle.replace(/^笔记\d+\.\s*/u, '');
+const aliases = sourceTitle.includes('从λ-矩阵到') ? 'λ-矩阵'
+  : sourceTitle.includes('幂零变换') ? 'Jordan标准型'
+  : sourceTitle.includes('不变子空间') ? '线性变换 II'
+  : sourceTitle.includes('线性变换 I——') ? '线性变换 I'
+  : topic;
+const vignettes: Record<string, [string, string]> = {
+  'λ-矩阵': ['λI − A', 'M55 23h130v62H55zm43 0v62m43-62v62M55 44h130M55 64h130m-115-28 5-9 5 9m30 20 5-9 5 9m35 20 5-9 5 9'],
+  '双线性函数到张量积': ['B(u,v) = uᵀMv', 'M66 28h108v57H66zm36 0v57m36-57v57M66 47h108M66 66h108m-133-29 16 0m-16 20h16m-16 19h16m31-58v-9m35 9v-9m35 9v-9'],
+  'Euclid空间，正交变换与对称变换': ['QᵀQ = I', 'M119 92V20m-53 57h108m-55 0 50-35m-50 35-35-45m-4 12 4-12 12 4m60 5 13 1-1 12m-23 1a34 34 0 0 0-42-3'],
+};
+const isSperner = /Sperner/i.test(title);
+const curated = Object.hasOwn(art, aliases) ? art[aliases] : Object.hasOwn(vignettes, aliases) ? vignettes[aliases] : undefined;
+const shortTitle = Array.from(title).length > 17 ? Array.from(title).slice(0, 16).join('') + '…' : title;
+const outline = (post.body ?? '').match(/^#{1,4}\s+([^<>\n$]{4,24})\s*$/m)?.[1]?.trim().replace(/[*_\x60]/g, '');
+const unfinished = (outline && outline !== shortTitle) ? outline : shortTitle;
+const [artLabel, strokes] = curated ?? [unfinished, 'M56 26h128v67H56zM56 45h128M79 62h82m-65 13h48m-24-49v-8m-4 4 4-4 4 4'];
+const label = post.collection === 'blogEn' ? englishArtLabels[artLabel] ?? artLabel : artLabel;
+const src = await articleCardImage(post);
+const palette = ['#933b31', '#345b58', '#41554f', '#64475b', '#585042'];
+const hue = palette[(Array.from(title).reduce((a,c) => (a * 31 + c.codePointAt(0)!) >>> 0, 0)) % palette.length];
+---
+<div class="post-illustration" style={{'--print':hue}} aria-hidden="true" data-card-art={src ? 'article-image' : isSperner || curated ? 'topic' : 'title'}>
+  {isSperner ? <SpernerPrint /> : (
+    <svg viewBox="0 0 240 128" focusable="false">
+      <path class="etch-frame" d="M13 12h214v104H13zM13 96h214M19 19h9m-9 0v9m202-9h-9m9 0v9"/>
+      <path class="vignette" d={strokes} />
+      <text x="120" y="110" text-anchor="middle" lengthAdjust="spacingAndGlyphs" textLength={label.length > 29 ? 175 : undefined}>{label}</text>
+    </svg>
+  )}
+  {src && <img class="article-card-image" src={src} alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />}
+</div>
+
+<script>
+  for (const img of document.querySelectorAll<HTMLImageElement>('img.article-card-image')) {
+    const hideBroken = () => { img.hidden = true; };
+    img.addEventListener('error', hideBroken, { once:true });
+    if (img.complete && !img.naturalWidth) hideBroken();
+  }
+</script>
+<style>
+  .post-illustration {
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    place-items: center;
+    align-self: center;
+    aspect-ratio: 1.6;
+    color: #f8e9ce;
+    background: repeating-linear-gradient(142deg, transparent 0 4px, #17100d14 4px 5px), var(--print);
+    box-shadow: inset 0 0 38px #17100d38;
+  }
+  svg { display: block; width: 100%; height: 100%; }
+  .vignette, .etch-frame { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .etch-frame { stroke-width: 1; opacity: .36; }
+  text { font: 11.5px var(--font-serif, serif); fill: currentColor; }
+  .article-card-image {
+    position: absolute; inset: 0; width: 100%; height: 100%; box-sizing: border-box;
+    padding: 3px; object-fit: contain; background: var(--surface, #f6f0e2);
+  }
+  .article-card-image[hidden] { display: none; }
+</style>

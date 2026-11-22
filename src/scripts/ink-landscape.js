@@ -1,8 +1,8 @@
 /**
  * 山影 · 生成水墨背景
  *
- * Two canvases stacked behind the page:
- *   [data-ink-base] – the painting itself: distant ranges, cloud sea, moon,
+ * The homepage supplies a painted image in place of the base canvas.
+ *   [data-ink-base] – the default painting: distant ranges, cloud sea, moon,
  *                    bamboo on the left, a boat. Rendered once per seed /
  *                    resize / theme.
  *   [data-ink-live] – transparent layer on top: drifting mist and the birds.
@@ -94,6 +94,51 @@ function dabSprite(color) {
   return cv;
 }
 
+function paintCrane(c, x, y, size, flap, dark) {
+  c.save();
+  c.translate(x, y);
+  c.scale(size, size);
+  const tip = -.28 - flap * .72;
+  const feather = dark ? '#819294' : '#515d57';
+  c.fillStyle = feather;
+  c.beginPath();
+  c.moveTo(.12, 0);
+  c.quadraticCurveTo(-.35, tip - .06, -.93, tip * .52);
+  c.quadraticCurveTo(-.45, tip * .58, -.12, .05);
+  c.fill();
+
+  // The long neck and trailing legs stay level between wingbeats.
+  c.strokeStyle = feather;
+  c.lineWidth = .075;
+  c.beginPath();
+  c.moveTo(-1.12, .035);
+  c.quadraticCurveTo(-.67, -.12, -.24, 0);
+  c.lineTo(.91, .12);
+  c.stroke();
+  c.fillStyle = dark ? '#cbd3c5' : '#f5edda';
+  c.beginPath();
+  c.moveTo(-.78, -.065);
+  c.quadraticCurveTo(-.26, -.14, .53, .045);
+  c.quadraticCurveTo(.08, .2, -.32, .025);
+  c.lineTo(-.78, 0);
+  c.fill();
+  c.beginPath();
+  c.moveTo(-.17, .025);
+  c.quadraticCurveTo(.04, tip * .74, .39, tip);
+  c.lineTo(.91, tip + .16);
+  c.quadraticCurveTo(.51, tip + .16, .16, .055);
+  c.fill();
+  c.fillStyle = feather;
+  c.beginPath();
+  c.moveTo(.39, tip);
+  c.lineTo(.99, tip + .16);
+  c.lineTo(.81, tip + .16);
+  c.lineTo(.9, tip + .23);
+  c.quadraticCurveTo(.59, tip + .2, .39, tip);
+  c.fill();
+  c.restore();
+}
+
 /* ── scene description ──────────────────────────────────────── */
 // Ranges sit on the right-hand side of the page; the left belongs to bamboo.
 const TIERS = [
@@ -148,16 +193,24 @@ export function mountInkLandscape(options = {}) {
   }
   const baseCv = document.querySelector('[data-ink-base]');
   const liveCv = document.querySelector('[data-ink-live]');
-  if (!baseCv || !liveCv) return null;
+  const baseCtx = baseCv?.getContext('2d', { alpha: false });
+  const liveCtx = liveCv?.getContext('2d', { alpha: true });
+  if (!liveCtx) return null;
 
-  const baseCtx = baseCv.getContext('2d', { alpha: false });
-  const liveCtx = liveCv.getContext('2d', { alpha: true });
-
+  const illustrated = !baseCv;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const artwork = liveCv.parentElement.querySelector('.home-cloudscape');
+  const mistImage = liveCv.dataset.mistSrc ? new Image() : null;
+  const mistBands = [
+    { level: .42, width: .93, depth: .19, travel: .81, seconds: 27, phase: .66, alpha: .56 },
+    { level: .28, width: .67, depth: .21, travel: .94, seconds: 17, phase: .36, alpha: .82 },
+  ];
   const state = {
     seed: options.seed ?? hash(Math.floor(Date.now() / 86400000), 7),
     W: 1440,
     H: 900,
+    artTop: 0,
+    artHeight: 900,
     palette: readPalette(),
     scale: 1,
     wisps: [],
@@ -655,6 +708,7 @@ export function mountInkLandscape(options = {}) {
 
   /* ── base painting ────────────────────────────────────────── */
   function renderBase() {
+    if (!baseCtx) return;
     const { paper, dark } = state.palette;
     const gain = dark ? 0.78 : 1.32;
     const c = baseCtx;
@@ -724,6 +778,27 @@ export function mountInkLandscape(options = {}) {
 
   /* ── live layer: mist and birds ───────────────────────────── */
   const wispSprite = (() => {
+    if (illustrated) {
+      // A feathered bank of cloud for the illustrated mountainside.
+      const cloud = document.createElement('canvas');
+      cloud.width = 448;
+      cloud.height = 104;
+      const brush = cloud.getContext('2d');
+      const dab = dabSprite([247, 243, 224]);
+      const rng = rngFor(31, 616);
+      const contour = makeNoise1D(rng);
+      for (let i = 0; i < 140; i++) {
+        const along = rng();
+        const taper = Math.sin(along * Math.PI);
+        const width = 32 + rng() * 78 * taper;
+        const height = width * (.35 + rng() * .35);
+        const x = 28 + along * (cloud.width - 56);
+        const y = 52 + 20 * contour(along * 4) + (rng() - .5) * 21 * taper;
+        brush.globalAlpha = (.2 + rng() * .36) * taper;
+        brush.drawImage(dab, x - width / 2, y - height / 2, width, height);
+      }
+      return cloud;
+    }
     const S = 256, cv = document.createElement('canvas');
     cv.width = cv.height = S;
     const g = cv.getContext('2d');
@@ -738,14 +813,16 @@ export function mountInkLandscape(options = {}) {
 
   function buildWisps() {
     const rng = rngFor(state.seed, 616);
+    const upperBand = illustrated ? 0.22 : 0.3;
+    const upperOpacity = illustrated ? 0.22 : 0.05;
     state.wisps = [];
     for (let i = 0; i < 14; i++) {
       const deep = i > 8;
       state.wisps.push({
         x: rng(),
-        y: deep ? 0.6 + rng() * 0.34 : 0.3 + rng() * 0.34,
+        y: (deep ? 0.6 : upperBand) + rng() * 0.34,
         r: (deep ? 0.3 : 0.22) * state.W * (0.7 + rng() * 0.9),
-        alpha: (deep ? 0.2 : 0.05) + rng() * (deep ? 0.16 : 0.05),
+        alpha: (deep ? 0.2 : upperOpacity) + rng() * (deep ? 0.16 : 0.05),
         speed: 0.003 + rng() * 0.006,
         bob: 0.1 + rng() * 0.16,
         phase: rng() * 6.28,
@@ -757,15 +834,16 @@ export function mountInkLandscape(options = {}) {
   function buildBirds() {
     const rng = rngFor(state.seed, 717);
     state.birds = [];
-    const n = 4 + Math.floor(rng() * 3);
-    const cx = 0.925 + rng() * 0.045, cy = 0.235 + rng() * 0.075;
+    const n = illustrated ? 3 : 4 + Math.floor(rng() * 3);
+    const cx = (illustrated ? 0.72 : 0.925) + rng() * 0.045;
+    const cy = (illustrated ? 0.14 : 0.235) + rng() * 0.075;
     for (let i = 0; i < n; i++) {
       state.birds.push({
         x: cx + (rng() - 0.5) * 0.11,
         y: cy + (rng() - 0.5) * 0.09,
         s: 7 + rng() * 6,
         ph: rng() * 6.28,
-        sp: 0.003 + rng() * 0.003,
+        sp: (illustrated ? 0.011 : 0.003) + rng() * 0.003,
         ox: 0,
         oy: 0,
         vx: 0,
@@ -782,15 +860,35 @@ export function mountInkLandscape(options = {}) {
     const { paper, ink } = state.palette;
 
     // mist: paper-coloured veils drifting across the ranges
+    const mistWidth = illustrated ? 1.8 : 1;
+    const mistAspect = illustrated ? wispSprite.width / wispSprite.height : 2.1;
+    const mistStrength = illustrated && state.palette.dark ? 0.62 : 1;
     for (const w of state.wisps) {
       const wx = ((w.x - t * w.speed) % 1.4 + 1.4) % 1.4 - 0.2;
       const px = wx * W;
       const py = (w.y + Math.sin(t * w.bob + w.phase) * 0.008) * H + Math.sin(t * 0.2 + w.phase) * w.amp;
       const a = w.alpha * (0.7 + 0.3 * Math.sin(t * 0.29 + w.phase));
-      c.globalAlpha = a;
-      c.drawImage(wispSprite, px - w.r / 2, py - w.r / 4.2, w.r, w.r / 2.1);
+      const width = w.r * mistWidth;
+      const height = width / mistAspect;
+      c.globalAlpha = a * mistStrength;
+      c.drawImage(wispSprite, px - width / 2, py - height / 2, width, height);
     }
     c.globalAlpha = 1;
+
+    // Cross the darker slopes at different depths. Fade only at the ends of a pass.
+    if (mistImage?.complete && mistImage.naturalWidth) {
+      for (const band of mistBands) {
+        const phase = (t / band.seconds + band.phase) % 1;
+        const width = W * band.width * (1 + .12 * phase);
+        const height = width * band.depth;
+        const x = W * (1.08 - band.travel * phase);
+        const y = state.artTop + state.artHeight * (band.level - .035 * phase + .012 * Math.sin(phase * 6.28));
+        const fade = Math.min(1, phase / .16, (1 - phase) / .18);
+        c.globalAlpha = band.alpha * fade * (state.palette.dark ? .57 : 1);
+        c.drawImage(mistImage, x - width / 2, y - height / 2, width, height);
+      }
+      c.globalAlpha = 1;
+    }
 
     // Birds keep their own spring offsets. A nearby pointer startles the flock;
     // release lets each bird settle independently instead of snapping back.
@@ -827,6 +925,10 @@ export function mountInkLandscape(options = {}) {
       py += b.oy;
       const flap = Math.sin(t * (2.2 + b.alarm * 3.4) + b.ph);
       const s = b.s * (W / 1440) * 1.6;
+      if (illustrated) {
+        paintCrane(c, px, py, s, flap, state.palette.dark);
+        continue;
+      }
       c.beginPath();
       c.moveTo(px - s, py + flap * s * 0.4);
       c.quadraticCurveTo(px - s * 0.42, py - s * (0.52 - flap * 0.22), px, py);
@@ -844,6 +946,11 @@ export function mountInkLandscape(options = {}) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     state.W = 1440;
     state.H = Math.round(clamp(1440 * vh / Math.max(1, vw), 700, 3200));
+    if (artwork) {
+      const rect = artwork.getBoundingClientRect();
+      state.artTop = rect.top * state.H / vh;
+      state.artHeight = rect.height * state.H / vh;
+    }
 
     // the typeset panel: the centre range is only allowed to show through it
     const shell = document.querySelector('.site-shell');
@@ -856,13 +963,14 @@ export function mountInkLandscape(options = {}) {
     }
 
     // base: up to 1.4x device pixels, capped for wide screens
-    const bs = Math.min(dpr, 1.4);
-    const bw = Math.max(1, Math.round(vw * bs));
-    const bh = Math.max(1, Math.round(bw * state.H / state.W));
-    baseCv.width = bw;
-    baseCv.height = bh;
-    baseCtx.setTransform(bw / state.W, 0, 0, bh / state.H, 0, 0);
-    renderBase();
+    if (baseCtx) {
+      const bs = Math.min(dpr, 1.4);
+      const bw = Math.max(1, Math.round(vw * bs));
+      const bh = Math.max(1, Math.round(bw * state.H / state.W));
+      baseCv.width = bw;
+      baseCv.height = bh;
+      renderBase();
+    }
 
     // live: CSS pixels are plenty for soft mist
     liveCv.width = Math.max(1, Math.round(vw));
@@ -886,6 +994,7 @@ export function mountInkLandscape(options = {}) {
   }
   function start() {
     if (state.raf || reduced.matches || document.hidden) return;
+    if (mistImage && !mistImage.hasAttribute('src')) mistImage.src = liveCv.dataset.mistSrc;
     state.lastPaint = 0;
     state.lastTime = 0;
     state.raf = requestAnimationFrame(tick);

@@ -1,0 +1,29 @@
+<script is:inline>
+  document.documentElement.classList.toggle('archive-study-preview', new URLSearchParams(location.search).get('background') === 'study' && new URLSearchParams(location.search).get('layout') !== 'index');
+</script>
+
+<style is:global>
+  @media screen {
+    .archive-study-preview { --study-field: #536674; }
+    .archive-study-preview.dark { --study-field: #354855; }
+    .archive-study-preview .archive-shell > .site-nav,
+    .archive-study-preview .archive-shell .archive-heading {
+      --ink: #fffaf0;
+      --body: #eee9e1;
+      --muted: #eee9e1;
+      --accent: #ffe1b8;
+      --soft: #ffffff19;
+      --line: #ffffff48;
+      --rule: #ffffff68;
+      background: var(--study-field);
+      color: var(--ink);
+    }
+    .archive-study-preview .archive-shell > .site-nav {
+      width: 100%;
+      padding-inline: max(var(--edge), calc((100% - 77rem) / 2));
+    }
+    .archive-study-preview .archive-heading .section-hero-art,
+    .archive-study-preview .archive-heading::after { display: none; }
+    .archive-study-preview .archive-heading .archive-counts { color: var(--body); }
+  }
+</style>

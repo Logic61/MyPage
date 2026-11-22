@@ -1,8 +1,5 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Navigation from '../components/Navigation.astro';
-import Footer from '../components/Footer.astro';
-import { Icon } from 'astro-icon/components';
+import ProjectsPage from '../components/ProjectsPage.astro';
 
 
 // 项目数据（之后你也可以把它们放进 src/content/projects 里让它完全自动化）
@@ -42,30 +39,4 @@ const projects = [
   }
 ];
 ---
-<Layout title="项目 - Shane Lorien">
-  <div class="site-shell">
-    <Navigation />
-    <main id="main-content" class="site-content">
-      <header class="page-heading">
-        <h1>项目</h1>
-        <p>一些开源仓库。</p>
-      </header>
-      <div class="project-list">
-        {projects.map(proj => (
-          <section class="project">
-            <div>
-              <div class="project-title">
-                <h2>{proj.name}</h2>
-                <a class="icon-button" href={proj.github} target="_blank" rel="noopener noreferrer" aria-label={`GitHub: ${proj.name}`}><Icon name="mdi:arrow-top-right" /></a>
-              </div>
-              <p>{proj.desc}</p>
-              <div class="project-stack">{proj.stack}</div>
-            </div>
-            <ul>{proj.points.map(point => <li>{point}</li>)}</ul>
-          </section>
-        ))}
-      </div>
-    </main>
-    <Footer />
-  </div>
-</Layout>
+<ProjectsPage {projects} />

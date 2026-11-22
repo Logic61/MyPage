@@ -1,0 +1,20 @@
+---
+import { Image } from 'astro:assets';
+
+interface Props {
+  art: ImageMetadata;
+  title: string;
+  description: string;
+  class?: string;
+}
+const { art, title, description, class: className } = Astro.props;
+---
+<header class:list={['page-heading', 'section-hero', className]}>
+  <Image class="section-hero-art" src={art} alt="" widths={[720, 1280, art.width]}
+    sizes="100vw" format="webp" quality={84} loading="eager" fetchpriority="high" decoding="async" />
+  <div class="section-wrap section-hero-copy">
+    <h1>{title}</h1>
+    <p>{description}</p>
+    <slot />
+  </div>
+</header>

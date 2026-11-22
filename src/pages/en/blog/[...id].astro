@@ -1,13 +1,24 @@
 ---
-import { getCollection, render } from 'astro:content';
+import { render } from 'astro:content';
 import BlogPost from '../../../components/BlogPost.astro';
+import { getBlogPosts, postSlug } from '../../../utils/posts';
 export async function getStaticPaths() {
-  const posts = await getCollection('blog', ({ data }) => !data.draft);
-  return posts.map(post => ({ params: { id: post.id }, props: { post } }));
+  const posts = await getBlogPosts(true);
+  const slugs = new Set<string>();
+  return posts.flatMap(post => {
+    const slug = postSlug(post);
+    if (!slug || slugs.has(slug)) throw new Error(`Invalid or duplicate English blog URL for ${post.id}: ${slug}`);
+    slugs.add(slug);
+    const canonical = { params: { id: slug }, props: { post, redirectTo: undefined } };
+    if (slug === post.id) return [canonical];
+    return [canonical, { params: { id: post.id }, props: { post, redirectTo: slug } }];
+  });
 }
-const { post } = Astro.props;
+const { post, redirectTo } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+if (redirectTo) return Astro.redirect(`${base}/en/blog/${redirectTo}/`);
 const { Content, headings } = await render(post);
 ---
-<BlogPost post={post} headings={headings} isEn={true}>
+<BlogPost post={post} headings={headings} languagePath={`/blog/${post.id}`} isEn={true}>
   <Content />
 </BlogPost>

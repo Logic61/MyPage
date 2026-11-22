@@ -4,6 +4,7 @@
 @import "@fontsource/noto-serif-sc/700.css";
 @import "./modern.css";
 @import "./heritage.css";
+@import "./sections.css";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:is(.dark *));
 

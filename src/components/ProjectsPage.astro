@@ -1,0 +1,45 @@
+---
+import { Icon } from 'astro-icon/components';
+import Layout from '../layouts/Layout.astro';
+import Navigation from './Navigation.astro';
+import Footer from './Footer.astro';
+import SectionHero from './SectionHero.astro';
+import viaduct from '../assets/projects-viaduct.webp';
+
+interface Props {
+  isEn?: boolean;
+  projects: { name: string; desc: string; stack: string; points: string[]; github: string }[];
+}
+const { projects, isEn = false } = Astro.props;
+const entries = projects.map(project => ({ ...project, id: project.github.split('/').pop()! }));
+const title = isEn ? 'Projects' : '项目';
+---
+<Layout title={`${title} - Shane Lorien`} section="projects">
+  <div class="site-shell section-shell projects-shell">
+    <Navigation />
+    <main id="main-content" class="site-content">
+      <SectionHero art={viaduct} title={title} class="projects-heading"
+        description={isEn ? 'Selected open-source repositories and academic experiments.' : '一些开源仓库。'} />
+      <div class="section-wrap">
+        <nav class="project-index" aria-label={isEn ? 'On this page' : '本页项目'}>
+          {entries.map(project => <a href={`#${project.id}`}>{project.name}<Icon name="mdi:arrow-down" /></a>)}
+        </nav>
+        <div class="project-list">
+          {entries.map(project => (
+            <section id={project.id} class="project">
+              <div class="project-summary">
+                <div class="project-stack">{project.stack}</div>
+                <h2>{project.name}</h2>
+                <p>{project.desc}</p>
+                <a class="project-repo text-link" href={project.github} target="_blank" rel="noopener noreferrer"
+                  aria-label={`GitHub · ${project.name}`}>GitHub<Icon name="mdi:arrow-top-right" /></a>
+              </div>
+              <ul>{project.points.map(point => <li>{point}</li>)}</ul>
+            </section>
+          ))}
+        </div>
+      </div>
+    </main>
+    <Footer />
+  </div>
+</Layout>

@@ -1,0 +1,39 @@
+---
+const vertex = (bits: number) => [
+  280 + (bits & 1 ? 144 : 0) - (bits & 2 ? 144 : 0),
+  317 - (bits & 1 ? 60 : 0) - (bits & 2 ? 60 : 0) - (bits & 4 ? 168 : 0),
+] as const;
+const vertices = Array.from({ length: 8 }, (_, bits) => ({ bits, point: vertex(bits), isMiddle: [3, 5, 6].includes(bits) }));
+const edges = vertices.flatMap(({bits, point}) => [1, 2, 4]
+  .filter(mask => !(bits & mask))
+  .map(mask => ({ from: point, to: vertex(bits | mask), tucked: bits === 0 && mask === 4 })));
+---
+<svg viewBox="0 0 560 380" class="cube-print" aria-hidden="true" focusable="false">
+  <path class="print-guides" d="M48 50H512M48 137H512M48 223H512M48 310H512 M66 27V352M494 27V352"/>
+  <path class="print-ticks" d="M60 49h12m-6-6v12m422-6h12m-6-6v12M60 310h12m-6-6v12m422-6h12m-6-6v12"/>
+  {edges.map(({ from, to, tucked }) => (
+    <line x1={from[0]} y1={from[1]} x2={to[0]} y2={to[1]} class:list={['cube-edge', { 'cube-edge-tucked': tucked }]} />
+  ))}
+  {vertices.filter(v => !v.isMiddle).map(({ point }) => <circle class="cube-vertex" cx={point[0]} cy={point[1]} r="5" />)}
+  {vertices.filter(v => v.isMiddle).map(({ point }) => (
+    <g><circle class="cube-halo" cx={point[0]} cy={point[1]} r="14" /><circle class="cube-highlight" cx={point[0]} cy={point[1]} r="7" /></g>
+  ))}
+  <text x="70" y="98" class="print-mark">B₃</text>
+  <text x="451" y="296" class="print-formula" text-anchor="end">2³</text>
+</svg>
+<style>
+  .cube-print { display: block; width: 100%; height: auto; color: var(--print-light); }
+  .print-guides, .print-ticks, .cube-edge, .cube-halo { fill: none; stroke: currentColor; }
+  .print-guides { opacity: .27; stroke-dasharray: 3 7; }
+  .print-ticks { opacity: .72; }
+  .cube-edge { stroke-width: 2; opacity: .75; }
+  .cube-edge-tucked { stroke-dasharray: 5 6; opacity: .39; }
+  .cube-vertex { fill: var(--print); stroke: currentColor; stroke-width: 2; }
+  .cube-highlight { fill: currentColor; }
+  .cube-halo { opacity: .66; transition: r .22s ease; }
+  .cube-print:hover .cube-halo { r: 19; }
+  .print-mark, .print-formula { fill: currentColor; font-family: var(--font-serif); font-style: italic; }
+  .print-mark { font-size: 46px; }
+  .print-formula { font-size: 20px; opacity: .75; }
+  @media (prefers-reduced-motion: reduce) { .cube-halo { transition: none; } }
+</style>

@@ -2,95 +2,169 @@
 import Layout from '../layouts/Layout.astro';
 import Navigation from './Navigation.astro';
 import Footer from './Footer.astro';
-import PostRow from './PostRow.astro';
-import { getCollection } from 'astro:content';
+import BlogCard from './BlogCard.astro';
+import ArchiveStudyPreview from './ArchiveStudyPreview.astro';
+import ArchiveIndexPreview from './ArchiveIndexPreview.astro';
+import SectionHero from './SectionHero.astro';
+import volumes from '../assets/archive-volumes.webp';
+import { getBlogPosts } from '../utils/posts';
 import { Icon } from 'astro-icon/components';
 interface Props { isEn?: boolean; }
 const { isEn = false } = Astro.props;
-const posts = (await getCollection('blog', ({ data }) => !data.draft))
+const posts = (await getBlogPosts(isEn))
   .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-const categories = [...new Set(posts.map(post => post.data.category).filter((category): category is string => !!category))];
+const pageSize = 10;
+const pageCount = Math.max(1, Math.ceil(posts.length / pageSize));
+const categoryCounts = new Map<string, number>();
+for (const { data } of posts) {
+  if (data.category) categoryCounts.set(data.category, (categoryCounts.get(data.category) ?? 0) + 1);
+}
+const categories = [...categoryCounts.keys()];
+const allLabel = isEn ? 'All entries' : '全部文章';
+const entryCount = isEn ? `${posts.length} ${posts.length === 1 ? 'entry' : 'entries'}` : `${posts.length} 篇文章`;
+const topicCount = isEn ? `${categories.length} ${categories.length === 1 ? 'topic' : 'topics'}` : `${categories.length} 个分类`;
 ---
-<Layout title={`${isEn ? 'Blog' : '博客'} - Shane Lorien`}>
-  <div class="site-shell">
+<Layout title={`${isEn ? 'Blog' : '博客'} - Shane Lorien`} section="archive">
+  <ArchiveStudyPreview />
+  <ArchiveIndexPreview />
+  <div class="site-shell section-shell archive-shell">
     <Navigation />
     <main id="main-content" class="site-content">
-      <div class="blog-layout">
-        <header class="page-heading">
-          <h1>{isEn ? 'Blog' : '博客'}</h1>
-          <p>{isEn ? 'Mathematics, computer science, and reading.' : '数学、计算机，以及阅读中的思考。'}</p>
-        </header>
+      <SectionHero art={volumes} title={isEn ? 'Blog' : '博客'} class="archive-heading"
+        description={isEn ? 'Mathematics, computer science, and reading.' : '数学、计算机，以及阅读中的思考。'}>
+        {posts.length > 0 && <p class="archive-counts">{entryCount} <span>·</span> {topicCount}</p>}
+      </SectionHero>
+      <div class="blog-layout section-wrap">
         <nav class="category-filter" id="category-filter" aria-label={isEn ? 'Filter by category' : '按分类筛选文章'}>
-          <button class="category-btn" data-target="all" aria-pressed="true">{isEn ? 'All' : '全部'} <span class="topic-count">{posts.length}</span></button>
-          {categories.map(category => <button class="category-btn" data-target={category} aria-pressed="false">{category}</button>)}
+          <h2 class="catalogue-only catalogue-title">{isEn ? 'Contents' : '分卷目录'}</h2>
+          <button class="category-btn" type="button" data-target="all" aria-pressed="true"><span class="catalogue-only catalogue-number" aria-hidden="true">00</span><span>{isEn ? 'All' : '全部'}</span> <span class="topic-count">{posts.length}</span></button>
+          {categories.map((category, i) => (
+            <button class="category-btn" type="button" data-target={category} aria-pressed="false"><span class="catalogue-only catalogue-number" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span><span>{category}</span><span class="catalogue-only topic-count">{categoryCounts.get(category)}</span></button>
+          ))}
         </nav>
-        <ul id="post-list" class="post-list">
-          {posts.map(post => <PostRow post={post} isEn={isEn} />)}
+        <label class="catalogue-only catalogue-picker" for="catalogue-select">
+          <strong>{isEn ? 'Contents' : '分卷目录'}</strong>
+          <select id="catalogue-select">
+            <option value="all">{allLabel} · {posts.length}</option>
+            {categories.map(category => <option value={category}>{category} · {categoryCounts.get(category)}</option>)}
+          </select>
+        </label>
+        <p class="catalogue-only catalogue-status" aria-live="polite" data-all-label={allLabel} data-prefix={isEn ? 'Showing' : '本页'}>
+          <strong id="catalogue-category">{allLabel}</strong>
+          <span id="catalogue-range"></span>
+        </p>
+        <ul id="post-list" class="post-list blog-card-list">
+          {posts.map(post => <BlogCard post={post} {isEn} />)}
         </ul>
         {!posts.length && <p class="empty-state">{isEn ? 'New articles are on the way.' : '文章正在整理中。'}</p>}
-        <nav id="pagination" class="pagination" aria-label={isEn ? 'Pagination' : '文章分页'}>
-          <button id="prev-page" aria-label={isEn ? 'Previous page' : '上一页'} disabled><Icon name="mdi:chevron-left" /></button>
+        <nav id="pagination" class="pagination archive-pagination" hidden={pageCount <= 1} data-page-size={pageSize} aria-label={isEn ? 'Pagination' : '文章分页'}>
+          <button type="button" id="first-page" disabled>{isEn ? 'First' : '首页'}</button>
+          <button type="button" id="prev-page" aria-label={isEn ? 'Previous page' : '上一页'} disabled><Icon name="mdi:chevron-left" /></button>
           <label>
             <span>{isEn ? 'Page' : '第'}</span>
             <input id="page-input" type="text" inputmode="numeric" value="1" aria-label={isEn ? 'Page number' : '页码'} />
-            <span>/ <span id="page-total">1</span></span>
+            <span>/ <span id="page-total">{pageCount}</span></span>
           </label>
-          <button id="next-page" aria-label={isEn ? 'Next page' : '下一页'} disabled><Icon name="mdi:chevron-right" /></button>
+          <button type="button" id="next-page" aria-label={isEn ? 'Next page' : '下一页'} disabled={pageCount <= 1}><Icon name="mdi:chevron-right" /></button>
+          <button type="button" id="last-page" disabled={pageCount <= 1}>{isEn ? 'Last' : '尾页'}</button>
         </nav>
       </div>
     </main>
     <Footer />
   </div>
 </Layout>
+<style>
+  .blog-card-list { display: grid; gap: 14px; }
+  .archive-pagination[hidden] { display: none; }
+  .archive-pagination { gap: clamp(6px, 2vw, 18px); }
+  #first-page, #last-page { padding-inline: 10px; white-space: nowrap; }
+  @media (max-width: 380px) {
+    .archive-pagination:not([hidden]) {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(42px, max-content));
+      gap: 8px;
+    }
+    .archive-pagination label { grid-column: 1 / -1; grid-row: 1; justify-content: center; }
+  }
+</style>
 <script>
   const posts = Array.from(document.querySelectorAll<HTMLElement>('#post-list .post-item'));
   const buttons = Array.from(document.querySelectorAll<HTMLButtonElement>('.category-btn'));
+  const first = document.getElementById('first-page') as HTMLButtonElement;
+  const last = document.getElementById('last-page') as HTMLButtonElement;
   const prev = document.getElementById('prev-page') as HTMLButtonElement;
   const next = document.getElementById('next-page') as HTMLButtonElement;
   const input = document.getElementById('page-input') as HTMLInputElement;
   const total = document.getElementById('page-total')!;
   const pagination = document.getElementById('pagination')!;
+  const pageSize = Number(pagination.dataset.pageSize);
+  const picker = document.getElementById('catalogue-select') as HTMLSelectElement;
+  const context = document.querySelector<HTMLElement>('.catalogue-status')!;
+  const contextCategory = document.getElementById('catalogue-category')!;
+  const range = document.getElementById('catalogue-range')!;
+  const catalogue = document.documentElement.classList.contains('archive-catalogue');
+  const asIndex = (i: number) => String(i).padStart(2, '0');
   let page = 1;
   let category = 'all';
   const filtered = () => posts.filter(post => category === 'all' || post.dataset.category === category);
+  const pagesFor = (count: number) => Math.max(1, Math.ceil(count / pageSize));
   const render = () => {
     const items = filtered();
-    const pages = Math.max(1, Math.ceil(items.length / 10));
+    const pages = pagesFor(items.length);
     page = Math.min(pages, Math.max(1, page));
-    const visible = new Set(items.slice((page - 1) * 10, page * 10));
+    const visible = new Set(items.slice((page - 1) * pageSize, page * pageSize));
     posts.forEach(post => { post.hidden = !visible.has(post); });
     buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.target === category)));
     input.value = String(page);
     total.textContent = String(pages);
-    prev.disabled = page === 1;
-    next.disabled = page === pages;
+    first.disabled = prev.disabled = page === 1;
+    last.disabled = next.disabled = page === pages;
     pagination.hidden = pages <= 1;
+    picker.value = category;
+    if (catalogue) {
+      contextCategory.textContent = category === 'all' ? context.dataset.allLabel! : category;
+      const from = items.length ? asIndex((page - 1) * pageSize + 1) : '00';
+      const to = asIndex(Math.min(page * pageSize, items.length));
+      range.textContent = `${context.dataset.prefix} ${from}–${to} / ${items.length}`;
+    }
   };
   const readCategory = () => {
     const value = new URL(location.href).searchParams.get('category');
     category = buttons.some(button => button.dataset.target === value) ? value! : 'all';
-    page = 1;
+    const requestedPage = Number(new URLSearchParams(location.search).get('page'));
+    page = catalogue && Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
     render();
   };
-  buttons.forEach(button => button.addEventListener('click', () => {
-    category = button.dataset.target || 'all';
+  const changeCategory = (nextCategory: string) => {
+    category = nextCategory;
     page = 1;
     const url = new URL(location.href);
     if (category === 'all') url.searchParams.delete('category');
     else url.searchParams.set('category', category);
-    history.pushState(null, '', url);
+    if (catalogue) url.searchParams.delete('page');
+    if (url.href !== location.href) history.pushState(null, '', url);
     render();
-  }));
+  };
+  buttons.forEach(button => button.addEventListener('click', () => changeCategory(button.dataset.target || 'all')));
+  picker.addEventListener('change', () => changeCategory(picker.value));
   const changePage = (value: number) => {
     page = value;
     render();
-    document.querySelector('.page-heading')?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    if (catalogue) {
+      const url = new URL(location.href);
+      if (page === 1) url.searchParams.delete('page');
+      else url.searchParams.set('page', String(page));
+      if (url.href !== location.href) history.pushState(null, '', url);
+    }
+    (catalogue ? context : document.getElementById('category-filter'))?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   };
+  first.addEventListener('click', () => changePage(1));
+  last.addEventListener('click', () => changePage(pagesFor(filtered().length)));
   prev.addEventListener('click', () => changePage(page - 1));
   next.addEventListener('click', () => changePage(page + 1));
   input.addEventListener('change', () => {
     const value = Number(input.value);
-    if (Number.isInteger(value) && value >= 1 && value <= Math.max(1, Math.ceil(filtered().length / 10))) changePage(value);
+    if (Number.isInteger(value) && value >= 1 && value <= pagesFor(filtered().length)) changePage(value);
     else input.value = String(page);
   });
   window.addEventListener('popstate', readCategory);

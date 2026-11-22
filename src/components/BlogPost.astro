@@ -1,19 +1,23 @@
 ---
-import type { CollectionEntry } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
 import Navigation from './Navigation.astro';
 import Footer from './Footer.astro';
 import TableOfContents from './TableOfContents.astro';
-import { postDate, postDescription } from '../utils/posts';
+import { postDate, postDescription, type BlogPostEntry } from '../utils/posts';
 import { Icon } from 'astro-icon/components';
-interface Props { post: CollectionEntry<'blog'>; headings: { depth: number; slug: string; text: string }[]; isEn?: boolean; }
-const { post, headings, isEn = false } = Astro.props;
+interface Props {
+  post: BlogPostEntry;
+  headings: { depth: number; slug: string; text: string }[];
+  languagePath: string;
+  isEn?: boolean;
+}
+const { post, headings, languagePath, isEn = false } = Astro.props;
 const directory = headings.filter(heading => heading.depth <= 3);
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 ---
-<Layout title={`${post.data.title} - Shane Lorien`} description={postDescription(post) || undefined}>
-  <div class="site-shell">
-    <Navigation />
+<Layout title={`${post.data.title} - Shane Lorien`} description={postDescription(post) || undefined} section="article">
+  <div class="site-shell section-shell article-shell">
+    <Navigation {languagePath} />
     <main id="main-content" class="site-content">
       <div id="top-sentinel" aria-hidden="true"></div>
       <div class:list={['reading-grid', { 'reading-grid--single': directory.length === 0 }]}>

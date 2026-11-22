@@ -78,7 +78,7 @@ export function mountSiteMotion() {
     ], { duration: 650, easing: 'cubic-bezier(.16,1,.3,1)' });
   });
 
-  document.querySelectorAll('.home-intro h1, .page-heading h1, .article-header h1, .cv-header h1').forEach((heading) => {
+  document.querySelectorAll('.home-intro h1, .page-heading:not(.archive-heading) h1, .article-header h1, .cv-header h1').forEach((heading) => {
     animate(heading, [
       { opacity: 0, clipPath: 'inset(0 100% 0 0)', transform: 'translateX(-10px)' },
       { opacity: 1, clipPath: 'inset(0 0 0 0)', transform: 'translateX(0)' },
@@ -99,9 +99,8 @@ export function mountSiteMotion() {
     ], { duration: 460, delay: 420 + index * 90, easing: 'cubic-bezier(.16,1,.3,1)' });
   });
 
-  // Lists arrive like slips of paper from the reading edge. The observer fires
-  // once per item and also works when blog filtering reveals an existing row.
-  const revealItems = [...document.querySelectorAll('.home-posts .post-item, .blog-layout .post-item, .project')];
+  // Reveal homepage rows and projects; archive cards stay visible during filtering.
+  const revealItems = [...document.querySelectorAll('.home-posts .post-item, .project')];
   if (!motionPreference.matches && 'IntersectionObserver' in window) {
     revealItems.forEach((item, index) => { item.dataset.motionOrder = String(index % 4); });
     const revealObserver = new IntersectionObserver((entries) => {

@@ -1,13 +1,21 @@
 ---
 import { getCollection, render } from 'astro:content';
 import BlogPost from '../../components/BlogPost.astro';
+import { postSlug } from '../../utils/posts';
 export async function getStaticPaths() {
-  const posts = await getCollection('blog', ({ data }) => !data.draft);
-  return posts.map(post => ({ params: { id: post.id }, props: { post } }));
+  const [posts, translations] = await Promise.all([
+    getCollection('blog', ({ data }) => !data.draft),
+    getCollection('blogEn', ({ data }) => !data.draft),
+  ]);
+  const slugs = new Map(translations.map(post => [post.id, postSlug(post)]));
+  return posts.map(post => {
+    const slug = slugs.get(post.id);
+    return { params: { id: post.id }, props: { post, languagePath: slug ? `/blog/${slug}` : '/blog' } };
+  });
 }
-const { post } = Astro.props;
+const { post, languagePath } = Astro.props;
 const { Content, headings } = await render(post);
 ---
-<BlogPost post={post} headings={headings} isEn={false}>
+<BlogPost post={post} headings={headings} {languagePath}>
   <Content />
 </BlogPost>

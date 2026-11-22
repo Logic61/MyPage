@@ -1,0 +1,81 @@
+<script is:inline>
+  {
+    const query = new URLSearchParams(location.search);
+    document.documentElement.classList.toggle('archive-catalogue', query.get('layout') === 'index' || query.get('background') !== 'study');
+  }
+</script>
+
+<style is:global>
+  .catalogue-only { display: none; }
+  .archive-catalogue .catalogue-status {
+    display: flex; align-items: baseline; justify-content: space-between; gap: .65rem 1rem;
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--line);
+    padding-block: .625rem; margin: 0; min-width: 0;
+    font-family: var(--font-sans); color: var(--muted); font-size: .82rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .archive-catalogue .catalogue-status strong { color: var(--ink); }
+  .archive-catalogue .catalogue-status span { white-space: nowrap; }
+  .archive-catalogue .blog-card-list { gap: 0; }
+  .archive-catalogue .card-link {
+    border: 0; border-bottom: 1px solid var(--line); background: transparent;
+    padding: 16px 0; grid-template-columns: minmax(0, 1fr) clamp(7rem, 23%, 12rem);
+  }
+  .archive-catalogue .card-link h2 { font-size: clamp(1.35rem, 2vw, 1.75rem); }
+  .archive-catalogue .card-link p { color: var(--body); }
+  .archive-catalogue .archive-pagination { margin-top: 24px; }
+  @media (min-width: 880px) {
+    .archive-catalogue .blog-layout {
+      display: grid; grid-template-columns: clamp(10rem, 21%, 14rem) minmax(0, 1fr);
+      column-gap: clamp(1.7rem, 4.2vw, 4rem);
+      grid-template-rows: auto 1fr auto;
+    }
+    .archive-catalogue .category-filter {
+      grid-area: 1 / 1 / 4 / 2; align-self: start;
+      float: none; display: grid; gap: 0; min-width: 0;
+      padding: 0; margin: 0; border: 0; border-top: 1px solid var(--rule);
+    }
+    .archive-catalogue .catalogue-title {
+      display: block; margin: 0; border-bottom: 1px solid var(--line); padding-block: .625rem;
+      font-family: var(--font-sans); color: var(--ink); font-weight: 700; font-size: .82rem;
+    }
+    .archive-catalogue .category-btn {
+      display: grid; grid-template-columns: 2ch minmax(0, 1fr) max-content;
+      gap: .65rem; align-items: baseline; text-align: left; white-space: normal;
+      font-size: .88rem; border: 0; border-bottom: 1px solid var(--line); border-radius: 0;
+      padding: .47rem 0; box-shadow: none; min-height: 36px; min-width: 0;
+    }
+    .archive-catalogue .category-btn .topic-count,
+    .archive-catalogue .catalogue-number {
+      display: block; font-family: var(--font-sans); color: var(--muted);
+      font-size: .74rem; font-variant-numeric: tabular-nums;
+    }
+    .archive-catalogue .category-btn[aria-pressed="true"] {
+      color: var(--accent); background: none; box-shadow: none; font-weight: 700;
+    }
+    .archive-catalogue .category-btn[aria-pressed="true"] .catalogue-number { color: var(--accent); }
+    .archive-catalogue .category-btn:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+    .archive-catalogue .catalogue-status,
+    .archive-catalogue .blog-card-list,
+    .archive-catalogue .archive-pagination,
+    .archive-catalogue .empty-state { grid-column: 2; }
+  }
+  @media (max-width: 879px) {
+    .archive-catalogue .category-filter { display: none; }
+    .archive-catalogue .catalogue-picker {
+      display: grid; grid-template-columns: max-content minmax(0, 1fr);
+      align-items: center; gap: 1rem; margin: 0 0 .9rem; font: .85rem var(--font-sans);
+    }
+    .archive-catalogue .catalogue-picker select {
+      width: 100%; min-width: 0; padding: .45rem .55rem; min-height: 42px;
+      border: 1px solid var(--line); color: var(--ink); background: var(--surface);
+    }
+    .archive-catalogue .card-link {
+      grid-template-columns: minmax(0, 1fr) clamp(4rem, 24%, 8.5rem);
+      padding-block: 14px;
+    }
+  }
+  @media (max-width: 340px) {
+    .archive-catalogue .catalogue-status { flex-wrap: wrap; }
+  }
+</style>

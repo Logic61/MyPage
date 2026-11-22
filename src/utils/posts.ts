@@ -1,6 +1,29 @@
-import type { CollectionEntry } from 'astro:content';
+import { getCollection, type CollectionEntry } from 'astro:content';
 
-export function postDescription(post: CollectionEntry<'blog'>): string {
+export type BlogPostEntry = CollectionEntry<'blog'> | CollectionEntry<'blogEn'>;
+
+export function postSlug(post: BlogPostEntry): string {
+  if (post.collection === 'blog') return post.id;
+  const slug = (text: string) => text.normalize('NFKD').toLowerCase()
+    .replace(/\p{Mark}/gu, '').replace(/['’]/g, '')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const section = post.id.includes('/') ? slug(post.data.category ?? '') : '';
+  return [section, slug(post.data.title)].filter(Boolean).join('/');
+}
+
+export async function getBlogPosts(isEn = false): Promise<BlogPostEntry[]> {
+  const originals = await getCollection('blog', ({ data }) => !data.draft);
+  if (!isEn) return originals;
+
+  const translations = new Map((await getCollection('blogEn', ({ data }) => !data.draft))
+    .map(post => [post.id, post] as const));
+  return originals.flatMap(original => {
+    const translation = translations.get(original.id);
+    return translation ? [translation] : [];
+  });
+}
+
+export function postDescription(post: BlogPostEntry): string {
   const clean = (text: string) => text
     .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
     .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')

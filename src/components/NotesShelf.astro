@@ -1,0 +1,352 @@
+---
+import { postSlug, type BlogPostEntry } from '../utils/posts';
+import { Image } from 'astro:assets';
+import { Icon } from 'astro-icon/components';
+import shoreline from '../content/blog/游记/images/骑往海边/b81e02e8e51f4c257b4f11d38eafe00e.jpeg';
+
+interface Props {
+  posts: BlogPostEntry[];
+  isEn: boolean;
+}
+
+const { posts, isEn } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const blog = `${base}${isEn ? '/en' : ''}/blog`;
+const perPage = 3;
+const perSpread = perPage * 2;
+const chapterNumber = (title: string) => Number(title.match(/^(?:(?:笔记|Notes?)\s*)?(\d+)\./i)?.[1] ?? Number.MAX_SAFE_INTEGER);
+const books = [
+  { id: 'discrete', category: '离散', title: isEn ? 'Discrete Math' : '离散数学' },
+  { id: 'algebra', category: '线代', title: isEn ? 'Linear Algebra' : '线性代数' },
+  { id: 'calculus', category: '高数', title: isEn ? 'Advanced Calculus' : '高等数学' },
+  { id: 'travel', category: '游记', title: isEn ? 'Travel Notes' : '游记' },
+].map(book => {
+  const category = isEn ? book.title : book.category;
+  const chapters = posts.filter(post => post.data.category === category).sort((a, b) => {
+    if (book.id === 'travel') return a.data.pubDate.valueOf() - b.data.pubDate.valueOf();
+    return chapterNumber(a.data.title) - chapterNumber(b.data.title) || a.data.title.localeCompare(b.data.title, isEn ? 'en' : 'zh-CN');
+  });
+  const spreads = Array.from({ length: Math.ceil(chapters.length / perSpread) }, (_, index) => {
+    const start = index * perSpread;
+    const spread = chapters.slice(start, start + perSpread);
+    const midpoint = Math.ceil(spread.length / 2);
+    return [spread.slice(0, midpoint), spread.slice(midpoint)];
+  });
+  return { ...book, category, chapters, spreads };
+}).filter(book => book.chapters.length > 0);
+---
+
+{books.length > 0 && (
+  <section class="notes-shelf" id="notes-shelf" aria-labelledby="notes-shelf-title">
+    <div class="shelf-intro">
+      <h2 id="notes-shelf-title">{isEn ? 'The notebook shelf' : '笔记书架'}</h2>
+      <p>{isEn ? 'Open a volume to browse its chapters.' : '取一册，翻阅各章。'}</p>
+    </div>
+    <ul class="shelf-books" role="list">
+      {books.map(book => (
+        <li class:list={['shelf-volume', book.id]}>
+          <a class="shelf-cover" href={`${blog}?category=${encodeURIComponent(book.category)}`}
+            data-shelf-open={book.id} aria-haspopup="dialog" aria-controls={`shelf-${book.id}`}>
+            <span class="cover-face">
+              <span class="cover-title">{book.title}</span>
+              <span class="cover-plate" aria-hidden="true">
+                {book.id === 'travel' && <Image src={shoreline} width={384} format="webp" alt="" class="cover-photo" />}
+              </span>
+              <span class="cover-author" aria-hidden="true">Shane Lorien</span>
+            </span>
+            <span class="shelf-count">{isEn ? `${book.chapters.length} entries` : `${book.chapters.length} 篇`}</span>
+          </a>
+          <dialog class="shelf-book" id={`shelf-${book.id}`} aria-labelledby={`title-${book.id}`} data-shelf-dialog>
+            <header class="shelf-book-header">
+              <div>
+                <h3 id={`title-${book.id}`}>{book.title}</h3>
+                <p class="shelf-book-meta">{isEn ? `Contents · ${book.chapters.length} entries` : `目录 · ${book.chapters.length} 篇`}</p>
+              </div>
+              <form method="dialog">
+                <button class="shelf-close" type="submit" aria-label={isEn ? 'Close book' : '合上书'} autofocus><Icon name="mdi:close" /></button>
+              </form>
+            </header>
+            <div class="shelf-chapters" data-shelf-chapters>
+              {book.spreads.map((pages, index) => (
+                <div class="shelf-spread" data-shelf-spread hidden={index > 0}>
+                  {pages.map((chapters, page) => (
+                    <div class="shelf-page">
+                      <ol start={index * perSpread + (page === 0 ? 0 : pages[0].length) + 1}>
+                        {chapters.map(chapter => <li><a href={`${blog}/${postSlug(chapter)}`}>{chapter.data.title}</a></li>)}
+                      </ol>
+                      <span class="shelf-page-number" aria-hidden="true">{index * 2 + page + 1}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <footer class="shelf-book-footer">
+              <a class="text-link" href={`${blog}/${postSlug(book.chapters[0])}`}>{isEn ? 'Start reading' : '从第一篇读起'}<Icon name="mdi:arrow-right" /></a>
+              {book.spreads.length > 1 && (
+                <div class="shelf-pager">
+                  <button type="button" data-shelf-turn="-1" aria-label={isEn ? 'Previous spread' : '上一跨页'} disabled><Icon name="mdi:chevron-left" /></button>
+                  <span data-shelf-position aria-live="polite">1 / {book.spreads.length}</span>
+                  <button type="button" data-shelf-turn="1" aria-label={isEn ? 'Next spread' : '下一跨页'}><Icon name="mdi:chevron-right" /></button>
+                </div>
+              )}
+            </footer>
+          </dialog>
+        </li>
+      ))}
+    </ul>
+  </section>
+)}
+
+<script>
+  document.querySelectorAll<HTMLAnchorElement>('[data-shelf-open]').forEach(cover => {
+    const book = document.getElementById(`shelf-${cover.dataset.shelfOpen}`);
+    if (!(book instanceof HTMLDialogElement) || typeof book.showModal !== 'function') return;
+
+    cover.addEventListener('click', event => {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      book.showModal();
+    });
+
+    const spreads = Array.from(book.querySelectorAll<HTMLElement>('[data-shelf-spread]'));
+    const chapters = book.querySelector<HTMLElement>('[data-shelf-chapters]');
+    const previous = book.querySelector<HTMLButtonElement>('[data-shelf-turn="-1"]');
+    const next = book.querySelector<HTMLButtonElement>('[data-shelf-turn="1"]');
+    const position = book.querySelector<HTMLElement>('[data-shelf-position]');
+    if (!chapters || !previous || !next || !position) return;
+    let active = 0;
+
+    const turn = (direction: number) => {
+      const target = active + direction;
+      if (target < 0 || target >= spreads.length) return;
+      spreads[active].hidden = true;
+      spreads[target].hidden = false;
+      chapters.scrollTop = 0;
+      active = target;
+      position.textContent = `${active + 1} / ${spreads.length}`;
+      previous.disabled = active === 0;
+      next.disabled = active === spreads.length - 1;
+      if (document.activeElement === previous && previous.disabled) next.focus();
+      else if (document.activeElement === next && next.disabled) previous.focus();
+    };
+
+    previous.addEventListener('click', () => turn(-1));
+    next.addEventListener('click', () => turn(1));
+  });
+</script>
+
+<style>
+  .notes-shelf {
+    display: grid;
+    grid-template-columns: minmax(170px, .48fr) minmax(0, 1.52fr);
+    align-items: center;
+    gap: clamp(20px, 3.6vw, 48px);
+    padding-block: 26px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .shelf-intro h2 { color: var(--ink); font-size: clamp(25px, 3vw, 38px); font-weight: 700; line-height: 1.1; }
+  .shelf-intro p { margin-top: 12px; color: var(--muted); font-size: 16px; }
+  .shelf-books {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: clamp(12px, 2.5vw, 28px);
+    align-items: end;
+    max-width: 800px;
+    padding-inline: clamp(6px, 2vw, 24px);
+    background: linear-gradient(to right, transparent, var(--rule) 10% 90%, transparent) 0 calc(100% - 35px) / 100% 1px no-repeat;
+  }
+
+  .shelf-volume { --book-ink: #2c5245; --jacket: #e4e5d4; --print: #dbe1c0; --proportion: .73; min-width: 0; }
+  .algebra { --book-ink: #843f30; --jacket: #eeded1; --print: #f4d9ba; --proportion: .71; }
+  .calculus { --book-ink: #2e4664; --jacket: #e2e6e5; --print: #b6cee0; --proportion: .77; }
+  .travel { --book-ink: #66543a; --jacket: #eee2c7; --proportion: .75; }
+  .shelf-cover { display: block; width: min(100%, 164px); margin-inline: auto; color: var(--ink); container-type: inline-size; }
+  .cover-face {
+    position: relative;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 7%;
+    aspect-ratio: var(--proportion);
+    padding: 11% 9% 9% 16%;
+    color: var(--book-ink);
+    background:
+      linear-gradient(90deg, #15181438, transparent 4%, #17191133 7%, transparent 9%),
+      repeating-linear-gradient(105deg, #211f1910 0, transparent 1px 4px),
+      linear-gradient(90deg, var(--book-ink) 0 9%, var(--jacket) 9%);
+    border-radius: 3px 1px 1px 3px;
+    border: 1px solid #342a2a60;
+    box-shadow: 3px 7px 12px #20150936;
+    transition: transform var(--motion-standard) var(--ease-brush), box-shadow var(--motion-standard) ease;
+  }
+
+  .cover-face::after {
+    content: '';
+    position: absolute;
+    left: 100%;
+    top: 3px;
+    bottom: 3px;
+    width: 5px;
+    border-inline-end: 1px solid var(--book-ink);
+    background: repeating-linear-gradient(90deg, #c6b28b 0 1px, #e9d6ae 1px 2px);
+    transform: skewY(20deg);
+  }
+
+  .cover-title { font-size: clamp(15px, 15cqi, 25px); font-weight: 700; line-height: 1.12; text-wrap: balance; overflow-wrap: anywhere; }
+  .cover-author { border-top: 1px solid color-mix(in srgb, currentColor 38%, transparent); padding-top: 5%; font-size: clamp(10px, 8cqi, 13px); line-height: 1; }
+  .cover-plate { position: relative; display: block; overflow: hidden; background-color: var(--book-ink); color: var(--print); }
+  .discrete .cover-plate {
+    background:
+      radial-gradient(circle at 22% 25%, currentColor 0 3%, transparent 3.5%),
+      radial-gradient(circle at 78% 25%, currentColor 0 3%, transparent 3.5%),
+      radial-gradient(circle at 22% 75%, currentColor 0 3%, transparent 3.5%),
+      radial-gradient(circle at 78% 75%, #e5bd76 0 3%, transparent 3.5%),
+      repeating-linear-gradient(0deg, #dbe1c030 0 1px, transparent 1px 20%),
+      repeating-linear-gradient(90deg, #dbe1c030 0 1px, transparent 1px 20%), var(--book-ink);
+  }
+  .discrete .cover-plate::before {
+    content: '';
+    position: absolute;
+    inset: 25% 22%;
+    border: 1px solid #dbe1c0b3;
+    background:
+      linear-gradient(to top right, transparent 49%, #dbe1c0b3 49.5% 50.5%, transparent 51%),
+      linear-gradient(to bottom right, transparent 49%, #e5bd76 49.5% 50.5%, transparent 51%);
+  }
+  .algebra .cover-plate::before, .algebra .cover-plate::after {
+    content: '';
+    position: absolute;
+    width: 51%;
+    aspect-ratio: 1;
+    background: repeating-linear-gradient(0deg, transparent 0 31%, currentColor 32% 33%),
+      repeating-linear-gradient(90deg, transparent 0 31%, currentColor 32% 33%);
+    border: 1px solid currentColor;
+  }
+  .algebra .cover-plate::before { left: 9%; top: 33%; transform: skewY(-19deg); opacity: .76; }
+  .algebra .cover-plate::after { left: 40%; top: 20%; transform: skewY(16deg); }
+  .calculus .cover-plate {
+    background:
+      repeating-radial-gradient(ellipse at 82% -12%, transparent 0 7%, #b6cee0cb 7.5% 8.4%, transparent 9% 12%),
+      linear-gradient(132deg, var(--book-ink) 22%, #4a6a82 55%, #253b59 84%);
+  }
+  .cover-photo {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 45% 58%;
+    transform: scale(1.18);
+    transform-origin: center 28%;
+    filter: saturate(.64) sepia(.10);
+  }
+  .shelf-count { display: block; padding-top: 14px; text-align: center; color: var(--muted); font-size: 14px; }
+  .shelf-cover:is(:hover, :focus-visible) .cover-face { transform: translateY(-5px) rotate(-2deg); box-shadow: 4px 12px 18px #20150950; }
+
+  .shelf-book {
+    --gutter: clamp(18px, 3.2vw, 42px);
+    --shelf-accent: color-mix(in srgb, var(--book-ink) 75%, var(--ink));
+    --shelf-paper: color-mix(in srgb, var(--surface) 93%, white);
+    --shelf-fold: color-mix(in srgb, var(--book-ink) 12%, transparent);
+    width: min(1120px, calc(100% - 56px));
+    height: min(680px, calc(100dvh - 48px));
+    max-width: none;
+    max-height: none;
+    margin: auto;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-top: 5px solid var(--shelf-accent);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--ink);
+    box-shadow: 0 24px 100px #140d0c7a;
+  }
+  :global(.dark) .shelf-book {
+    --shelf-accent: color-mix(in srgb, var(--jacket) 62%, var(--ink));
+    --shelf-paper: color-mix(in srgb, var(--surface) 91%, var(--ink));
+    --shelf-fold: #100b0a55;
+  }
+  .shelf-book[open] { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; }
+  :global(html:has(dialog[data-shelf-dialog][open])) { overflow: hidden; }
+  .shelf-book::backdrop { background: #1d1814b0; backdrop-filter: blur(3px); }
+  .shelf-book-header, .shelf-book-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-inline: var(--gutter);
+  }
+  .shelf-book-header { padding-block: clamp(14px, 3vh, 30px) clamp(14px, 2vh, 22px); }
+  .shelf-book-header h3 { font-size: clamp(28px, 4.4vw, 52px); font-weight: 700; line-height: 1.12; color: var(--shelf-accent); }
+  .shelf-book-meta { margin-top: 7px; color: var(--muted); font-size: 14px; font-family: var(--font-sans); }
+  .shelf-book-footer { padding-block: 12px 14px; }
+  .shelf-book-footer .text-link { min-height: 44px; color: var(--shelf-accent); font-size: 16px; }
+  .shelf-close, .shelf-pager button {
+    display: inline-grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    color: var(--body);
+  }
+  .shelf-close:hover, .shelf-pager button:hover:not(:disabled) { border-color: var(--shelf-accent); color: var(--shelf-accent); background: var(--soft); }
+  .shelf-close :global(svg), .shelf-pager :global(svg) { width: 22px; height: 22px; }
+  .shelf-chapters { overflow: auto; overscroll-behavior: contain; padding: 0 var(--gutter) 5px; }
+  .shelf-spread {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 100%;
+    border: 1px solid var(--line);
+    background: var(--shelf-paper);
+    box-shadow: 0 2px var(--shelf-paper), 0 3px var(--line);
+  }
+  .shelf-page {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 22px;
+    padding: clamp(18px, 4vh, 40px) clamp(20px, 4vw, 56px) clamp(14px, 3vh, 26px);
+  }
+  .shelf-page:first-child { background: linear-gradient(to left, var(--shelf-fold), transparent 26px); border-inline-end: 1px solid var(--line); }
+  .shelf-page:last-child { background: linear-gradient(to right, var(--shelf-fold), transparent 20px); }
+  .shelf-page li a {
+    display: block;
+    padding: clamp(12px, 2vh, 20px) 0;
+    border-bottom: 1px solid var(--line);
+    font-size: clamp(18px, 2.05vw, 25px);
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+  }
+  .shelf-page li a:is(:hover, :focus-visible) { color: var(--shelf-accent); text-decoration: underline; text-underline-offset: .16em; }
+  .shelf-page:last-child .shelf-page-number { text-align: end; }
+  .shelf-page-number, .shelf-pager { color: var(--muted); font-size: 14px; font-variant-numeric: tabular-nums; }
+  .shelf-pager { display: flex; flex-shrink: 0; align-items: center; gap: clamp(6px, 1.5vw, 16px); }
+  .shelf-pager button:disabled { opacity: .35; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .shelf-spread:not([hidden]) .shelf-page:last-child { transform-origin: left; animation: shelf-page-open 240ms var(--ease-brush); }
+    @keyframes shelf-page-open { from { opacity: .25; transform: perspective(1000px) rotateY(-16deg); } }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .cover-face { transition: none; }
+    .shelf-cover:is(:hover, :focus-visible) .cover-face { transform: none; }
+  }
+  @media (max-width: 760px) {
+    .notes-shelf { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .shelf-intro p { margin-top: 6px; }
+    .shelf-book { width: calc(100% - 24px); height: calc(100dvh - 24px); }
+  }
+  @media (max-width: 510px) {
+    .shelf-books { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 16px; background: none; }
+    .shelf-count { padding-top: 8px; }
+    .shelf-book { --gutter: 14px; width: calc(100% - 12px); height: calc(100dvh - 12px); }
+    .shelf-spread { grid-template-columns: minmax(0, 1fr); grid-auto-rows: min-content; }
+    .shelf-page { padding: 0 15px; }
+    .shelf-page:first-child, .shelf-page:last-child { background: none; border-inline-end: 0; }
+    .shelf-page-number { display: none; }
+  }
+  @media (max-width: 360px) {
+    .shelf-book-footer { flex-wrap: wrap; gap: 4px 12px; }
+    .shelf-pager { margin-inline-start: auto; }
+  }
+</style>
