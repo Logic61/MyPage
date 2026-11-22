@@ -1,0 +1,68 @@
+---
+import { Icon } from 'astro-icon/components';
+import PostIllustration from './PostIllustration.astro';
+import { getBlogPosts, postDate, postSlug } from '../utils/posts';
+import '../styles/study-catalogue.css';
+
+interface Props { isEn?: boolean; }
+const { isEn = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const prefix = `${base}${isEn ? '/en' : ''}`;
+const posts = (await getBlogPosts(isEn)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+const categories = [...new Set(posts.map(post => post.data.category).filter((category): category is string => !!category))];
+const recentCount = Math.min(8, posts.length);
+---
+
+<dialog id="study-catalogue" class="retreat-catalogue" aria-labelledby="catalogue-title" data-study-catalogue>
+  <aside class="retreat-catalogue-cover" aria-hidden="true">
+    <img src={`${base}/scenes/mountain-gate.webp`} width="1672" height="941" alt="" loading="lazy" decoding="async" />
+    <p class="retreat-cover-signature">Shane Lorien</p>
+  </aside>
+  <div class="retreat-catalogue-folio">
+    <header class="retreat-catalogue-heading">
+      <div>
+        <h2 id="catalogue-title" tabindex="-1">{isEn ? 'Blog' : '博客'}</h2>
+        <p class="retreat-catalogue-intro">{isEn ? 'Mathematics, computer science, and thoughts from reading.' : '数学、计算机，以及阅读中的思考。'}</p>
+      </div>
+      <form method="dialog">
+        <button class="retreat-close" type="submit" aria-label={isEn ? 'Close and return to the study' : '关闭，回到书斋'}>
+          <Icon name="mdi:close" /><span>{isEn ? 'Close' : '关闭'}</span>
+        </button>
+      </form>
+    </header>
+    <div class="retreat-catalogue-controls">
+      <div class="retreat-catalogue-views" role="group" aria-label={isEn ? 'Choose posts' : '选择文章范围'}>
+        <button type="button" data-catalogue-view="all" aria-pressed="true">{isEn ? 'All posts' : '全部文章'}<span>{posts.length}</span></button>
+        <button type="button" data-catalogue-view="recent" aria-pressed="false">{isEn ? 'Latest' : '最新文章'}<span>{recentCount}</span></button>
+      </div>
+      <label class="retreat-category-label" for="study-category">
+        <span>{isEn ? 'Topic' : '分类'}</span>
+        <select id="study-category">
+          <option value="">{isEn ? 'All topics' : '所有分类'}</option>
+          {categories.map(category => <option value={category}>{category}</option>)}
+        </select>
+      </label>
+    </div>
+    <p class="retreat-catalogue-status" role="status" data-catalogue-status>{isEn ? `${posts.length} entries` : `共 ${posts.length} 篇`}</p>
+    <ol class="retreat-catalogue-list" data-catalogue-list>
+      {posts.map((post, index) => (
+        <li data-catalogue-post data-category={post.data.category || ''} data-recent={index < recentCount ? 'true' : 'false'}>
+          <a href={`${prefix}/blog/${postSlug(post)}`}>
+            <div class="retreat-entry-art"><PostIllustration {post} /></div>
+            <span class="retreat-entry-text">
+              <strong>{post.data.title}</strong>
+              <span class="retreat-entry-meta">
+                {post.data.category && <span>{post.data.category}</span>}
+                <time datetime={post.data.pubDate.toISOString()}>{postDate(post.data.pubDate, isEn)}</time>
+              </span>
+            </span>
+          </a>
+        </li>
+      ))}
+    </ol>
+    <footer class="retreat-catalogue-footer">
+      <span>{isEn ? 'Esc to close' : '按 Esc 关闭'}</span>
+      <a href={`${prefix}/blog`}>{isEn ? 'View blog' : '博客页面'}</a>
+    </footer>
+  </div>
+</dialog>

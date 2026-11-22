@@ -1,0 +1,241 @@
+/* The mountain, study and open catalogue share jade, paper and lamplight. */
+html.spatial-home[data-section="home"] {
+  --page: #eee5d1;
+  --surface: #faf8ef;
+  --soft: #eef0e3;
+  --ink: #28362d;
+  --body: #3b453b;
+  --muted: #657166;
+  --line: #c8c8ae;
+  --accent: #365e51;
+  --retreat-gold: #9a7442;
+  --scene-ink: #f5efdf;
+  --scene-muted: #ded9c6;
+  --mountain-ink: #2b3b30;
+  --mountain-muted: #53614f;
+  --retreat-paper: #eee5d1;
+  --scene-height: clamp(620px, 100svh, 70vw);
+  scroll-behavior: auto;
+}
+html.spatial-home.dark[data-section="home"] {
+  --page: #18251f;
+  --surface: #21392f;
+  --soft: #2b4337;
+  --ink: #f0e8d6;
+  --body: #e0dacb;
+  --muted: #b5b3a1;
+  --line: #496050;
+  --accent: #d1c697;
+  --retreat-gold: #d6c29a;
+  --mountain-ink: #f1e9d5;
+  --mountain-muted: #d0d5bc;
+  --retreat-paper: #18251f;
+}
+.spatial-home body { background: var(--page); font-family: var(--font-serif); }
+.retreat { position: relative; isolation: isolate; color: var(--scene-ink); }
+.retreat a, .retreat button { -webkit-tap-highlight-color: transparent; }
+.retreat :focus-visible { outline: 2px solid #e8c891; outline-offset: 5px; }
+.retreat h1:focus, .retreat h2:focus { outline: none; }
+.retreat-main { width: 100%; }
+.retreat-scene { position: relative; height: var(--scene-height); overflow: hidden; background: #26372d; }
+.retreat-js[data-retreat-scene="mountain"] .retreat-study,
+.retreat-js[data-retreat-scene="study"] .retreat-mountain { display: none; }
+.retreat-image-frame { position: absolute; inset: 0; overflow: hidden; }
+.retreat-canvas {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: max(100vw, calc(var(--scene-height) * 1.7768331562));
+  aspect-ratio: 1672 / 941;
+  transform: translate(calc(-50% + var(--scene-drift-x, 0px)), calc(-50% + var(--scene-drift-y, 0px))) scale(1.012);
+  transform-origin: center;
+  transition: transform 800ms cubic-bezier(.2,.65,.2,1);
+}
+.retreat-painting { display: block; width: 100%; height: 100%; max-width: none; object-fit: fill; transition: filter 800ms; }
+.dark .retreat-painting { filter: brightness(.77) saturate(.83); }
+.retreat-image-frame::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, #101e19a3, transparent 22%, transparent 76%, #101c1680);
+}
+.retreat-mountain .retreat-image-frame::after {
+  background: none;
+}
+.dark .retreat-mountain .retreat-image-frame::after {
+  background: linear-gradient(90deg, #0d231a72, #10251d19 48%, transparent 68%), linear-gradient(180deg, #1020199c, transparent 25%, transparent 75%, #17271d65);
+}
+.retreat-atmosphere {
+  position: absolute; inset: 12% -15% 1%; pointer-events: none; opacity: .12;
+  background: radial-gradient(ellipse at 35% 70%, #cdd9cbb5, transparent 55%), radial-gradient(ellipse at 70% 48%, #ebe5cd73, transparent 45%);
+  animation: retreat-mist 26s ease-in-out infinite alternate;
+}
+@keyframes retreat-mist { to { transform: translate(3%, -2%); opacity: .21; } }
+.retreat[data-paused] .retreat-atmosphere { animation-play-state: paused; }
+.retreat-chrome { position: absolute; inset: 0 0 auto; z-index: 20; }
+.retreat-chrome .site-nav {
+  margin: 0; padding: 24px clamp(28px, 4.8vw, 92px); min-height: 88px;
+  display: grid; grid-template-columns: 1fr auto auto; gap: clamp(26px, 4vw, 76px);
+  border: 0; color: var(--scene-ink);
+}
+.retreat-chrome .site-nav .brand { color: var(--scene-ink); font-size: 24px; font-weight: 500; letter-spacing: .01em; }
+.retreat-chrome .site-nav .nav-links { gap: 26px; font-size: 15px; }
+.retreat-chrome .site-nav .nav-links a { color: var(--scene-muted); }
+.retreat-chrome .site-nav .nav-links a:hover { color: #fff; }
+.retreat-chrome .site-nav .icon-button { color: var(--scene-ink); border-radius: 0; width: 44px; height: 44px; }
+.retreat-chrome .site-nav .icon-button:hover { background: #f6eed51c; }
+.retreat-chrome .site-nav .nav-tools { gap: 5px; }
+html.spatial-home:not([data-retreat-scene="study"]) .retreat-chrome .site-nav :is(.brand, .nav-links a, .icon-button) { color: var(--mountain-ink); }
+html.spatial-home:not([data-retreat-scene="study"]) .retreat-chrome .site-nav .icon-button:hover { background: #42634b18; }
+.retreat-chrome .search-dialog { color: var(--ink); background: var(--surface); text-shadow: none; }
+.retreat-introduction {
+  position: absolute; z-index: 3; top: clamp(140px, 18vw, 240px); left: clamp(38px, 7.2vw, 142px);
+  width: min(600px, 48vw); color: var(--mountain-ink); text-shadow: none;
+}
+.retreat-eyebrow { font-family: var(--font-sans); font-size: 12px; font-weight: 400; letter-spacing: .22em; line-height: 1.7; }
+.retreat-introduction > .retreat-eyebrow { color: var(--mountain-muted); }
+.retreat-introduction h1 { margin-top: 22px; font-size: clamp(58px, 6.2vw, 102px); font-weight: 400; line-height: .98; letter-spacing: -.035em; text-wrap: nowrap; }
+.retreat-motto { display: flex; flex-wrap: wrap; gap: 0 .65em; margin-top: 24px; font-size: clamp(21px, 2vw, 29px); font-weight: 400; line-height: 1.7; letter-spacing: .16em; }
+html[lang="en"].spatial-home .retreat-motto { flex-direction: column; font-size: clamp(20px, 1.8vw, 27px); letter-spacing: 0; line-height: 1.45; }
+/* A text invitation leaves the painted doorway as the visual anchor. */
+.retreat-enter {
+  display: inline-flex; align-items: center; gap: 24px;
+  min-height: 54px; margin-top: 27px; padding: 4px 1px 8px;
+  color: var(--mountain-ink); background: none; border: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--mountain-ink) 60%, transparent);
+  font-size: 23px; line-height: 1.5; letter-spacing: .12em;
+  transition: border-color 180ms, color 180ms;
+}
+.retreat-enter svg { width: 24px; height: 28px; stroke: currentColor; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.retreat-enter:hover { color: var(--accent); border-bottom-color: currentColor; }
+.retreat-enter:focus-visible { outline: 2px solid var(--mountain-ink); outline-offset: 7px; }
+.retreat-invitation { max-width: 390px; margin-top: 14px; color: var(--mountain-muted); font-size: 16px; line-height: 1.8; letter-spacing: .03em; }
+.retreat-scene-note { position: absolute; left: clamp(38px, 7.2vw, 142px); bottom: 38px; display: flex; align-items: center; gap: 18px; font-size: 12px; letter-spacing: .16em; color: var(--mountain-muted); }
+.retreat-note-line { height: 1px; width: 64px; background: currentColor; opacity: .5; }
+/* Hit areas follow the objects. Their names are set on the painted materials. */
+.retreat-spot {
+  position: absolute; z-index: 3; left: var(--spot-x); top: var(--spot-y);
+  width: var(--spot-width); height: var(--spot-height); min-width: 44px; min-height: 44px;
+  transform: translate(-50%, -50%); border: 0; border-radius: 20%;
+  color: var(--scene-ink); outline-offset: 5px; cursor: pointer;
+}
+.retreat-spot::before {
+  content: ''; position: absolute; inset: -12%; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(ellipse, #ffe5aa3b, #f5d49b13 46%, transparent 72%);
+  opacity: 0; transition: opacity 220ms;
+}
+.retreat-spot:is(:hover,:focus-visible)::before { opacity: 1; }
+.retreat-spot:focus-visible { outline: 2px solid #fff1c9; }
+.retreat-object-title {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  padding: 5px 1px; color: #f4e5be; font-size: clamp(18px, 1.45vw, 24px);
+  font-weight: 500; line-height: 1.4; letter-spacing: .14em; white-space: nowrap;
+  text-shadow: 0 1px 3px #18251f80; border-bottom: 1px solid currentColor;
+  transition: color 180ms, text-shadow 180ms;
+}
+.retreat-object-books .retreat-object-title { left: 47%; top: 70%; transform: translate(-50%, -50%) rotate(-2deg); }
+.retreat-object-notebook .retreat-object-title { left: 30%; top: 43%; transform: translate(-50%, -50%) rotate(-4deg); color: #51422f; text-shadow: 0 1px 1px #ffedc833; border-bottom-color: #69563c78; }
+.retreat-object-workbench .retreat-object-title { left: 48%; top: 40%; transform: translate(-50%, -50%) rotate(4deg); font-size: clamp(17px, 1.35vw, 22px); }
+.retreat-object-letter .retreat-object-title { left: 23%; top: 42%; transform: translate(-50%, -50%) rotate(-5deg); color: #594532; text-shadow: 0 1px 1px #ffedc833; border-bottom-color: #69563c78; }
+.retreat-spot:is(:hover,:focus-visible) .retreat-object-title { text-shadow: 0 0 12px #f3d89d88; }
+.dark .retreat-object-notebook .retreat-object-title, .dark .retreat-object-letter .retreat-object-title { color: #302a20; text-shadow: none; }
+.retreat-door::before { inset: -12%; opacity: .55; background: radial-gradient(ellipse, #ffdc7b4a, #f2ce7926 35%, transparent 70%); animation: retreat-door-light 4.8s ease-in-out infinite alternate; }
+.retreat-door:is(:hover,:focus-visible)::before { opacity: 1; animation: none; }
+.retreat-door-cue {
+  position: absolute; top: calc(100% + 15px); left: 50%; transform: translateX(-50%);
+  padding: 5px 0; color: #fff1cb; font-size: 17px; line-height: 1.5; letter-spacing: .12em;
+  white-space: nowrap; text-shadow: 0 1px 4px #203b2af2, 0 0 14px #1f3425c9;
+}
+.retreat-door-cue::before { content: ''; position: absolute; left: 50%; bottom: 100%; height: 20px; width: 1px; background: linear-gradient(transparent, #f8e8be); }
+.retreat-door-cue::after { content: ''; position: absolute; bottom: 2px; inset-inline: 0; height: 1px; background: #efdeb7a8; }
+@keyframes retreat-door-light { from { opacity: .42; } to { opacity: .85; } }
+.retreat-study-heading { position: absolute; z-index: 3; top: 125px; left: clamp(38px, 6.2vw, 120px); text-shadow: 0 2px 18px #080e09c9; }
+.retreat-study-heading h2 { font-size: clamp(32px, 3vw, 46px); line-height: 1.2; font-weight: 400; letter-spacing: .18em; }
+.retreat-study-heading > p { margin-top: 13px; color: #e8e0cb; font-size: 16px; letter-spacing: .06em; }
+.retreat-study-bottom { position: absolute; z-index: 4; bottom: 30px; inset-inline: clamp(38px, 4.8vw, 92px); display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+.retreat-outside { display: inline-flex; align-items: center; min-height: 44px; gap: 11px; color: #f2e9d3; font-size: 14px; letter-spacing: .08em; }
+.retreat-outside svg { width: 18px; height: 18px; }
+.retreat-outside:hover { text-decoration: underline; text-underline-offset: 6px; }
+.retreat-desktop-hint { color: #ddd7c4; font-size: 14px; letter-spacing: .1em; }
+.retreat-touch-directory { display: none; }
+.retreat-colophon { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 25px clamp(28px, 4.8vw, 92px); background: var(--retreat-paper); color: var(--mountain-muted); font-size: 12px; line-height: 1.7; letter-spacing: .04em; }
+.retreat-colophon > div { display: flex; gap: 28px; flex-wrap: wrap; }
+.retreat-colophon a { color: var(--mountain-ink); }
+.retreat-colophon a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.retreat-transition { position: fixed; inset: 0; z-index: 50; background: #17231d; opacity: 0; pointer-events: none; transition: opacity 220ms ease; }
+.retreat[data-switching] .retreat-transition { opacity: 1; pointer-events: auto; }
+
+.retreat-noscript { padding: 18px 7vw; color: var(--mountain-ink); font-size: 14px; background: var(--retreat-paper); }
+
+/* Narrow screens keep the complete painting and a comfortable text directory. */
+@media (max-width: 900px) {
+  .retreat-chrome { position: relative; background: var(--retreat-paper); }
+  .retreat-chrome .site-nav { padding: 20px 6vw 12px; min-height: 0; grid-template-columns: 1fr auto; gap: 8px 12px; }
+  .retreat-chrome .site-nav .brand { font-size: 23px; }
+  .retreat-chrome .site-nav :is(.brand, .nav-links a, .icon-button) { color: var(--mountain-ink); }
+  .retreat-chrome .site-nav .icon-button:hover { background: #42634b18; }
+  .retreat-chrome .site-nav .nav-tools { grid-column: 2; grid-row: 1; }
+  .retreat-chrome .site-nav .nav-secondary { display: none; }
+  .retreat-chrome .site-nav .nav-links { grid-column: 1 / -1; grid-row: 2; gap: 28px; border: 0; padding: 0; font-size: 16px; }
+  .retreat-chrome .site-nav .nav-links a { padding-block: 5px; min-height: 44px; display: inline-flex; align-items: center; }
+  .retreat-scene { display: flex; flex-direction: column; height: auto; min-height: 0; overflow: visible; background: var(--retreat-paper); }
+  .retreat-image-frame { position: relative; inset: auto; width: 100%; aspect-ratio: 1672 / 941; flex-shrink: 0; }
+  .retreat-canvas { position: relative; left: auto; top: auto; width: 100%; height: 100%; aspect-ratio: 1672 / 941; transform: none; transition: none; }
+  .retreat-image-frame::after, .retreat-mountain .retreat-image-frame::after { background: none; }
+  .retreat-introduction { position: relative; inset: auto; order: -1; width: 100%; padding: 16px 7vw 23px; text-shadow: none; }
+  .retreat-introduction h1 { font-size: clamp(43px, 8.5vw, 64px); margin-top: 10px; }
+  .retreat-introduction .retreat-eyebrow { font-size: 12px; letter-spacing: .16em; }
+  .retreat-motto { margin-top: 12px; font-size: 18px; line-height: 1.4; }
+  html[lang="en"].spatial-home .retreat-motto { font-size: 18px; line-height: 1.32; }
+  .retreat-enter { margin-top: 17px; min-height: 48px; gap: 22px; font-size: 21px; }
+  .retreat-enter svg { width: 21px; height: 26px; }
+  .retreat-invitation { max-width: 36em; margin-top: 12px; font-size: 16px; line-height: 1.65; }
+  .retreat-scene-note { display: none; }
+  .retreat-spot { border-radius: 18%; }
+  .retreat-object-title { font-size: clamp(14px, 2.6vw, 20px); padding-block: 1px; letter-spacing: .06em; }
+  .retreat-object-workbench .retreat-object-title { font-size: clamp(14px, 2.4vw, 19px); }
+  .retreat-object-books .retreat-object-title { top: 70%; }
+  .retreat-object-notebook .retreat-object-title { left: 39%; }
+  .retreat-door-cue { top: auto; bottom: calc(100% + 12px); font-size: 14px; }
+  .retreat-door-cue::before { bottom: auto; top: 100%; height: 15px; background: linear-gradient(#f8e8be, transparent); }
+  .retreat-door-cue::after { display: none; }
+  .retreat-study-heading { position: relative; inset: auto; order: -1; padding: 18px 7vw 22px; text-shadow: none; color: var(--mountain-ink); }
+  .retreat-study-heading h2 { font-size: 32px; }
+  .retreat-study-heading > p { margin-top: 10px; font-size: 16px; color: var(--mountain-muted); }
+  .retreat-study-bottom { position: relative; inset: auto; order: 2; margin: 0 7vw; padding: 9px 0 17px; }
+  .retreat-outside { color: var(--mountain-ink); }
+  .retreat-desktop-hint { display: none; }
+  .retreat-touch-directory { order: 1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 0 24px; padding: 13px 7vw 10px; }
+  .retreat-touch-directory a { display: flex; align-items: center; min-height: 80px; padding: 12px 0; border-bottom: 1px solid var(--line); color: var(--mountain-ink); }
+  .retreat-touch-directory strong { display: block; font-size: 18px; font-weight: 400; }
+  .retreat-touch-directory small { display: block; margin-top: 5px; color: var(--mountain-muted); font-size: 14px; line-height: 1.5; }
+  .retreat-colophon { flex-direction: column; align-items: flex-start; gap: 10px; padding: 20px 7vw; border-top: 1px solid var(--line); font-size: 13px; }
+}
+@media (min-width: 901px) and (max-width: 1100px) {
+  .retreat-scene-note { display: none; }
+  .retreat-invitation { max-width: 350px; }
+}
+@media (max-width: 600px) {
+  .retreat-chrome .site-nav .brand { font-size: 21px; }
+  .retreat-chrome .site-nav .nav-tools { gap: 0; }
+  .retreat-chrome .site-nav .icon-button { width: 44px; }
+  html[lang="en"] .retreat-object-workbench .retreat-object-title { top: 72%; letter-spacing: .01em; text-shadow: 0 1px 3px #18251fcc; }
+}
+@media (max-width: 360px) {
+  .retreat-introduction h1 { font-size: 40px; }
+  .retreat-chrome .site-nav .brand { font-size: 19px; }
+  .retreat-touch-directory { column-gap: 16px; }
+  .retreat-touch-directory strong { font-size: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .retreat *, .retreat *::before, .retreat *::after { animation: none !important; transition: none !important; }
+  .retreat-canvas { transform: translate(-50%,-50%); }
+  .retreat-atmosphere { display: none; }
+}
+@media (prefers-reduced-motion: reduce) and (max-width: 900px) {
+  .retreat-canvas { transform: none; }
+}
+@media print {
+  .retreat-chrome, .retreat-transition, .retreat-spot, .retreat-catalogue { display: none !important; }
+  .retreat-scene { height: auto; min-height: 0; }
+  .retreat-image-frame { position: relative; aspect-ratio: 1672/941; }
+  .retreat-canvas { position: static; width: 100%; transform: none; }
+  .retreat-introduction, .retreat-study-heading { position: static; padding: 24px; color: #222; width: 100%; text-shadow: none; }
+}

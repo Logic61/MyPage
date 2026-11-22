@@ -1,0 +1,11 @@
+---
+interface Props { isEn?: boolean; }
+const { isEn = false } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+---
+<a class="return-to-study" href={`${base}${isEn ? '/en' : ''}/#study`}><span>{isEn ? 'Return to the study' : '回到书斋'}</span></a>
+<style>
+  .return-to-study { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--muted); font-family: var(--font-serif); font-size: 16px; }
+  .return-to-study:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 5px; }
+  @media print { .return-to-study { display: none; } }
+</style>

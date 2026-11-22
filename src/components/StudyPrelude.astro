@@ -1,0 +1,26 @@
+---
+import ReturnToStudy from './ReturnToStudy.astro';
+interface Props {
+  title?: string;
+  eyebrow?: string;
+  description?: string;
+  isEn?: boolean;
+  compact?: boolean;
+}
+const { title, eyebrow, description, isEn = false, compact = false } = Astro.props;
+---
+<header class:list={['section-wrap', 'study-prelude', { 'study-prelude-compact': compact }]}>
+  <nav class="study-trail" aria-label={isEn ? 'Your place in the study' : '书斋导航'}>
+    <ReturnToStudy {isEn} />
+    {eyebrow && <span class="study-trail-place">{eyebrow}</span>}
+  </nav>
+  {title && (
+    <div class="study-heading">
+      <div>
+        <h1>{title}</h1>
+        {description && <p class="study-description">{description}</p>}
+        <slot />
+      </div>
+    </div>
+  )}
+</header>

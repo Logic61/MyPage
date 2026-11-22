@@ -2,6 +2,8 @@
 import Layout from '../layouts/Layout.astro';
 import CvHeader from '../components/CvHeader.astro';
 import Navigation from '../components/Navigation.astro';
+import Footer from '../components/Footer.astro';
+import StudyPrelude from '../components/StudyPrelude.astro';
 
 ---
 
@@ -10,7 +12,10 @@ import Navigation from '../components/Navigation.astro';
 
     <Navigation />
 
-    <main id="main-content" class="site-content cv-document">
+    <main id="main-content" class="site-content cv-page">
+    <StudyPrelude title="简历"
+      description="研究兴趣、教育经历与项目记录。" />
+    <article class="cv-document" aria-labelledby="cv-name">
     <CvHeader isEn={false} />
 
     <div class="cv-sections">
@@ -152,6 +157,8 @@ import Navigation from '../components/Navigation.astro';
       <span>中国 · 北京</span>
     </footer>
 
+    </article>
   </main>
+  <Footer />
   </div>
 </Layout>

@@ -1,0 +1,273 @@
+/* The letter and the workbench share the study's paper, jade and brass. */
+@media screen {
+  .study-page .site-shell.cv-shell { background: transparent; }
+
+  .study-page .cv-shell .cv-document,
+  .study-page .projects-shell .project-folio {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(ellipse at 100% 0, color-mix(in srgb, var(--study-gold) 9%, transparent), transparent 46%),
+      var(--study-paper, var(--surface));
+    box-shadow: var(--study-shadow, 0 20px 65px #263e3214);
+  }
+
+  .study-page .cv-shell .cv-document {
+    display: block;
+    width: var(--measure);
+    max-width: none;
+    padding: clamp(1.6rem, 5vw, 4.25rem);
+    margin: 0 auto;
+  }
+
+  .study-page .cv-shell .cv-header {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 2rem;
+    margin: 0;
+    padding: 0 0 2.5rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .study-page .cv-document-label {
+    margin: 0 0 .75rem;
+    color: var(--study-gold);
+    font-size: .875rem;
+    font-family: var(--font-serif);
+    letter-spacing: .16em;
+  }
+
+  .study-page .cv-shell .cv-header h2 {
+    margin: 0;
+    color: var(--ink);
+    font-family: var(--font-serif);
+    font-size: clamp(2.75rem, 4.8vw, 4.5rem);
+    font-weight: 400;
+    line-height: 1.2;
+    letter-spacing: .04em;
+  }
+
+  .study-page .cv-shell .cv-identity {
+    max-width: 33em;
+    margin-top: 1.15rem;
+    font-size: 1.0625rem;
+    line-height: 1.8;
+    color: var(--body);
+  }
+
+  .study-page .cv-shell .cv-contact {
+    display: flex;
+    flex-flow: row wrap;
+    justify-items: start;
+    gap: .35rem 1.4rem;
+    margin-top: 1.25rem;
+    color: var(--muted);
+    font-size: .9375rem;
+  }
+
+  .study-page .cv-contact a { min-height: 2.75rem; }
+  .study-page .cv-contact svg { color: var(--study-gold); }
+  .study-page .cv-shell .cv-download {
+    gap: .55rem;
+    min-height: 2.875rem;
+    margin-top: 2.5rem;
+    padding: .65rem 1.05rem;
+    border: 1px solid var(--study-gold);
+    border-radius: 2px;
+    background: transparent;
+    color: var(--accent);
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    white-space: nowrap;
+  }
+  .study-page .cv-shell .cv-download:hover {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--surface);
+  }
+
+  .study-page .cv-shell .cv-sections > section {
+    display: grid;
+    grid-template-columns: minmax(8.5rem, .28fr) minmax(0, 1fr);
+    align-items: start;
+    gap: 1.25rem clamp(1.5rem, 4vw, 3.5rem);
+    padding: 2.15rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .study-page .cv-shell .cv-sections > section:first-child { padding-top: 2.15rem; }
+  .study-page .cv-shell .cv-sections > section:last-child { border-bottom: 0; }
+  .study-page .cv-shell .cv-sections > section > :last-child { padding: 0; border: 0; }
+  .study-page .cv-shell .section-heading {
+    position: relative;
+    margin: 0;
+    padding: .12rem 0 0 1rem;
+    color: var(--accent);
+    font-family: var(--font-serif);
+    font-size: 1.1875rem;
+    font-weight: 400;
+    line-height: 1.7;
+    letter-spacing: .04em;
+  }
+  .study-page .cv-shell .section-heading::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: .45rem;
+    width: 2px;
+    height: 1.1em;
+    background: var(--study-gold);
+  }
+  .study-page .cv-shell .cv-title { font-size: 1.1875rem; font-weight: 700; line-height: 1.7; }
+  .study-page .cv-shell .cv-sub { margin-top: .35rem; font-size: .9375rem; }
+  .study-page .cv-shell .cv-date { font-size: .875rem; }
+  .study-page .cv-shell .cv-bullets,
+  .study-page .cv-shell .cv-note,
+  .study-page .cv-shell .cv-skills { font-size: 1rem; line-height: 1.9; }
+  .study-page .cv-shell .cv-bullets { padding-left: 1.15rem; }
+  .study-page .cv-shell .cv-bullets li::marker { color: var(--study-gold); }
+  .study-page .cv-shell .cv-entry + .cv-entry { margin-top: 1.8rem; }
+  .study-page .cv-shell .cv-skill-row { grid-template-columns: 8rem minmax(0, 1fr); gap: 1rem; padding: .35rem 0; }
+  .study-page .cv-shell .cv-skill-key { font-size: .9375rem; }
+  .study-page .cv-shell .cv-footer {
+    gap: 1rem;
+    margin: .5rem 0 0;
+    padding: 1.35rem 0 0;
+    border-top: 1px solid var(--line);
+    font-size: .875rem;
+  }
+
+  .study-page .workbench-directory {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: .45rem 2rem;
+    margin-bottom: 2rem;
+    padding: .2rem 0 1.15rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--study-gold) 55%, var(--line));
+  }
+  .study-page .workbench-directory > p {
+    margin: 0;
+    color: var(--muted);
+    font-size: .875rem;
+    letter-spacing: .09em;
+  }
+  .study-page .projects-shell .project-index {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .35rem 1.75rem;
+    padding: 0;
+    border: 0;
+  }
+  .study-page .projects-shell .project-index a {
+    min-height: 2.75rem;
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    font-weight: 400;
+  }
+  .study-page .projects-shell .project-list { gap: 2rem; }
+  .study-page .projects-shell .project-folio {
+    display: grid;
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    align-items: start;
+    gap: clamp(2rem, 5vw, 4.5rem);
+    padding: clamp(1.6rem, 4vw, 3.5rem);
+    scroll-margin-top: 2rem;
+  }
+  .study-page .project-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.8rem;
+    height: 2.8rem;
+    margin-bottom: 1.35rem;
+    border: 1px solid color-mix(in srgb, var(--study-gold) 60%, transparent);
+    border-radius: 50%;
+    color: var(--study-gold);
+  }
+  .study-page .project-glyph svg { width: 1.4rem; height: 1.4rem; }
+  .study-page .projects-shell .project-stack {
+    margin: 0 0 .6rem;
+    font-family: var(--font-sans);
+    font-size: .875rem;
+    font-weight: 400;
+    letter-spacing: .04em;
+    color: var(--study-gold);
+  }
+  .study-page .projects-shell .project h2 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: clamp(1.75rem, 3vw, 2.6rem);
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: .015em;
+    overflow-wrap: anywhere;
+  }
+  .study-page .projects-shell .project-summary > p { margin-top: 1rem; font-size: 1rem; line-height: 1.9; }
+  .study-page .projects-shell .project-repo {
+    gap: .5rem;
+    min-height: 2.75rem;
+    margin-top: 1rem;
+    color: var(--accent);
+    font-family: var(--font-serif);
+    font-size: 1rem;
+    text-decoration: none;
+  }
+  .study-page .projects-shell .project-repo:hover { text-decoration: underline; text-underline-offset: .3em; }
+  .study-page .projects-shell .project-repo svg { width: 1.15rem; height: 1.15rem; }
+  .study-page .projects-shell .project-notes {
+    margin-top: .1rem;
+    padding-left: clamp(1.5rem, 3vw, 2.5rem);
+    border-left: 1px solid color-mix(in srgb, var(--study-gold) 38%, var(--line));
+  }
+  .study-page .projects-shell .project-notes-label {
+    margin: 0 0 .65rem;
+    color: var(--study-gold);
+    font-family: var(--font-serif);
+    font-size: .875rem;
+    letter-spacing: .12em;
+  }
+  .study-page .projects-shell .project ul { margin: 0; padding: 0; list-style: none; color: var(--body); }
+  .study-page .projects-shell .project li { padding: 1rem 0; font-size: 1rem; line-height: 1.9; }
+  .study-page .projects-shell .project li:first-child { padding-top: .5rem; }
+  .study-page .projects-shell .project li + li { margin: 0; border-top: 1px solid var(--line); }
+}
+
+@media screen and (max-width: 760px) {
+  .study-page .cv-shell .cv-document,
+  .study-page .projects-shell .project-folio { padding: 1.6rem 1.35rem; }
+  .study-page .cv-shell .cv-document::before,
+  .study-page .projects-shell .project-folio::before { inset: 5px; }
+  .study-page .cv-shell .cv-header { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; padding-bottom: 1.75rem; }
+  .study-page .cv-shell .cv-header h2 { font-size: clamp(2.4rem, 9.5vw, 3.5rem); }
+  .study-page .cv-shell .cv-download { justify-self: start; margin: 0; }
+  .study-page .cv-shell .cv-contact { flex-direction: column; gap: .15rem; }
+  .study-page .cv-shell .cv-sections > section { grid-template-columns: minmax(0, 1fr); gap: 1rem; padding: 1.65rem 0; }
+  .study-page .cv-shell .cv-sections > section:first-child { padding-top: 1.65rem; }
+  .study-page .cv-shell .cv-head { gap: .2rem .75rem; }
+  .study-page .cv-shell .cv-title { font-size: 1.125rem; }
+  .study-page .cv-shell .cv-skill-row { grid-template-columns: minmax(0, 6.1rem) minmax(0, 1fr); gap: .65rem; }
+  .study-page .cv-shell .cv-footer { flex-wrap: wrap; gap: .35rem 1rem; }
+  .study-page .workbench-directory { display: block; margin-bottom: 1.25rem; }
+  .study-page .workbench-directory > p { margin-bottom: .4rem; }
+  .study-page .projects-shell .project-index { gap: .2rem 1rem; }
+  .study-page .projects-shell .project-list { gap: 1.25rem; }
+  .study-page .projects-shell .project-folio { grid-template-columns: minmax(0, 1fr); gap: 1.75rem; }
+  .study-page .project-glyph { margin-bottom: 1rem; }
+  .study-page .projects-shell .project-notes { padding-left: 0; padding-top: 1.25rem; border-left: 0; border-top: 1px solid var(--line); }
+}
+
+@media print {
+  .study-page .study-prelude,
+  .study-page .cv-document-label,
+  .study-page .workbench-directory,
+  .study-page .project-glyph { display: none; }
+  .study-page .cv-shell .cv-document { display: block; width: 100%; max-width: none; margin: 0; padding: 0; border: 0; background: none; box-shadow: none; }
+  .study-page .cv-header h2 { margin: 0; font-size: 28pt; line-height: 1.25; }
+  .study-page .cv-sections > section > :last-child { padding: 0; border: 0; }
+  .study-page .cv-header, .study-page .cv-entry { break-inside: avoid; }
+  .study-page .project-folio { display: block; border: 0; border-bottom: 1px solid #aaa; padding: 16pt 0; background: none; box-shadow: none; }
+  .study-page .project-notes-label { margin: 12pt 0 6pt; font-size: 10pt; }
+}
