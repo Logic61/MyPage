@@ -692,10 +692,13 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   for (const xx of [-1.014,1.014]) rod(bench,stitch,new THREE.Vector3(xx,.500,-.225),new THREE.Vector3(xx,.500,.205),.0016,5);
   batchStatic(bench);
   colliders.push({x:10,z:5,halfX:1.24,halfZ:.40});
-  interactions.push({id:'bench',kind:'bench',label:'坐看山色',labelEn:'Pause by the mountains',
-    position:new THREE.Vector3(10,1.175,5.201),approach:new THREE.Vector3(10,.3,3.65),radius:2.05,meshes:[bench],
-    // Actual seat contact point, NOT a standing capsule foot. Add only the seated eye offset.
-    sitPosition:new THREE.Vector3(10,.824,4.88),sitYaw:0});
+  // The guide faces the broad cushion. Its surface is also the seated camera's height reference.
+  const seatContact = new THREE.Vector3(10, .824, 4.88);
+  interactions.push({
+    id: 'bench', kind: 'bench', label: '坐看山色', labelEn: 'Pause by the mountains',
+    position: seatContact, approach: new THREE.Vector3(10, .3, 3.65), radius: 2.05, meshes: [bench],
+    sitPosition: seatContact, sitYaw: 0,
+  });
 
   let instrumentAngle = 0;
   return {
