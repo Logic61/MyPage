@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary } from './materials';
 import { branchGeometry, gridSurface, mistTexture, naturalRock, roundedBlock, seeded } from './environment-geometry';
+import { bambooWind, buildBamboo } from './bamboo';
 import { branchWind, buildPines } from './pine-grove';
 import { COURTYARD_POOLS, createStudyArchitecture } from './environment-design';
 import type { Collider, Environment } from './types';
@@ -26,8 +27,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   const moss = own(library.material('moss', { worldScale: 1.1, normalScale: .4 }));
   const iron = own(new THREE.MeshStandardMaterial({ color: '#4b4c43', metalness: .63, roughness: .72 }));
   const ropeMaterial = own(new THREE.MeshStandardMaterial({ color: '#b4aa8b', roughness: 1 }));
-  const bambooMaterial = own(library.material('bark', { color: '#dae5c5', repeat: [1, 2], normalScale: .23 }));
-  const bambooLeafMaterial = own(new THREE.MeshStandardMaterial({ color: '#596e4c', roughness: .95, side: THREE.DoubleSide }));
+  const fernMaterial = own(new THREE.MeshStandardMaterial({ color: '#596e4c', roughness: .95, side: THREE.DoubleSide }));
   const block = keep(roundedBlock()), cube = keep(new THREE.BoxGeometry(1, 1, 1));
   const cylinder = keep(new THREE.CylinderGeometry(1, 1, 1, 12));
   const rocks = [keep(naturalRock(12)), keep(naturalRock(49)), keep(naturalRock(87))];
@@ -160,23 +160,23 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   own(pines.material);
 
   // Slender bamboo and small ferns occupy the western rock edge only.
-  const bambooStems: Placed[] = [], bambooNodes: Placed[] = [], bambooLeaves: Placed[] = [];
+  const bamboo = buildBamboo(rng);
+  const culms = own(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .57 }));
+  const blades = own(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .79, side: THREE.DoubleSide }));
+  for (const [geometry, material, name] of [[bamboo.stems, culms, 'Jointed bamboo culms and twigs'], [bamboo.leaves, blades, 'Folded bamboo foliage']] as const) {
+    bambooWind(material, windTime);
+    const plant = mesh(keep(geometry), material);
+    plant.name = name; plant.userData.dynamic = true;
+  }
+  obstacle(-13.7, -.75, .72, 1.38);
   const leafShape = keep(new THREE.BufferGeometry());
   leafShape.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -.07, .012, .24, 0, .025, .58, 0, 0, 0, 0, .025, .58, .055, -.006, .24], 3));
   leafShape.setAttribute('uv', new THREE.Float32BufferAttribute([.5, 0, 0, .45, .5, 1, .5, 0, .5, 1, 1, .45], 2)); leafShape.computeVertexNormals();
-  for (let i = 0; i < 15; i++) {
-    const x = -13.7 + (rng() - .5) * 1.2, z = -.75 + (rng() - .5) * 2.5, height = 2.3 + rng() * 1.9;
-    bambooStems.push({ x, y: .3 + height / 2, z, sx: .028 + rng() * .012, sy: height, sz: .034 });
-    for (let y = .65; y < height; y += .44) bambooNodes.push({ x, y, z, sx: .043, sy: .022, sz: .043 });
-    for (let j = 0; j < 12; j++) bambooLeaves.push({ x, y: height * (.48 + j / 24), z, sx: .75, sy: .75, sz: .75, ry: j * 2.4 + i, rx: -.25 + rng() * .5 });
-  }
-  batch(cylinder, bambooMaterial, bambooStems, 'Fine bamboo stems'); batch(cylinder, cutStone, bambooNodes, 'Bamboo joints');
-  branchWind(bambooLeafMaterial, windTime, 'y', .065);
-  batch(leafShape, bambooLeafMaterial, bambooLeaves, 'Lanceolate bamboo leaves'); obstacle(-13.7, -.75, .72, 1.38);
+  branchWind(fernMaterial, windTime, 'y', .065);
   const ferns: Placed[] = [];
   for (const [x, z] of [[-13.6, 6.8], [-13.1, 6.2], [-13.4, -.1], [11.8, 9.4]]) for (let j = 0; j < 12; j++)
     ferns.push({ x, y: .3, z, sx: .6, sy: .7, sz: .7, ry: j * Math.PI / 6, rx: -.8 + (j % 3) * .1 });
-  batch(leafShape, bambooLeafMaterial, ferns, 'Low edge ferns');
+  batch(leafShape, fernMaterial, ferns, 'Low edge ferns');
 
   // Low stones guard the outer ledge without obstructing the entrance or the lookout.
   const edging: Placed[] = [];
