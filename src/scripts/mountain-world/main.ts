@@ -352,9 +352,8 @@ async function initializeWorld(root: HTMLElement) {
     function activate(item: Interaction) {
       cancelRoute(); clearMovement(); selectedId = item.id; selectedUntil = elapsed + 1.35;
       item.activate?.(); lighting.sun.shadow.needsUpdate = true;
-      if (item.kind === 'lantern') {
-        ui.showToast(en ? 'A little light in the mountains.' : '山间一盏灯。');
-      } else if (item.kind === 'bench') {
+      if (item.kind === 'lantern') return;
+      if (item.kind === 'bench') {
         seatReturn = position.clone();
         seatedAt = item; root.dataset.seated = 'true';
         if (standButton) standButton.hidden = false;

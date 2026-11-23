@@ -18,7 +18,6 @@ const places = [
   { id: 'books', section: 'blog', glyph: 'blog', name: t('藏书架', 'Bookshelf'), place: t('西翼 · 博客', 'West wing · Writing') },
   { id: 'projects', section: 'projects', glyph: 'projects', name: t('项目', 'Projects'), place: t('东翼 · 工作案', 'East wing · Workbench') },
   { id: 'about', section: 'cv', glyph: 'cv', name: t('简历', 'CV'), place: t('北厅东壁 · 挂轴', 'North hall · Hanging scroll') },
-  { id: 'latest', section: 'blog', glyph: 'blog', name: t('近作', 'Recent writing'), place: t('北厅 · 书案', 'North hall · Writing desk') },
   { id: 'bench', section: null, glyph: 'map', name: t('临崖小坐', 'Cliffside bench'), place: t('东亭 · 观山', 'East pavilion · Overlook') },
 ] as const;
 ---
@@ -42,7 +41,7 @@ const places = [
             <select id="category" data-world-category aria-label={t('文章分类', 'Filter by subject')}><option value="">{t('全部分类', 'All subjects')}</option>{categories.map(c => <option value={c}>{c}</option>)}</select>
           </div>
           <div class="catalogue-list">
-            {posts.map(post => <div data-world-post><a href={`${prefix}/blog/${postSlug(post)}/`} data-world-article data-slug={postSlug(post)}
+            {posts.map(post => <div data-world-post><a href={`${prefix}/blog/${postSlug(post)}/`} data-world-article data-manuscript={`${base}/manuscripts/${isEn ? 'en' : 'zh'}/${postSlug(post)}/index.html`} data-slug={postSlug(post)}
               data-alias={isEn ? `${prefix}/blog/${post.id}/` : undefined} data-category={categoryOf(post)} data-description={postDescription(post)}
               data-date={postDate(post.data.pubDate, isEn)} data-author={post.data.author}><span>{post.data.title}</span></a></div>)}
             <p data-world-empty hidden>{t('没有找到匹配的文章。', 'No matching titles.')}</p>
@@ -76,7 +75,7 @@ const places = [
                   <g id="map-player" transform="translate(130 189)"><circle r="3.5"/><path d="M0-10l-3.2 5.8h6.4z"/></g>
                 </svg>
                 <div class="map-directory">{places.map(p => <div>
-                  {p.section ? <a href={`${prefix}/${p.section}/`} data-section-link={p.section} data-recent={p.id === 'latest' || undefined}><FolioGlyph name={p.glyph}/><span><strong>{p.name}</strong><small>{p.place}</small></span></a>
+                  {p.section ? <a href={`${prefix}/${p.section}/`} data-section-link={p.section}><FolioGlyph name={p.glyph}/><span><strong>{p.name}</strong><small>{p.place}</small></span></a>
                     : <span class="map-bench"><FolioGlyph name={p.glyph}/><span><strong>{p.name}</strong><small>{p.place}</small></span></span>}
                   <button type="button" data-world-destination={p.id} aria-label={t('指路至','Guide me to ') + p.name}>{t('指路','Guide me')}</button>
                 </div>)}</div>

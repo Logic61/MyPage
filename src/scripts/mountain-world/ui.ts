@@ -56,7 +56,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
   }
 
   function openContent(kind: InteractionKind, catalogue = false) {
-    if (kind === 'books' || kind === 'latest') void folio.show('blog', { recent: kind === 'latest', catalogue });
+    if (kind === 'books') void folio.show('blog', { catalogue });
     else if (kind === 'projects' || kind === 'about') void folio.show(kind === 'projects' ? 'projects' : 'cv');
   }
 
@@ -79,7 +79,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
       event.preventDefault();
       const id = destination.dataset.worldDestination!;
       if (failed) {
-        if (id === 'books' || id === 'latest' || id === 'projects' || id === 'about') openContent(id);
+        if (id === 'books' || id === 'projects' || id === 'about') openContent(id);
         else showToast(en ? 'The path needs a browser with 3D support.' : '山间行走需要浏览器支持三维场景。');
       } else {
         folio.close();

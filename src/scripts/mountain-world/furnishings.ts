@@ -434,7 +434,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   const notebook = new THREE.Group();
   notebook.name = 'open-handwritten-notebook';
   notebook.position.set(-.38, .786, .08); notebook.rotation.y = -.10; desk.add(notebook);
-  const manuscript = written('notes', 'latest');
+  const manuscript = written('notes');
   const verse = written('poem');
   for (const side of [-1, 1]) {
     const half = new THREE.Group(); half.position.x = side * .132; half.rotation.z = side * -.025; notebook.add(half);
@@ -456,7 +456,6 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     result.computeVertexNormals(); return result;
   });
   mesh(turningLeaf, leafGeometry, manuscript);
-  let leafElapsed = 2, leafHasTurned = false;
   const bookmark = box(notebook, red, .012, .0017, .12, .081, .007, .213);
   bookmark.rotation.x = .23;
   for (let i = 0; i < 4; i++) cylinder(notebook, red, .0008, .0008, .026, .077 + i * .0026, -.005, .270, 4).rotation.x = .38;
@@ -549,9 +548,6 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
   batchStatic(desk, [notebook]); batchStatic(notebook, [turningLeaf]);
   colliders.push({ x: 0, z: -7, halfX: 1.49, halfZ: .64 });
-  interactions.push({ id: 'latest', kind: 'latest', label: '翻阅近作', labelEn: 'Read recent writing',
-    position: new THREE.Vector3(-.38, 1.115, -6.92), approach: new THREE.Vector3(-.35, .3, -5.55), radius: 2.1,
-    meshes: [notebook], activate: () => { leafElapsed = 0; leafHasTurned = true; } });
 
   // ----------------------- The instrument workbench -----------------------
   const workbench = group('project-workbench', 5, -2.8); workbench.rotation.y = -Math.PI / 2; writingTable(workbench, 2.3, 1.1);
@@ -729,10 +725,6 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
       if (pulledBook) {
         const distance = bookOpen ? .10 : selectedId === 'books' ? .035 : 0;
         pulledBook.position.z = THREE.MathUtils.damp(pulledBook.position.z, pulledBookBaseZ + distance, 7, dt);
-      }
-      if (leafHasTurned) {
-        leafElapsed = Math.min(1.25, leafElapsed + dt);
-        turningLeaf.rotation.z = THREE.MathUtils.smoothstep(leafElapsed / 1.25, 0, 1) * Math.PI;
       }
       instrumentImpulse = Math.max(0, instrumentImpulse - dt);
       instrumentAngle += dt * (.04 + (selectedId === 'projects' ? .12 : 0) + instrumentImpulse * .5);

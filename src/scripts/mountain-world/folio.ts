@@ -2,7 +2,6 @@ type Section = 'blog' | 'projects' | 'cv' | 'map';
 interface ReadingOptions {
   entry?: HTMLAnchorElement;
   anchor?: string;
-  recent?: boolean;
   catalogue?: boolean;
   fromHistory?: boolean;
 }
@@ -48,8 +47,8 @@ function sanitizeContent(container: Element, pageURL: URL) {
   });
 }
 
-async function readManuscript(section: keyof typeof fragments, url: URL, signal: AbortSignal) {
-  const response = await fetch(url, { signal, credentials: 'same-origin' });
+async function readManuscript(section: keyof typeof fragments, url: URL, signal: AbortSignal, manuscript?: string) {
+  const response = await fetch(manuscript || url, { signal, credentials: 'same-origin' });
   if (!response.ok) throw new Error('Unavailable manuscript');
   const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
   const content = doc.querySelector(fragments[section]);
@@ -58,7 +57,7 @@ async function readManuscript(section: keyof typeof fragments, url: URL, signal:
     const symbol = doc.getElementById(use.getAttribute('href')!.slice(1));
     if (symbol && !content.contains(symbol) && !content.querySelector(`[id="${CSS.escape(symbol.id)}"]`)) use.before(symbol.cloneNode(true));
   }
-  sanitizeContent(content, new URL(response.url || url.href));
+  sanitizeContent(content, url);
   return content.innerHTML;
 }
 
@@ -76,7 +75,7 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
   const byPath = new Map(rows.map(row => [pathKey(new URL(row.href)), row]));
   for (const row of rows) if (row.dataset.alias) byPath.set(pathKey(new URL(row.dataset.alias, location.href)), row);
   const positions = new Map<string, number>(), cache = new Map<string, string>();
-  let selected = rows[0], recentOnly = false, activeKey = '', loaded = false;
+  let selected = rows[0], activeKey = '', loaded = false;
   let request: AbortController | undefined, opener: HTMLElement | null = null;
 
   function catalogue(open: boolean, focus = false) {
@@ -87,9 +86,9 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
   function filter() {
     const query = search.value.trim().toLocaleLowerCase();
     let count = 0;
-    rows.forEach((row, index) => {
+    rows.forEach((row) => {
       const text = [row.textContent, row.dataset.description, row.dataset.category].join(' ').toLocaleLowerCase();
-      const visible = (!recentOnly || index < 8) && (!category.value || row.dataset.category === category.value) && text.includes(query);
+      const visible = (!category.value || row.dataset.category === category.value) && text.includes(query);
       row.parentElement!.hidden = !visible;
       if (visible) count++;
     });
@@ -106,7 +105,7 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
     } catch { /* Malformed author anchors do not interrupt reading. */ }
   }
   function neighbours() {
-    const entries = recentOnly ? rows.slice(0, 8) : rows;
+    const entries = rows;
     const index = entries.indexOf(selected), previous = entries[index - 1], next = entries[index + 1];
     for (const [id, target, label] of [['#newer', previous, t('上一篇','Newer')], ['#older', next, t('下一篇','Older')]] as const) {
       const button = el<HTMLButtonElement>(id);
@@ -126,14 +125,9 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
   }
   async function show(section: Section, opts: ReadingOptions = {}) {
     if (section === 'blog') {
-      if (opts.recent !== undefined && opts.recent !== recentOnly) {
-        recentOnly = opts.recent;
-        search.value = ''; category.value = '';
-      }
       if (opts.entry) selected = opts.entry;
-      if (recentOnly && rows.indexOf(selected) >= 8) selected = rows[0];
       if (!selected) section = 'map';
-      el('[data-catalogue-title]').textContent = recentOnly ? t('近作', 'Recent writing') : t('藏书目录', 'Contents');
+      el('[data-catalogue-title]').textContent = t('藏书目录', 'Contents');
       filter();
     }
     const opening = !dialog.open;
@@ -184,7 +178,10 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
     reading.setAttribute('aria-busy','true');
     status.textContent = t('正在展开手稿…','Unrolling the manuscript…'); status.hidden = false;
     try {
-      const html = cache.get(key) ?? await readManuscript(section, url, controller.signal);
+      const html = cache.get(key) ?? await readManuscript(section, url, controller.signal, blog ? selected.dataset.manuscript : undefined).catch(error => {
+        if (!blog || controller.signal.aborted) throw error;
+        return readManuscript(section, url, controller.signal);
+      });
       if (controller.signal.aborted || !dialog.open) return;
       cache.set(key, html); body.innerHTML = html; status.hidden = true;
       if (blog) neighbours();
@@ -207,7 +204,7 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
     if (!match) { close(); return; }
     let slug = '';
     try { slug = decodeURIComponent(match[2] || ''); } catch { /* Start at the last selected writing. */ }
-    void show(match[1] as Section, { entry: rows.find(row => row.dataset.slug === slug), recent: false, fromHistory: true });
+    void show(match[1] as Section, { entry: rows.find(row => row.dataset.slug === slug), fromHistory: true });
   }
   dialog.addEventListener('click', event => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0 || !(event.target instanceof Element)) return;
@@ -217,7 +214,7 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
       return;
     }
     const tab = event.target.closest<HTMLElement>('[data-section-link]');
-    if (tab) { event.preventDefault(); void show(tab.dataset.sectionLink as Section, { recent: tab.hasAttribute('data-recent') }); return; }
+    if (tab) { event.preventDefault(); void show(tab.dataset.sectionLink as Section); return; }
     const link = event.target.closest<HTMLAnchorElement>('a[href]');
     if (!link || link.target === '_blank' || link.hasAttribute('download')) return;
     const href = link.getAttribute('href')!;
@@ -227,11 +224,11 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
     const entry = byPath.get(pathKey(target));
     if (entry) {
       event.preventDefault();
-      void show('blog', { entry, anchor: target.hash, recent: recentOnly && rows.indexOf(entry) < 8 });
+      void show('blog', { entry, anchor: target.hash });
       reading.focus({ preventScroll: true });
     } else if (body.contains(link)) {
       const section = (['blog','cv','projects'] as const).find(id => pathKey(target) === `${prefix}/${id}`);
-      if (section) { event.preventDefault(); void show(section, { anchor: target.hash, recent: false }); }
+      if (section) { event.preventDefault(); void show(section, { anchor: target.hash }); }
     }
   }, { signal });
   search.addEventListener('input', filter, { signal });

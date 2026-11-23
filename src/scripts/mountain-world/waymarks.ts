@@ -1,7 +1,7 @@
 import { Vector3, type PerspectiveCamera } from 'three';
 import type { Interaction, InteractionKind } from './types';
 
-const lifts: Record<InteractionKind, number> = { books: .67, latest: .46, projects: .61, about: 1.14, lantern: .41, bench: .66 };
+const lifts: Record<InteractionKind, number> = { books: .67, projects: .61, about: 1.14, lantern: .41, bench: .66 };
 const bearings: Partial<Record<InteractionKind, number>> = { books: .29, about: .49, projects: .69 };
 const labelShifts = [0, -44, 44, -88, 88, -132, 132];
 
