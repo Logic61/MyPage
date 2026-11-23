@@ -48,7 +48,7 @@ const places = [
               data-date={postDate(post.data.pubDate, isEn)} data-author={post.data.author}><span>{post.data.title}</span></a></div>)}
             <p data-world-empty hidden>{t('没有找到匹配的文章。', 'No matching titles.')}</p>
           </div>
-          <span class="mw-sr-only" data-world-count aria-live="polite"></span>
+          <span class="mw-sr-only" data-world-count aria-live="polite">{t(`共 ${posts.length} 篇`, `${posts.length} ${posts.length === 1 ? 'page' : 'pages'}`)}</span>
         </aside>
         <div class="folio-text-side">
           <button type="button" id="show-contents" aria-expanded="false">{t('选篇 · 藏书目录', 'Choose a text')}</button>

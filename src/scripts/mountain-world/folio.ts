@@ -47,18 +47,23 @@ function sanitizeContent(container: Element, pageURL: URL) {
   });
 }
 
-async function readManuscript(section: keyof typeof fragments, url: URL, signal: AbortSignal, manuscript?: string) {
-  const response = await fetch(manuscript || url, { signal, credentials: 'same-origin' });
+async function readManuscript(section: keyof typeof fragments, url: URL, signal: AbortSignal, manuscript?: string, priority: RequestPriority = 'high') {
+  const response = await fetch(manuscript || url, { signal, credentials: 'same-origin', priority });
   if (!response.ok) throw new Error('Unavailable manuscript');
-  const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+  const html = await response.text();
+  signal.throwIfAborted();
+  const doc = new DOMParser().parseFromString(html, 'text/html');
   const content = doc.querySelector(fragments[section]);
   if (!content) throw new Error('Missing manuscript');
-  for (const use of content.querySelectorAll('svg[data-icon] use[href^="#"]')) {
-    const symbol = doc.getElementById(use.getAttribute('href')!.slice(1));
-    if (symbol && !content.contains(symbol) && !content.querySelector(`[id="${CSS.escape(symbol.id)}"]`)) use.before(symbol.cloneNode(true));
+  if (!(manuscript && new URL(response.url).origin === location.origin && content.getAttribute('data-folio-ready') === '1')) {
+    for (const use of content.querySelectorAll('svg[data-icon] use[href^="#"]')) {
+      const symbol = doc.getElementById(use.getAttribute('href')!.slice(1));
+      if (symbol && !content.contains(symbol) && !content.querySelector(`[id="${CSS.escape(symbol.id)}"]`)) use.before(symbol.cloneNode(true));
+    }
+    sanitizeContent(content, url);
   }
-  sanitizeContent(content, url);
-  return content.innerHTML;
+  content.removeAttribute('class');
+  return content;
 }
 
 /** The Meridian folio keeps the index, each manuscript and the visitor's place independent. */
@@ -74,9 +79,45 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
   const rows = [...dialog.querySelectorAll<HTMLAnchorElement>('[data-world-article]')];
   const byPath = new Map(rows.map(row => [pathKey(new URL(row.href)), row]));
   for (const row of rows) if (row.dataset.alias) byPath.set(pathKey(new URL(row.dataset.alias, location.href)), row);
-  const positions = new Map<string, number>(), cache = new Map<string, string>();
+  const positions = new Map<string, number>(), cache = new Map<string, Element>();
+  const pending = new Map<string, { controller: AbortController; result: Promise<Element> }>();
   let selected = rows[0], activeKey = '', loaded = false;
-  let request: AbortController | undefined, opener: HTMLElement | null = null;
+  let view = 0, hoverTimer: number | undefined, opener: HTMLElement | null = null;
+
+  function stopOtherRequests(keep?: string) {
+    window.clearTimeout(hoverTimer);
+    for (const [key, request] of pending) {
+      if (key === keep) continue;
+      request.controller.abort();
+      pending.delete(key);
+    }
+  }
+  function obtain(section: keyof typeof fragments, url: URL, fragment?: string, priority: RequestPriority = 'high') {
+    const key = pathKey(url), existing = pending.get(key);
+    if (existing) return existing.result;
+    const controller = new AbortController();
+    const result = readManuscript(section, url, controller.signal, fragment, priority).catch(error => {
+      if (!fragment || controller.signal.aborted) throw error;
+      return readManuscript(section, url, controller.signal, undefined, priority);
+    }).then(content => {
+      controller.signal.throwIfAborted();
+      cache.set(key, content);
+      if (cache.size > 3) cache.delete(cache.keys().next().value!);
+      return content;
+    }).finally(() => {
+      if (pending.get(key)?.controller === controller) pending.delete(key);
+    });
+    pending.set(key, { controller, result });
+    return result;
+  }
+  function prefetch(row?: HTMLAnchorElement) {
+    if (!row || signal.aborted || (navigator as Navigator & { connection?: { saveData: boolean } }).connection?.saveData) return;
+    const url = new URL(row.href), key = pathKey(url);
+    // Keep a visitor's in-progress read ahead of any speculative request.
+    if (cache.has(key) || pending.has(key) || (dialog.open && !loaded)) return;
+    stopOtherRequests();
+    void obtain('blog', url, row.dataset.manuscript, 'low').catch(() => {});
+  }
 
   function catalogue(open: boolean, focus = false) {
     manuscript.dataset.catalogue = open ? 'open' : 'closed';
@@ -128,7 +169,6 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
       if (opts.entry) selected = opts.entry;
       if (!selected) section = 'map';
       el('[data-catalogue-title]').textContent = t('藏书目录', 'Contents');
-      filter();
     }
     const opening = !dialog.open;
     if (opening) {
@@ -158,9 +198,9 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
       return;
     }
     remember();
-    request?.abort();
-    const controller = new AbortController();
-    request = controller; activeKey = key; loaded = false;
+    const currentView = ++view;
+    stopOtherRequests(key);
+    activeKey = key; loaded = false;
     reading.scrollTop = 0;
     documentPane.hidden = section === 'map'; mapPane.hidden = section !== 'map';
     body.replaceChildren(); status.hidden = true;
@@ -176,25 +216,31 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
     }
     original.href = url.href;
     reading.setAttribute('aria-busy','true');
-    status.textContent = t('正在展开手稿…','Unrolling the manuscript…'); status.hidden = false;
+    const cached = cache.get(key);
+    if (cached) { cache.delete(key); cache.set(key, cached); }
+    const showStatus = cached ? undefined : window.setTimeout(() => {
+      if (view !== currentView || !dialog.open) return;
+      status.textContent = t('正在展开手稿…','Unrolling the manuscript…'); status.hidden = false;
+    }, 150);
     try {
-      const html = cache.get(key) ?? await readManuscript(section, url, controller.signal, blog ? selected.dataset.manuscript : undefined).catch(error => {
-        if (!blog || controller.signal.aborted) throw error;
-        return readManuscript(section, url, controller.signal);
-      });
-      if (controller.signal.aborted || !dialog.open) return;
-      cache.set(key, html); body.innerHTML = html; status.hidden = true;
+      const content = cached ?? await obtain(section, url, blog ? selected.dataset.manuscript : undefined);
+      if (currentView !== view || !dialog.open) return;
+      body.replaceChildren(content); status.hidden = true;
       if (blog) neighbours();
       loaded = true;
       reading.scrollTop = positions.get(key) ?? 0;
       jump(opts.anchor);
     } catch {
-      if (controller.signal.aborted || !dialog.open) return;
+      if (currentView !== view || !dialog.open) return;
       const retry = document.createElement('button');
       retry.type = 'button'; retry.textContent = t('重新展开','Try again');
       retry.onclick = () => void show(section, opts);
       status.replaceChildren(document.createTextNode(t('这份手稿暂时没有载入。','This manuscript could not be loaded. ')), retry);
-    } finally { if (controller === request) reading.removeAttribute('aria-busy'); }
+      status.hidden = false;
+    } finally {
+      window.clearTimeout(showStatus);
+      if (currentView === view) reading.removeAttribute('aria-busy');
+    }
   }
   function close() {
     if (dialog.open) { remember(); dialog.close(); }
@@ -233,12 +279,23 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
   }, { signal });
   search.addEventListener('input', filter, { signal });
   category.addEventListener('change', filter, { signal });
+  function intendedRow(event: Event) {
+    return event.target instanceof Element ? event.target.closest<HTMLAnchorElement>('[data-world-article]') ?? undefined : undefined;
+  }
+  dialog.addEventListener('pointerover', event => {
+    window.clearTimeout(hoverTimer);
+    const row = intendedRow(event);
+    if (row) hoverTimer = window.setTimeout(() => prefetch(row), 100);
+  }, { signal });
+  dialog.addEventListener('pointerout', () => window.clearTimeout(hoverTimer), { signal });
+  dialog.addEventListener('focusin', event => prefetch(intendedRow(event)), { signal });
   contents.addEventListener('click', () => catalogue(true, true), { signal });
   el('#hide-contents').addEventListener('click', () => catalogue(false, true), { signal });
   dialog.addEventListener('cancel', remember, { signal });
   dialog.addEventListener('close', () => {
     if (dialog.open) return;
-    request?.abort(); catalogue(false);
+    ++view; stopOtherRequests(); catalogue(false);
+    reading.removeAttribute('aria-busy');
     opener?.focus({ preventScroll: true }); options.onReadingChange(false);
     if (location.hash.startsWith('#folio/')) {
       if (history.state?.courtFolio) history.back();
@@ -247,9 +304,10 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
   }, { signal });
   window.addEventListener('hashchange', fromAddress, { signal });
   if (location.hash.startsWith('#folio/')) fromAddress();
+  else prefetch(selected);
   return {
     show,
     close,
-    dispose() { request?.abort(); if (dialog.open) dialog.close(); cache.clear(); }
+    dispose() { ++view; stopOtherRequests(); if (dialog.open) dialog.close(); cache.clear(); }
   };
 }

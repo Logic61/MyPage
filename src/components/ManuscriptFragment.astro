@@ -1,0 +1,7 @@
+---
+import { prepareManuscript } from '../utils/folio-manuscript';
+
+interface Props { articleURL: URL }
+const html = prepareManuscript(await Astro.slots.render('default'), Astro.props.articleURL);
+---
+<div class="article-body" data-folio-ready="1" set:html={html} />
