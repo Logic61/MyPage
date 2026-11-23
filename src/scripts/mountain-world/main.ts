@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createMusic } from './music';
 import { createEnvironment } from './environment';
 import { createFurnishings } from './furnishings';
 import { createSurfaceLibrary } from './materials';
@@ -48,7 +49,10 @@ async function initializeWorld(root: HTMLElement) {
   const config: WorldConfig = JSON.parse(configElement.textContent || '{}');
   const en = config.isEn;
   const abort = new AbortController(), { signal } = abort;
-  const ambience = createAmbience();
+  const ambience = createAmbience(config.base, () => {
+    ui.setSound(false);
+    ui.showToast(en ? 'Music could not play. Click the speaker to retry.' : '音乐暂时无法播放，点击喇叭可重试。');
+  });
   let alive = true, teardown = () => {};
   let suspendAction = () => {}, resumeAction = () => {};
   let interactionAction = () => {}, resetAction = () => {};
@@ -659,9 +663,14 @@ async function initializeWorld(root: HTMLElement) {
   }
 }
 
-function createAmbience() {
+function createAmbience(base: string, onFailure: () => void) {
   let context: AudioContext | null = null, master: GainNode | null = null, windGain: GainNode | null = null;
   let enabled = false, hidden = false, footClock = 0;
+  const music = createMusic(base, () => {
+    enabled = false;
+    if (master && context) master.gain.setTargetAtTime(0, context.currentTime, .1);
+    onFailure();
+  });
   const sources: AudioScheduledSourceNode[] = [];
   function ensure() {
     if (context) return;
@@ -678,14 +687,16 @@ function createAmbience() {
   }
   return {
     toggle() {
-      try { ensure(); enabled = !enabled; void context?.resume(); master?.gain.setTargetAtTime(enabled ? 0.6 : 0, context!.currentTime, 0.4); }
-      catch { enabled = false; }
+      enabled = !enabled;
+      music.setAudible(enabled && !hidden);
+      try { ensure(); void context?.resume().catch(() => {}); master?.gain.setTargetAtTime(enabled && !hidden ? .6 : 0, context!.currentTime, .4); }
+      catch { /* Music can play without synthesized footsteps. */ }
       return enabled;
     },
-    setHidden(value: boolean) { hidden = value; if (master && context) master.gain.setTargetAtTime(enabled && !hidden ? 0.6 : 0, context.currentTime, 0.2); },
+    setHidden(value: boolean) { hidden = value; music.setAudible(enabled && !hidden); if (master && context) master.gain.setTargetAtTime(enabled && !hidden ? 0.6 : 0, context.currentTime, 0.2); },
     update(indoor: boolean, speed: number, delta: number) {
       if (!context || !enabled || hidden) return;
-      windGain?.gain.setTargetAtTime(indoor ? 0.07 : 0.18, context.currentTime, 1.2);
+      windGain?.gain.setTargetAtTime(indoor ? .025 : .055, context.currentTime, 1.2);
       footClock += speed * delta;
       if (speed > 0.5 && footClock > 1.1) {
         footClock = 0;
@@ -697,6 +708,6 @@ function createAmbience() {
         tone.onended = () => { tone.disconnect(); gain.disconnect(); };
       }
     },
-    dispose() { sources.forEach(source => source.stop()); void context?.close(); },
+    dispose() { music.dispose(); sources.forEach(source => source.stop()); void context?.close(); },
   };
 }

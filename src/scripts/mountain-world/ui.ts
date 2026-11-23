@@ -49,6 +49,12 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     toastTimer = window.setTimeout(() => { toast.hidden = true; }, 3400);
   }
 
+  function setSound(playing: boolean) {
+    soundButton.setAttribute('aria-pressed', String(playing));
+    soundButton.setAttribute('aria-label', playing ? (en ? 'Turn background music off' : '关闭背景音乐') : (en ? 'Turn background music on' : '开启背景音乐'));
+    one<HTMLElement>('[data-sound-label]').textContent = playing ? (en ? 'Music on' : '音乐开启') : (en ? 'Music off' : '音乐关闭');
+  }
+
   function openContent(kind: InteractionKind, catalogue = false) {
     if (kind === 'books' || kind === 'latest') void folio.show('blog', { recent: kind === 'latest', catalogue });
     else if (kind === 'projects' || kind === 'about') void folio.show(kind === 'projects' ? 'projects' : 'cv');
@@ -93,10 +99,8 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
       else if (action === 'interact') actions.onInteract();
       else if (action === 'sound') {
         const playing = actions.onSound();
-        soundButton.setAttribute('aria-pressed', String(playing));
-        soundButton.setAttribute('aria-label', playing ? (en ? 'Turn ambient sound off' : '关闭环境声音') : (en ? 'Turn ambient sound on' : '开启环境声音'));
-        one<HTMLElement>('[data-sound-label]').textContent = playing ? (en ? 'Sound on' : '声音开启') : (en ? 'Sound off' : '声音关闭');
-        showToast(playing ? (en ? 'Listen to the mountain.' : '听一听山间。') : (en ? 'Ambient sound off.' : '环境声音已关闭。'));
+        setSound(playing);
+        showToast(playing ? (en ? 'Background music on.' : '背景音乐已开启。') : (en ? 'Background music off.' : '背景音乐已关闭。'));
       } else if (action === 'dismiss-hint') {
         one<HTMLElement>('[data-world-hint]').hidden = true;
         try { sessionStorage.setItem('mountain-study:hint-dismissed', '1'); } catch { /* Storage is optional. */ }
@@ -106,6 +110,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
   }, { signal });
 
   return {
+    setSound,
     updateWaymarks: waymarks.update,
     useCentredWaymark() {
       const item = waymarks.atCentre();

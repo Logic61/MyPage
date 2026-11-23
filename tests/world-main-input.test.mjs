@@ -6,6 +6,7 @@ import { setImmediate as nextTurn } from 'node:timers/promises';
 import ts from 'typescript';
 import * as THREE from 'three';
 import * as lookControls from '../src/scripts/mountain-world/look-controls.ts';
+import * as music from '../src/scripts/mountain-world/music.ts';
 import * as pointerLock from '../src/scripts/mountain-world/pointer-lock.ts';
 import * as firstPerson from '../src/scripts/mountain-world/first-person.ts';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
@@ -96,7 +97,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   };
   const modules = {
     three: { ...THREE, WebGLRenderer: class { debug = {}; compileAsync() { lifecycle.compiles++; return compileReady; } dispose() { disposed('renderer'); } } },
-    './look-controls': lookControls, './pointer-lock': pointerLock, './first-person': firstPerson,
+    './music': music, './look-controls': lookControls, './pointer-lock': pointerLock, './first-person': firstPerson,
     './landscape-backdrop': { createLandscapeBackdrop(scene) {
       const root = new THREE.Group(); root.name = 'test-backdrop'; root.userData.ignoreAmbientOcclusion = true; scene.add(root);
       return { root, ready: backdropReady, update(time) { lifecycle.backdropUpdates++; lifecycle.landscapeTime = time; }, dispose() { disposed('backdrop'); root.removeFromParent(); } };

@@ -93,22 +93,23 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
     const rng=seeded(seed), base=new THREE.Vector3(x,.3,z), twist=(rng()-.5)*.80;
     // Lift the crown above the eaves while retaining the bough spread and rooting space in each bed.
     const height = h * 1.32;
-    const trunkPoints = [[0,0,0],[-.12,.21,.06],[.37,.48,-.09],[.52,.65,.18],[.81,.84,-.04],[1,1,.065]]
-      .map(([u,v,w])=>base.clone().add(new THREE.Vector3(u*lean,v*height,w*h*.21)));
+    // The central leader rises on one axis. Variation belongs to the lateral branches.
+    const trunkPoints = [0,.25,.5,.75,1].map(t =>
+      new THREE.Vector3(x + t * lean * .075, base.y + t * height, z));
     const trunk = new THREE.CatmullRomCurve3(trunkPoints);
     // Root flare narrows rapidly at ground level, then the bole tapers steadily to the leader.
     const baseRadius = height * .053;
     const trunkRadius = (t: number) => .008 * t + baseRadius * Math.pow(1 - t, .77) * (.78 + .22 * Math.exp(-12 * t));
     limb(trunkPoints,baseRadius,.008,18,trunkRadius);
-    colliders.push({x:x+.10*lean,z,halfX:baseRadius*.87+Math.abs(lean)*.11,halfZ:baseRadius*.88});
+    colliders.push({x,z,halfX:baseRadius*.92,halfZ:baseRadius*.88});
     for (let j=0;j<5;j++) {
       const a=j*2.39+twist, tip=base.clone().add(new THREE.Vector3(.73*Math.cos(a),-.04,.58*Math.sin(a)));
       limb([base.clone().add(new THREE.Vector3(0,h*.058,0)),base.clone().lerp(tip,.54),tip],baseRadius*.41,.011);
     }
-    for (let i=0;i<10;i++) {
-      const t=.30+i*.071+(rng()-.5)*.026, foot=trunk.getPointAt(t), a=seed*.73+i*2.40+(rng()-.5)*.82;
-      const reach=h*(.39-i*.0285)*spread*(.85+.28*rng()), dir=new THREE.Vector3(Math.cos(a),0,Math.sin(a));
-      const elbow=foot.clone().addScaledVector(dir,reach*.53); elbow.y-=h*(.052-.004*i);
+    for (let i=0;i<13;i++) {
+      const t=.29+i*.055+(rng()-.5)*.026, foot=trunk.getPointAt(t), a=seed*.73+i*2.40+(rng()-.5)*.82;
+      const reach=h*(.40-i*.021)*spread*(.85+.28*rng()), dir=new THREE.Vector3(Math.cos(a),0,Math.sin(a));
+      const elbow=foot.clone().addScaledVector(dir,reach*.53); elbow.y-=h*(.052-.003*i);
       const end=foot.clone().addScaledVector(dir,reach); end.y+=h*(.041+.005*i);
       const knuckle=foot.clone().lerp(elbow,.48);
       knuckle.add(new THREE.Vector3(-dir.z,.14,dir.x).multiplyScalar(reach*(rng()-.5)*.21));
@@ -127,12 +128,12 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
         const arch = origin.clone().lerp(tip,.54);
         arch.y -= length * .072;
         limb([origin,arch,tip],twigRadius,twigRadius*.12,7);
-        for (let k=0;k<4;k++) {
-          const along=.21+k*.24, start=origin.clone().lerp(tip,along);
+        for (let k=0;k<6;k++) {
+          const along=.12+k*.17, start=origin.clone().lerp(tip,along);
           start.y -= Math.sin(Math.PI * along) * length * .066;
           brush.position.copy(start);
           brush.rotation.set((k%2 ? .57 : -.43)+(rng()-.5)*.36,-angle+side*(k%2 ? .48 : -.22)+(rng()-.5)*.66,(rng()-.3)*.34,'YXZ');
-          const s=(.43+length*.78)*(1.08-k*.085)*(.83+.34*rng()); brush.scale.set(s,s*(.85+.20*rng()),s*(1+.24*rng()));
+          const s=(.56+length*.85)*(1.09-k*.057)*(.83+.34*rng()); brush.scale.set(s,s*(.85+.20*rng()),s*(1+.24*rng()));
           brush.updateMatrix(); transforms.push(brush.matrix.clone());
           const sunward=.5+.5*Math.cos(angle+1.0);
           colors.push(new THREE.Color('#94a38e').lerp(new THREE.Color('#c9c4a2'),.16+.33*sunward+.29*rng()));
@@ -146,10 +147,10 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
       const length = h * (.088 - .012 * i);
       const tip = foot.clone().add(new THREE.Vector3(Math.cos(angle) * length, length * .63, Math.sin(angle) * length));
       limb([foot, foot.clone().lerp(tip, .51), tip], trunkRadius(.875 + .030 * i)*.33, .002, 6);
-      for (const turn of [-.39, .28]) {
+      for (const turn of [-.65, -.12, .45]) {
         brush.position.copy(foot).lerp(tip, .60);
         brush.rotation.set(turn, -angle + turn * .55, .39 + .055 * i, 'YXZ');
-        brush.scale.setScalar(length + .29);
+        brush.scale.setScalar(length + .43);
         brush.updateMatrix();
         transforms.push(brush.matrix.clone());
         colors.push(new THREE.Color('#b8bda2'));

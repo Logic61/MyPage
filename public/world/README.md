@@ -74,3 +74,17 @@ The wall-mounted *Preface* uses `folio-pines.webp`, an original ImageGen paintin
 | `flagstone-normal.webp` | Resized from the Meridian Observatory copy of Paving Stones 150. [ambientCG, Paving Stones 150](https://ambientcg.com/view?id=PavingStones150) |
 
 The source scans are CC0. The site serves these WebP maps locally. Colour maps use sRGB and normal and roughness maps use linear data. [Poly Haven licence](https://polyhaven.com/license), [ambientCG licence](https://docs.ambientcg.com/license/)
+
+## Courtyard music
+
+The speaker starts a weighted draw at track boundaries. The previous recording is excluded from the next draw. Each file is the original AAC stream remuxed for progressive playback.
+
+| Recording | Draw weight | Source |
+| --- | ---: | --- |
+| Beethoven, Pastoral Symphony | 4 | [Bilibili recording](https://www.bilibili.com/video/BV1Bx411t7xW/) |
+| Chopin, Barcarolle, Op. 60 | 4 | [Bilibili recording, starting at 00:20](https://www.bilibili.com/video/BV1gb411G74B/) |
+| 江上清风游 | 2 | [Bilibili recording](https://www.bilibili.com/video/BV14s411i7vZ/) |
+| 烟雨行舟 | 2 | [Bilibili recording](https://www.bilibili.com/video/BV1z54y1S7qv/) |
+| Heart linked | 1 | [Bilibili recording](https://www.bilibili.com/video/BV18s411c7yF/) |
+
+The courtyard pines use a straight leader and layered, spreading boughs, informed by the [China National Botanical Garden's Chinese pine photographs](https://chnbg.cn/shu_detail/737.html).
