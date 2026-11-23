@@ -225,16 +225,35 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-arrival { position: absolute; inset: 0; z-index: 4; background: #35413b; }
 .mw-cover { width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
 .mw-arrival::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg,rgba(16,28,27,.78),transparent 36%); }
-.mw-cover-actions { position: absolute; z-index: 1; left: max(5vw,24px,env(safe-area-inset-left)); bottom: max(7vh,28px,env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 26px; }
-.mw-cover-actions a { display: inline-flex; align-items: center; min-height: 44px; }
-.mountain-world:not([data-state="poster"]) .mw-cover-actions,
+.mw-cover-title {
+  position: absolute; z-index: 1; inset: 22% 0 auto; margin: 0; padding-inline: 12px;
+  transform: translateY(-50%); text-align: center;
+  color: #fff9e9; font: 500 clamp(32px,5.1vw,80px)/1.05 var(--font-serif,Georgia,serif);
+  text-shadow: 0 1px 3px #1d363d, 0 2px 15px #182f3abc;
+}
+.mw-cover-actions {
+  position: absolute; z-index: 1; left: 50%; bottom: max(16%,env(safe-area-inset-bottom));
+  transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.mw-cover-actions :is(button,a) {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; white-space: nowrap;
+  padding: 4px 10px; text-shadow: 0 1px 3px #0a211e, 0 1px 8px #0a211e;
+}
+.mw-cover-actions .mw-enter-button { font-size: clamp(20px,1.7vw,26px); }
+.mw-cover-actions .mw-read-button { color: #fff6df; }
+.mountain-world:not([data-state="poster"]) :is(.mw-cover-title,.mw-cover-actions),
 .mountain-world:not([data-state="loading"]) .mw-loading,
 .mountain-world[data-state="failed"] .mw-arrival,
 .mountain-world:not([data-state="ready"]) :is(.mw-header,.mw-hud),
 .mountain-world[data-mode="welcome"] .mw-header { display: none; }
 .mountain-world .mw-loading { z-index: 5; background: rgba(21,33,34,.56); }
-.mw-arrival-bar { position: absolute; z-index: 1; left: 0; width: 100%; bottom: max(12vh,48px,env(safe-area-inset-bottom)); min-height: 48px; border: 0; border-block: 1px solid rgba(230,230,222,.28); color: #fffdf5; background: linear-gradient(90deg,rgba(108,112,112,.16),rgba(97,102,101,.68) 40% 60%,rgba(108,112,112,.16)); text-shadow: 0 1px 4px #424745; letter-spacing: .24em; text-indent: .24em; }
-.mw-arrival-bar:hover { background-color: rgba(190,191,185,.14); }
+.mw-arrival-bar {
+  position: absolute; z-index: 1; left: 0; width: 100%; bottom: max(12vh,48px,env(safe-area-inset-bottom)); min-height: 48px;
+  border: 0; border-block: 1px solid #94ceee54; color: #fff;
+  background: linear-gradient(90deg,#438fbd32,#2269959c 22%,#123e69d9 50%,#2269959c 78%,#438fbd32);
+  text-shadow: 0 1px 3px #123454; font-weight: 600; letter-spacing: .24em; text-indent: .24em;
+}
+.mw-arrival-bar:hover { background-color: #337cb73d; }
 .mountain-world .mw-arrival-bar:focus-visible { outline-offset: -3px; }
 .mountain-world[data-arriving] .mw-stage { animation: mw-open-gate .95s cubic-bezier(.16,.76,.25,1) both; }
 .mountain-world[data-arriving] :is(.mw-header,.mw-hud,.mw-waymarks,.mw-thumbstick,.mw-reticle) { visibility: hidden; }
