@@ -24,9 +24,9 @@ export function createStudyLighting(scene: THREE.Scene, coarse = false) {
   doorway.position.set(0, 3.3, -5.3); doorway.lookAt(0, 1.5, -9.6);
   scene.add(doorway); lights.push(doorway);
 
-  const shelfBounce = new THREE.RectAreaLight(0xe8eee6, 1.6, 3.8, 2.2);
+  const shelfBounce = new THREE.RectAreaLight(0xf4e8d4, 1.8, 3.8, 2.2);
   shelfBounce.name = 'Open-court sky in the library wing';
-  shelfBounce.position.set(-2.95, 2.7, -3.2); shelfBounce.lookAt(-5.9, 1.4, -3.2);
+  shelfBounce.position.set(-2.95, 2.76, -1.38); shelfBounce.lookAt(-5.55, 1.45, -1.82);
   scene.add(shelfBounce); lights.push(shelfBounce);
 
   const sideSky = new THREE.RectAreaLight(0xe4edf0, 1.6, 3.8, 2.2);

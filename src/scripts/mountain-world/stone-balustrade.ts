@@ -13,13 +13,21 @@ function moulding(profile: number[][]) {
   return geometry.translate(0, 0, -1).rotateY(Math.PI / 2);
 }
 
-function carvedPanel() {
+function carvedPanel(crossing: boolean) {
   const shape = new THREE.Shape();
   shape.moveTo(-1, .178); shape.lineTo(1, .178); shape.lineTo(1, .518);
   shape.lineTo(.90, .518); shape.lineTo(.86, .556); shape.lineTo(-.86, .556);
   shape.lineTo(-.90, .518); shape.lineTo(-1, .518); shape.closePath();
   // Paired ruyi-shaped openings are cut right through the stone.
-  for (const sign of [-1, 1]) {
+  if(crossing) {
+    const hole=new THREE.Path();
+    hole.moveTo(-.68,.33);hole.bezierCurveTo(-.60,.39,-.43,.48,-.24,.464);
+    hole.bezierCurveTo(-.065,.45,.027,.370,.20,.373);hole.bezierCurveTo(.35,.374,.44,.456,.57,.464);
+    hole.bezierCurveTo(.712,.471,.72,.389,.58,.368);hole.bezierCurveTo(.43,.346,.35,.291,.18,.287);
+    hole.bezierCurveTo(.008,.282,-.11,.375,-.245,.377);hole.bezierCurveTo(-.43,.382,-.52,.294,-.65,.295);
+    hole.quadraticCurveTo(-.71,.298,-.68,.33);
+    hole.closePath();shape.holes.push(hole);
+  } else for (const sign of [-1, 1]) {
     const hole = new THREE.Path();
     hole.moveTo(sign * .42, .408);
     hole.bezierCurveTo(sign * .34, .450, sign * .44, .499, sign * .50, .464);
@@ -110,13 +118,23 @@ function lotusBud() {
   return g;
 }
 
-export function stoneBalustrade(parent: THREE.Group, stone: THREE.Material, shade: THREE.Material, own: OwnGeometry) {
+function squarePierCap() {
+  const shape = new THREE.Shape();
+  const size=.173, chamfer=.024;
+  const corners=[[-size+chamfer,-size],[size-chamfer,-size],[size,-size+chamfer],[size,size-chamfer],
+    [size-chamfer,size],[-size+chamfer,size],[-size,size-chamfer],[-size,-size+chamfer]];
+  corners.forEach(([x,y],i)=>i?shape.lineTo(x,y):shape.moveTo(x,y));shape.closePath();
+  const cap=new THREE.ExtrudeGeometry(shape,{depth:.106,bevelSize:.023,bevelThickness:.025,bevelSegments:1});
+  return cap.rotateX(-Math.PI/2).translate(0,.882,0);
+}
+
+export function stoneBalustrade(parent: THREE.Group, stone: THREE.Material, shade: THREE.Material, own: OwnGeometry, crossing=false) {
   const base = own(moulding([[0,.139],[.052,.139],[.077,.114],[.121,.106],[.137,.125],[.170,.125],[.186,.095]]));
-  const panel = own(carvedPanel()), relief = own(cloudRelief());
+  const panel = own(carvedPanel(crossing)), relief = crossing?null:own(cloudRelief());
   const cap = own(moulding([[.606,.078],[.622,.095],[.647,.095],[.662,.113],[.705,.113],[.731,.088],[.741,.069]]));
   const bolster = own(new THREE.LatheGeometry([[.065,.544],[.074,.552],[.061,.571],[.051,.583],[.064,.598],[.064,.612]]
     .map(([r,y])=>new THREE.Vector2(r,y)),8));
-  const post = own(carvedPost()), bud = own(lotusBud());
+  const post = own(carvedPost()), finial = own(crossing?squarePierCap():lotusBud());
   function put(group: THREE.Group, g: THREE.BufferGeometry, m: THREE.Material, name: string, x=0) {
     const mesh = new THREE.Mesh(g,m);
     mesh.name=name; mesh.position.x=x; mesh.castShadow=mesh.receiveShadow=true; group.add(mesh);
@@ -126,14 +144,15 @@ export function stoneBalustrade(parent: THREE.Group, stone: THREE.Material, shad
     points.forEach(([x,z], i) => {
       if (!omitFirst || i!==0) {
         const pier = new THREE.Group(); pier.position.set(x,floor,z); pier.scale.y=height; parent.add(pier);
-        put(pier,post,stone,'Chamfered stone post and stepped foot'); put(pier,bud,stone,'Carved lotus-bud finial');
+        put(pier,post,stone,'Chamfered stone post and stepped foot'); put(pier,finial,stone,crossing?'Square bridge coping':'Carved lotus-bud finial');
       }
       if (!i) return;
       const [ax,az]=points[i-1], len=Math.hypot(x-ax,z-az);
       const bay = new THREE.Group(); bay.position.set((ax+x)/2,floor,(az+z)/2);
       bay.rotation.y=Math.atan2(az-z,x-ax); bay.scale.set(len/2,height,1); parent.add(bay);
-      put(bay,base,shade,'Balustrade stepped plinth'); put(bay,panel,stone,'Paired cloud openings in the stone panel');
-      put(bay,relief,shade,'Cloud scrolls in shallow relief'); put(bay,cap,stone,'Bevelled handrail');
+      put(bay,base,shade,'Balustrade stepped plinth'); put(bay,panel,stone,crossing?'Long cloud opening in a dressed bridge slab':'Paired cloud openings in the stone panel');
+      if(relief) put(bay,relief,shade,'Cloud scrolls in shallow relief');
+      put(bay,cap,stone,'Bevelled handrail');
       for (const k of [-.63,0,.63]) put(bay,bolster,stone,'Carved handrail support',k);
     });
   };

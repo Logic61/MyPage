@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { createLotusPlanting } from './lotus-pond';
-import { COURTYARD_POOL, POOL_LAMP } from './water-court';
+import { COURTYARD_POOL, setPoolReflections } from './water-court';
 import { createFloorFinishes } from './courtyard-paving';
 import { buildTimberHalls } from './timber-halls';
+import { buildCloudGallery } from './cloud-gallery';
+import { buildReedShades } from './reed-shades';
 import { HALL_STEPS, NORTH_HALL_RISE } from './hall-terrace';
 import { architecturalBlock, gridSurface } from './environment-geometry';
 import type { SurfaceLibrary } from './materials';
@@ -45,9 +47,10 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   const binding = own(new THREE.MeshStandardMaterial({ color: '#a4aa98', roughness: 1 }));
   const soil = own(library.material('ground', { worldScale: 1.5, color: '#a9b4a0', normalScale: .32 }));
   const waterMaterial = own(new THREE.MeshPhysicalMaterial({
-    color: '#8bbcaf', vertexColors:true, roughness: .23, metalness: .04, transparent: true, opacity: .68,
-    clearcoat: .54, clearcoatRoughness: .24, depthWrite: false, side: THREE.DoubleSide,
+    color: '#83ada6', vertexColors:true, roughness: .16, metalness: .09, transparent: true, opacity: .60,
+    clearcoat: .63, clearcoatRoughness: .18, depthWrite: false, side: THREE.DoubleSide,
   }));
+  setPoolReflections(waterMaterial);
   const blocks = new Map<string, THREE.BufferGeometry>(), unitCube = keep(new THREE.BoxGeometry(1, 1, 1));
   const vUp = new THREE.Vector3(0, 1, 0);
 
@@ -76,11 +79,11 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     return axis === 'x' ? box(b - a, h, depth, (a + b) / 2, y, fixed, material, name)
       : box(depth, h, b - a, fixed, y, (a + b) / 2, material, name);
   }
-  function wallPanel(axis: 'x' | 'z', fixed: number, lo: number, hi: number, bottom: number, top: number, thickness: number) {
+  function wallPanel(axis: 'x' | 'z', fixed: number, lo: number, hi: number, bottom: number, top: number, thickness: number, finish = plaster) {
     if (hi - lo < .01 || top - bottom < .01) return;
     const x = axis === 'x' ? (lo + hi) / 2 : fixed, z = axis === 'x' ? fixed : (lo + hi) / 2;
     const w = axis === 'x' ? hi - lo : thickness, d = axis === 'z' ? hi - lo : thickness;
-    box(w, top - bottom, d, x, (top + bottom) / 2, z, plaster, 'Solid lime-plaster wall with depth', .012);
+    box(w, top - bottom, d, x, (top + bottom) / 2, z, finish, 'Solid lime-plaster wall with depth', .012);
     if (bottom < 2.28 && top > .35) obstacle(x, z, w / 2 + .012, d / 2 + .012);
     if (bottom < .4) box(w + .012, .14, d + .012, x, .37, z, limestone, 'Continuous pale stone wall plinth', .006);
   }
@@ -167,32 +170,74 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
 
   const waterW = COURTYARD_POOL.x1 - COURTYARD_POOL.x0, waterD = COURTYARD_POOL.z1 - COURTYARD_POOL.z0;
   const waterCentre = (COURTYARD_POOL.z0 + COURTYARD_POOL.z1) / 2;
-  const shallow=new THREE.Color('#d7e3bb'), deep=new THREE.Color('#598f8a');
+  const shallow=new THREE.Color('#c2c9a9'), deep=new THREE.Color('#547d77');
   const waterGeometry = keep(gridSurface(42,44,(u,v) => new THREE.Vector3((u-.5)*waterW,.257,(v-.5)*waterD),true,
     (u,v)=>shallow.clone().lerp(deep,THREE.MathUtils.smoothstep(Math.min(u,v,1-u,1-v),0,.38))));
   const bedStone = own(library.material('darkStone',{color:'#b2bda8',worldScale:.45,roughness:.88,normalScale:.44}));
   const pebble = keep(new THREE.IcosahedronGeometry(1,1));
   const lotus = createLotusPlanting(group,geometries,materials);
   box(waterW,.06,waterD,0,.13,waterCentre,bedStone,'Recessed pool bed',.005).castShadow=false;
+  // Fine curved caustics stay continuous at eye level without tessellating the bed.
+  const pixels=256, cells=15;
+  const seeds=new Map<number,[number,number]>();
+  for(let z=-2;z<=cells+2;z++) for(let x=-2;x<=cells+2;x++){
+    const jitter=(salt:number)=>Math.abs(Math.sin(x*63.17+z*115.43+salt)*2319.17)%1;
+    seeds.set((z+2)*32+x+2,[x+.16+.68*jitter(1.6),z+.16+.68*jitter(8.3)]);
+  }
+  const bedPixels=new Uint8Array(pixels*pixels*4);
+  for(let row=0;row<pixels;row++) for(let col=0;col<pixels;col++){
+    const u=col/pixels,v=row/pixels,x=u*cells+.31*Math.sin(v*43+u*2),z=v*cells+.24*Math.sin(u*39-v*4);
+    const cx=Math.floor(x),cz=Math.floor(z);
+    let first=5,second=5;
+    for(let j=-1;j<=1;j++) for(let i=-1;i<=1;i++){
+      const point=seeds.get((cz+j+2)*32+cx+i+2)!;
+      const dist=(x-point[0])**2+(z-point[1])**2;
+      if(dist<first){second=first;first=dist;}else second=Math.min(second,dist);
+    }
+    const beam=Math.exp(-29*(second-first)),dapple=7*Math.sin(1.7*x)*Math.cos(2.1*z);
+    const at=(row*pixels+col)*4;
+    bedPixels[at]=98+dapple+94*beam;bedPixels[at+1]=113+dapple+81*beam;
+    bedPixels[at+2]=91+dapple+49*beam;bedPixels[at+3]=255;
+  }
+  const bedMap=new THREE.DataTexture(bedPixels,pixels,pixels,THREE.RGBAFormat);
+  bedMap.colorSpace=THREE.SRGBColorSpace;bedMap.magFilter=THREE.LinearFilter;bedMap.minFilter=THREE.LinearMipmapLinearFilter;
+  bedMap.generateMipmaps=true;bedMap.needsUpdate=true;
+  const caustics=own(new THREE.MeshStandardMaterial({map:bedMap,roughness:.94}));
+  caustics.addEventListener('dispose',()=>bedMap.dispose());
+  const lightBed=keep(gridSurface(1,1,(u,v)=>new THREE.Vector3((u-.5)*waterW,.164,(v-.5)*waterD),true));
+  const bed=add(lightBed,caustics,'Light refracted across the shallow pool',0,0,waterCentre);bed.castShadow=false;
   for (let k=0;k<24;k++) {
     const px=1.90*Math.sin(k*2.43), pz=waterCentre+2.06*Math.sin(k*1.47+.3);
     const stone=add(pebble,bedStone,'Submerged river stone',px,.164,pz);
     stone.scale.set(.034+.013*(k%3),.014+.004*(k%2),.027+.012*(k%4)); stone.rotation.y=k*2.4;
   }
   for (const side of [-1,1]) {
-    // The walks meet the coping flush. Small end joints in the long sill stones remain legible at eye level.
+    // The pale cap projects over the recessed wall. The patinated corner cramps cross the stone joints.
+    const halfW=waterW/2,halfD=waterD/2;
+    box(.18,.19,waterD+.38,side*(halfW+.09),.300,waterCentre,sidePaving,'Lower wall of the pool',.008);
+    box(waterW,.19,.18,0,.300,waterCentre+side*(halfD+.09),sidePaving,'Lower wall of the pool',.008);
     for(let i=0;i<4;i++) {
-      box(.16,.15,(waterD+.32)/4-.005,side*(waterW/2+.08),.235,rim.z0+(i+.5)*(waterD+.32)/4,limestone,'Stone pool coping',.007);
-      box(waterW/4-.005,.15,.16,COURTYARD_POOL.x0+(i+.5)*waterW/4,.235,waterCentre+side*(waterD/2+.08),limestone,'Stone pool coping',.007);
+      box(.23,.092,(waterD+.42)/4-.008,side*(halfW+.092),.424,COURTYARD_POOL.z0-.21+(i+.5)*(waterD+.42)/4,limestone,'Stone pool coping',.011);
+      box(waterW/4-.007,.092,.23,COURTYARD_POOL.x0+(i+.5)*waterW/4,.424,waterCentre+side*(halfD+.092),limestone,'Stone pool coping',.011);
     }
-    box(.59,.16,.62,side*POOL_LAMP.postX,.226,POOL_LAMP.z,limestone,'Lantern shoe on the poolside walk',.018);
   }
-  obstacle(0,waterCentre,waterW/2,waterD/2);
+  const poolBronze=own(new THREE.MeshStandardMaterial({color:'#6a8171',metalness:.54,roughness:.61}));
+  const poolGold=own(new THREE.MeshStandardMaterial({color:'#cba46a',metalness:.61,roughness:.48}));
+  for(const side of [-1,1]) for(const end of [-1,1]){
+    const x=side*(waterW/2-.29), z=waterCentre+end*(waterD/2+.092);
+    box(.085,.012,.238,x,.475,z,poolBronze,'Bronze cramp across the stone cap',.004);
+    for(const edge of [-1,1])box(.009,.014,.238,x+edge*.038,.475,z,poolGold,'Burnished edge of the bronze cramp',.002);
+    for(const face of [-1,1]){
+      box(.084,.091,.012,x,.425,z+face*.116,poolBronze,'Bent end of the coping cramp',.003);
+      box(.030,.025,.014,x,.395,z+face*.118,poolGold,'Square brass rivet',.003);
+    }
+  }
+  obstacle(0,waterCentre,waterW/2+.205,waterD/2+.205);
   const water=add(waterGeometry,waterMaterial,'Open reflecting pool',0,0,waterCentre);
   water.castShadow=false; water.userData.dynamic=true; water.userData.ignoreInteractionRay=true;
   // Two stronger colonies leave open water on the diagonal between the gate and the hall.
-  lotus.plant(-1.40,2.60,-1,-.37,.97);
-  lotus.plant(-.78,2.35,1,.95,.66);
+  lotus.plant(-1.40,2.83,-1,-.37,.97);
+  lotus.plant(-.78,2.52,1,.95,.66);
   lotus.plant(1.30,4.91,1,-.45,1.08);
   lotus.plant(.47,5.12,-1,.86,.75);
   lotus.plant(1.47,2.53,1,.44,.64);
@@ -233,12 +278,28 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   wall('x', -10, -6.1, 6.1, 4.18);
   for (const x of [-6.1, 6.1]) wall('z', x, -10, -5.8, 3.79, [{ from: -9.18, to: -6.35, bottom: 1.02, top: 3.29, lattice: true }]);
   assembly = group;
-  for (const sign of [-1,1]) wall('z',sign*6.1,-5.8,.6,3.47,[
+  const archivePlaster = own(library.material('plaster', { color: '#f4e5ce', worldScale: .78, roughness: .94, normalScale: .21 }));
+  const archiveElm = own(library.material('paleWood', { color: '#bc886a', worldScale: .92, roughness: .76, normalScale: .28 }));
+  // These two enclosing walls also carry the dado. The full length of the east face opens onto the court.
+  function archiveWall(axis: 'x' | 'z', fixed: number, lo: number, hi: number, top: number) {
+    const inward = axis === 'z' ? 1 : -1, face = fixed + inward * .14;
+    wallPanel(axis, fixed, lo, hi, .3, top, .28, archivePlaster);
+    const panels = Math.ceil((hi - lo) / .60), width = (hi - lo) / panels;
+    for (let i = 0; i < panels; i++) {
+      horizontal(lo + i * width + .004, lo + (i + 1) * width - .004, .57, face + inward * .015, axis, archiveElm, 'Elm dado panel', .50, .027);
+      horizontal(lo + i * width, lo + i * width + .034, .57, face + inward * .031, axis, archiveElm, 'Dado muntin', .49, .025);
+    }
+    horizontal(lo, hi, .835, face + inward * .028, axis, archiveElm, 'Beaded rail over the wall panelling', .073, .076);
+    horizontal(lo, hi, .365, face + inward * .031, axis, archiveElm, 'Skirting at the foot of the archive wall', .093, .079);
+    horizontal(lo, hi, top - .09, face + inward * .035, axis, archiveElm, 'Timber wall plate under the archive eaves', .18, .082);
+  }
+  archiveWall('z',-6.1,-5.8,.6,3.47);
+  archiveWall('x',.6,-6.1,-3.2,3.16);
+  wall('z',6.1,-5.8,.6,3.47,[
     {from:-5.62,to:-4.14,bottom:.3,top:2.89}, {from:-3.12,to:.20,bottom:1.07,top:2.96,lattice:true},
   ]);
   for (const sign of [-1, 1]) {
-    wall('x', .6, sign < 0 ? -6.1 : 3.2, sign < 0 ? -3.2 : 6.1, 3.16,
-      [{ from: sign < 0 ? -5.67 : 3.63, to: sign < 0 ? -3.63 : 5.67, bottom: 1.02, top: 2.82, lattice: true }]);
+    if (sign > 0) wall('x', .6, 3.2, 6.1, 3.16, [{ from: 3.63, to: 5.67, bottom: 1.02, top: 2.82, lattice: true }]);
     for (const z of [-4.22, .52]) post(sign * 3.2, z, 3.08, .17);
     box(.20, .17, 6.5, sign * 3.2, 3.07, -2.6, joinery, 'Continuous open-gallery bearing beam');
     for (const z of [-5.73, -4.22, .52]) beam(new THREE.Vector3(sign * 3.2, 3.07, z), new THREE.Vector3(sign * 6.02, 3.39, z), .13, .15, 'Visible gallery cross beam');
@@ -260,14 +321,16 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
 
   for (const sign of [-1,1]) {
     for (const z of [-5.65,-1.8,2,7.55]) {
-      post(sign*8.28,z,2.82,.16);
+      if (sign>0) post(sign*8.28,z,2.82,.16);
       beam(new THREE.Vector3(sign*6.25,3.07,z),new THREE.Vector3(sign*8.28,2.85,z),.10,.12,'Covered walk cross beam');
     }
     for (const z of [2,7.55]) post(sign*6.25,z,3.04,.16);
     box(.15,.13,13.42,sign*6.25,3.04,.95,joinery,'Inner gallery plate');
     box(.17,.16,13.42,sign*8.28,2.85,.95,joinery,'Outer gallery plate');
   }
-  const halls = buildTimberHalls(group, { timber: joinery, stone: limestone, sideStone: sidePaving, plaster, soffit }, obstacle, en);
+  const halls = buildTimberHalls(group, { timber: joinery, stone: limestone, sideStone: sidePaving, plaster, archivePlaster, soffit }, obstacle, en);
+  const galleryStone = buildCloudGallery(group,library,geometries,materials,colliders);
+  buildReedShades(group,library,geometries,materials);
   halls.group.traverse(object => {
     if (object instanceof THREE.Mesh) {
       geometries.add(object.geometry); materials.add(object.material);
@@ -293,7 +356,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     { x: 10.15, z: .10, halfX: 2.81, halfZ: 8.1 },
   ];
   return {
-    geometries, materials, colliders, walkAreas, floors, ready: Promise.all([halls.ready,lotus.ready,floors.ready]).then(()=>{}),
+    geometries, materials, colliders, walkAreas, floors, galleryStone, ready: Promise.all([halls.ready,lotus.ready,floors.ready]).then(()=>{}),
     dispose() { halls.dispose(); lotus.dispose(); floors.dispose(); },
     update(time: number) {
       const { position, normal } = waterGeometry.attributes;

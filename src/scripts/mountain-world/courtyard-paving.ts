@@ -156,5 +156,30 @@ export function createFloorFinishes(library: SurfaceLibrary, keep: Owner, own: <
     batch.finish(parent,'Radially cut terrace flags',stone,keep);
   }
 
-  return {flags,boards,round,ready,dispose(){released=true;for(const texture of textures)texture.dispose();}};
+  // A flush six-sided stone inset follows the pavilion columns in the timber terrace.
+  function pavilion(parent: THREE.Object3D, x: number, z: number) {
+    const paving = new CourseMesh(248);
+    const corner = (side: number, r: number): Point => {
+      const angle = -side * Math.PI / 3;
+      return [x + r * Math.cos(angle), z + r * Math.sin(angle)];
+    };
+    const edge = (side: number, r: number, t: number): Point => {
+      const a = corner(side,r), b = corner(side+1,r);
+      return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
+    };
+    const radii = [.49,1.17,1.76,2.22,2.36];
+    paving.polygon(Array.from({length:6},(_,i)=>corner(i,2.36)),.308,'border');
+    paving.polygon(Array.from({length:6},(_,i)=>corner(i,.485)),.316,'field');
+    for (let j=1;j<radii.length;j++) {
+      const outer = radii[j]-.004, inner = radii[j-1]+.004, blocks = j===1 ? 1 : 2;
+      for (let side=0;side<6;side++) for (let k=0;k<blocks;k++) {
+        const start = k/blocks+.0025, end = (k+1)/blocks-.0025;
+        paving.polygon([edge(side,inner,start),edge(side,outer,start),edge(side,outer,end),edge(side,inner,end)],
+          .316,j===radii.length-1 ? 'border' : 'field');
+      }
+    }
+    paving.finish(parent,'Six-sided inset of dressed pavilion flags',stone,keep);
+  }
+
+  return {flags,boards,round,pavilion,ready,dispose(){released=true;for(const texture of textures)texture.dispose();}};
 }

@@ -9,7 +9,7 @@ import { createStudyLighting } from './lighting';
 import { createLandscapeBackdrop } from './landscape-backdrop';
 import { createStudyRenderer, type RenderQuality } from './rendering';
 import { createInteractionPicker, movementDirection, FLOOR_HEIGHT, EYE_HEIGHT, SEATED_EYE_HEIGHT } from './first-person';
-import { hallRiseAt } from './hall-terrace';
+import { walkRiseAt } from './hall-terrace';
 import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from './look-controls';
 import { createCourtyardMouseLock } from './pointer-lock';
 import type { Interaction, WorldConfig } from './types';
@@ -346,7 +346,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       requestLock();
     }
     function eyePosition() {
-      const standingEye = FLOOR_HEIGHT + hallRiseAt(position.x, position.z) + EYE_HEIGHT;
+      const standingEye = FLOOR_HEIGHT + walkRiseAt(position.x, position.z) + EYE_HEIGHT;
       return { x: position.x, y: seatedAt ? position.y + SEATED_EYE_HEIGHT : standingEye, z: position.z };
     }
     function standUp(resumeMouse = false) {

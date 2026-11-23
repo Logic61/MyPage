@@ -88,12 +88,13 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   }
   let disposed = false;
   const assetRoot = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/, '');
+  const graniteFaces = [granite,darkStone];
   const graniteReady = new THREE.TextureLoader().loadAsync(assetRoot + '/world/cloud-pass-granite.webp').then(texture => {
     if (disposed) { texture.dispose(); return; }
     texture.colorSpace = THREE.SRGBColorSpace;
     texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = 4;
     localTextures.add(texture);
-    for (const face of [granite,darkStone]) { face.map = texture; face.needsUpdate = true; }
+    for (const face of graniteFaces) { face.map = texture; face.needsUpdate = true; }
   }).catch(() => { /* The procedural stone is already visible. */ });
   mesh(keep(cragFace(outline)), granite).castShadow = false;
   const ledges = cliffSpurs(outline);
@@ -128,9 +129,11 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
 
   // Timber veranda. Its outer carved-stone parapets meet the bridge railing at the pavilion gate.
   const architecture = createStudyArchitecture(root, library, en);
+  graniteFaces.push(architecture.galleryStone);
   for (const side of [-1,1]) {
     mesh(cube, wood, side * 10.15, .111, .1, 5.65, .36, 16.4);
     architecture.floors.boards(root,{x0:side*10.15-2.79,x1:side*10.15+2.79,z0:-8.08,z1:8.29},true);
+    architecture.floors.pavilion(root,side*10.18,4.92);
     for (const z of [-6.3, -.2, 6.4]) {
       timber(new THREE.Vector3(side * 9.8, -2.4, z), new THREE.Vector3(side * 12.62, -.12, z), .105);
       mesh(block, wood, side * 11, -.17, z, 4.1, .28, .22);

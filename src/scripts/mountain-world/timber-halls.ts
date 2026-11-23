@@ -2,12 +2,14 @@ import * as THREE from 'three';
 import { stoneBalustrade } from './stone-balustrade';
 import { hexagonalRing, rectangularRing, tiledRoof } from './tiled-roof';
 import { NORTH_HALL_RISE } from './hall-terrace';
+import { buildGoSetting } from './go-pavilion';
 
 interface Materials {
   timber: THREE.Material;
   stone: THREE.MeshStandardMaterial;
   sideStone: THREE.MeshStandardMaterial;
   plaster: THREE.MeshStandardMaterial;
+  archivePlaster: THREE.MeshStandardMaterial;
   soffit: THREE.Material;
 }
 type Obstacle = (x: number, z: number, halfX: number, halfZ: number) => void;
@@ -23,6 +25,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   let disposed = false;
   const lacquer = new THREE.MeshStandardMaterial({ name: 'Cinnabar stained cedar', color: '#d88c64', roughness: .69 });
   const cedar = new THREE.MeshStandardMaterial({ name: 'Oiled amber cedar', color: '#d2a475', roughness: .76 });
+  const jujube = new THREE.MeshStandardMaterial({ name: 'Turned and oiled jujube wood', color: '#cc966b', roughness: .41 });
   const mineral = new THREE.MeshStandardMaterial({ name: 'Deep teal beam ground', color: '#414d45', roughness: .80 });
   const gold = new THREE.MeshStandardMaterial({ name: 'Aged bronze leaf', color: '#d7ad62', metalness: .36, roughness: .46 });
   const glazed = new THREE.MeshStandardMaterial({ name: 'Ash-blue fired pantiles', color: '#b2b7c6', vertexColors: true, roughness: .75, metalness: .045 });
@@ -119,11 +122,11 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   const surfaceImages = Promise.all([
     surfaceMap('honed-limestone.webp', [m.stone, m.sideStone]),
     surfaceMap('flagstone-normal.webp', [m.stone, m.sideStone], 'normalMap'),
-    surfaceMap('lacquer-grain.webp', [lacquer,cedar]),
+    surfaceMap('lacquer-grain.webp', [lacquer,cedar,jujube]),
     surfaceMap('timber-normal.webp', [lacquer,cedar], 'normalMap'),
     surfaceMap('timber-rough.webp', [lacquer,cedar], 'roughnessMap'),
-    surfaceMap('limewash-color.webp', [m.plaster]),
-    surfaceMap('limewash-normal.webp', [m.plaster], 'normalMap'),
+    surfaceMap('limewash-color.webp', [m.plaster,m.archivePlaster]),
+    surfaceMap('limewash-normal.webp', [m.plaster,m.archivePlaster], 'normalMap'),
     surfaceMap('fired-tile-grain.webp', [glazed]),
     surfaceMap('fired-tile-rough.webp', [glazed], 'roughnessMap'),
   ]);
@@ -314,14 +317,14 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     box(cedar,'Timber apron of the courtyard wing',windowX,.76,front,2.89,.51,.089);
     for(const dx of [-1.25,-.62,0,.62,1.25])
       box(lacquer,'Wing apron stile',windowX+dx,.76,front+.052,.050,.53,.048);
-    for(const y of [.50,1.01,2.86])
+    for(const y of sign < 0 ? [.50,1.01] : [.50,1.01,2.86])
       box(cedar,'Window reveal rail',windowX,y,front,2.91,.083,.16);
-    for(const dx of [-1.31,-1.13,1.13,1.31])
-      box(cedar,'Boarded window cheek',windowX+dx,1.92,front,.155,1.81,.096);
-    for(const dx of [-.83,-.65,.65,.83])
-      box(m.timber,'Open side-bay lattice',windowX+dx,1.92,front-.038,.037,1.73,.047);
-    for(const side of [-1,1]) {
-      for(const y of [1.26,2.58])
+    if (sign > 0) {
+      for(const dx of [-1.31,-1.13,1.13,1.31])
+        box(cedar,'Boarded window cheek',windowX+dx,1.92,front,.155,1.81,.096);
+      for(const dx of [-.83,-.65,.65,.83])
+        box(m.timber,'Open side-bay lattice',windowX+dx,1.92,front-.038,.037,1.73,.047);
+      for(const side of [-1,1]) for(const y of [1.26,2.58])
         box(m.timber,'Short rail in the wing lattice',windowX+side*.82,y,front-.03,.40,.037,.049);
     }
     paintedBeam(windowX,3.03,.71,2.91,.24,.25);
@@ -336,7 +339,8 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     hallRail([[sign*6.35,8.4],[sign*6.35,7.76]],.83,.296,true);
     obstacle(sign*6.35,2.68,.13,2.07);
     obstacle(sign*6.35,8.01,.13,.39);
-    group.add(tiledRoof({name:'Covered hillside gallery',eave:rectangularRing(sign*7.28,.95,1.37,7.03),
+    // The inner eave terminates inside the wing wall; the outer drip edge stays above the gallery.
+    group.add(tiledRoof({name:'Covered hillside gallery',eave:rectangularRing(sign*7.41,.95,1.24,7.03),
       ridge:rectangularRing(sign*7.28,.95,.025,5.93),height:3.10,rise:.59,lift:.21},roofMaterials));
   }
   // Cross the threshold as soon as the bridge opens out onto the main island.
@@ -367,24 +371,8 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
       height:3.08,rise:1.38,lift:.47,tileWidth:.19 },roofMaterials));
     turned('Bronze gourd finial',gold,px,4.46,pz,[[.13,0],[.14,.055],[.085,.10],[.128,.20],[.065,.27],[.043,.29],[.079,.36],[.048,.43],[.009,.51],[0,.55]]);
   }
-  // A stone Go table occupies the western pavilion, opposite the eastern lookout seat.
-  const tx=-10.18,tz=4.92;
-  turned('Carved chess-table pedestal',m.stone,tx,.30,tz,[[.33,0],[.33,.10],[.22,.15],[.17,.37],[.27,.44],[.34,.47]],8);
-  box(m.stone,'Square stone Go table',tx,.81,tz,1.14,.10,1.14);
-  box(m.soffit,'Go board',tx,.891,tz,.75,.062,.75);
-  const spacing=.049;
-  for (let i=-6;i<=6;i++) {
-    box(m.timber,'Go lines',tx+i*spacing,.923,tz,.003,.002,12*spacing);
-    box(m.timber,'Go lines',tx,.923,tz+i*spacing,12*spacing,.002,.003);
-  }
-  const piece=new THREE.SphereGeometry(1,12,6);
-  for (const [i,j,white] of [[2,-3,1],[-3,4,1],[0,-2,1],[1,2,1],[-1,-2,0],[1,-3,0],[3,3,0],[-3,-3,0],[0,2,0]])
-    part(piece,white?m.plaster:m.timber,'Go stone',tx+i*spacing,.934,tz+j*spacing,.022,.011,.022);
-  obstacle(tx,tz,.57,.57);
-  for (const z of [tz-.98,tz+.98]) {
-    turned('Stone drum stool',m.stone,tx,.30,z,[[.23,0],[.23,.06],[.18,.12],[.21,.26],[.25,.35],[.23,.39],[0,.40]]);
-    obstacle(tx,z,.25,.25);
-  }
+  textures.push(buildGoSetting(group, m.stone, m.sideStone, cedar, jujube, gold, obstacle));
+  for (const side of [-1,1]) lantern(10.18 + side * 1.17, 2.97, 5.98, .68);
   // The gravel forecourt receives the stone span at the mountain gate.
   box(m.stone,'Gate approach paving',0,.17,13.625,3.3,.24,4.25);
   for (const sign of [-1,1]) {

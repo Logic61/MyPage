@@ -122,5 +122,18 @@ export function tiledRoof({ name, eave, ridge, height, rise, lift, tileWidth = .
     }
     group.add(caps, rafters);
   }
+  // The opposite slopes end on either face of a narrow ridge. Its purlin closes the joint seen from below.
+  if (ridge.length===4) {
+    const bounds=new THREE.Box2().setFromPoints(ridge),span=bounds.getSize(new THREE.Vector2());
+    if (Math.min(span.x,span.y)<.22 && Math.max(span.x,span.y)>.5) {
+      const alongX=span.x>span.y, length=Math.max(span.x,span.y)+.10, width=Math.min(span.x,span.y)+.13;
+      const center=bounds.getCenter(new THREE.Vector2());
+      const purlin=add(new THREE.BoxGeometry(alongX?length:width,.12,alongX?width:length),m.timber,'Closed ridge purlin');
+      purlin.position.set(center.x,height+rise-.086,center.y);
+      const cap=add(new THREE.CylinderGeometry(width*.51,width*.51,length,12),m.ridge,'Round ridge cover');
+      cap.position.set(center.x,height+rise+.007,center.y);
+      if (alongX) cap.rotation.z=Math.PI/2; else cap.rotation.x=Math.PI/2;
+    }
+  }
   return group;
 }

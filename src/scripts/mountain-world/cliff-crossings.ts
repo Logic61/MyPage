@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { architecturalBlock } from './environment-geometry';
 import { stoneBalustrade } from './stone-balustrade';
+import { createStoneBeacon } from './court-beacon';
+import { SUN_DAIS } from './hall-terrace';
 import type { SurfaceLibrary } from './materials';
 import type { createFloorFinishes } from './courtyard-paving';
 import type { Collider } from './types';
@@ -17,7 +19,7 @@ export function buildCliffCrossings(
   const lime = own(library.material('limestone', { color: '#e1e3e2', worldScale: .66, normalScale: .39 }));
   const slate = own(library.material('limestone', { color: '#bcbfc0', worldScale: .87, normalScale: .46 }));
   const honeyStone = own(library.material('limestone', { color: '#d9c8ad', worldScale: .59, normalScale: .53 }));
-  const bronze = own(library.material('brass', { color: '#809a89', worldScale: 1.7, roughness: .75, metalness: .42, normalScale: .32 }));
+  const bronze = own(library.material('limestone', { color: '#80998e', worldScale: 1.7, roughness: .57, metalness: .46, normalScale: .26 }));
   const gilt = own(library.material('brass', { color: '#e5bb76', worldScale: 1.1, roughness: .57, metalness: .38, normalScale: .21 }));
   const paper = own(library.material('paper', { color: '#f8dda2', worldScale: 2.3 }));
   paper.emissive.set('#d28a34'); paper.emissiveIntensity = .33;
@@ -55,7 +57,7 @@ export function buildCliffCrossings(
     if (!geometry) { geometry = keep(architecturalBlock(width,height,depth,.014)); dressedStones.set(key,geometry); }
     return place(parent,geometry,mat,x,y,z);
   }
-  const parapet = stoneBalustrade(root,lime,slate,keep);
+  const parapet = stoneBalustrade(root,lime,slate,keep,true);
 
   // Use short solid pieces on a diagonal so the middle of an arc is never an invisible obstacle.
   function edge(points: [number,number][], height: number, omitFirst=false) {
@@ -162,55 +164,58 @@ export function buildCliffCrossings(
     }
   }
 
-  const beaconCap = keep(new THREE.LatheGeometry([[.25,0],[.285,.025],[.27,.052],[.367,.072],[.38,.10],[.30,.12],[.21,.17],[.13,.26],[.085,.28],[.062,.34],[0,.345]]
-    .map(([x,y])=>new THREE.Vector2(x,y)),8));
-  const crown = keep(new THREE.LatheGeometry([[.065,0],[.091,.021],[.083,.047],[.044,.071],[.050,.098],[.072,.13],[.058,.169],[.027,.20],[0,.23]]
-    .map(([x,y])=>new THREE.Vector2(x,y)),12));
-  const latticeEye = keep(new THREE.TorusGeometry(.092,.011,5,8));
-  const fascia = keep(new THREE.TorusGeometry(.347,.012,5,8));
-  const finialSeam = keep(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0,.275,.085),new THREE.Vector3(0,.19,.184),
-    new THREE.Vector3(0,.129,.28),new THREE.Vector3(0,.14,.353),
-  ]),10,.012,5,false));
-  function lantern(x:number,z:number) {
-    ashlar(root,slate,x,.37,z,.56,.16,.56);
-    ashlar(root,lime,x,.50,z,.44,.10,.44);
-    ashlar(root,honeyStone,x,.565,z,.36,.044,.36);
-    ashlar(root,slate,x,.80,z,.25,.44,.25);
-    ashlar(root,lime,x,.978,z,.32,.08,.32);
-    place(root,block,bronze,x,1.063,z,.48,.102,.48);
-    place(root,block,gilt,x,1.041,z,.482,.014,.482);
-    place(root,block,paper,x,1.325,z,.327,.43,.327);
-    for(const dx of [-.178,.178]) for(const dz of [-.178,.178]) {
-      place(root,block,bronze,x+dx,1.325,z+dz,.047,.46,.047);
-    }
-    for(const h of [1.15,1.49]) place(root,block,bronze,x,h,z,.42,.034,.42);
-    for (let i=0; i<4; i++) {
-      const face = new THREE.Group(); face.position.set(x,1.325,z); face.rotation.y=i*Math.PI/2; root.add(face);
-      place(face,latticeEye,bronze,0,.003,.174);
-      for (const sign of [-1,1]) {
-        place(face,block,bronze,0,sign*.135,.176,.014,.085,.018);
-        place(face,block,bronze,sign*.132,.004,.176,.076,.015,.019);
-        place(face,block,gilt,sign*.124,sign*.125,.174,.065,.010,.012);
-        place(face,block,gilt,sign*.096,sign*.148,.174,.009,.054,.012);
+  const castBeacon = createStoneBeacon(keep);
+  function lantern(x:number,z:number,scale=1) {
+    const mount = new THREE.Group();mount.position.set(x,.30,z);mount.scale.setScalar(scale);root.add(mount);
+    castBeacon(mount,{stone:lime,shadeStone:slate,bronze,gilt,silk:paper});
+    colliders.push({x,z,halfX:.32*scale,halfZ:.32*scale});
+  }
+
+  function floorRing(parent:THREE.Group,material:THREE.Material,r:number,width:number,y:number) {
+    const band = place(parent,keep(new THREE.RingGeometry(r-width/2,r+width/2,96)),material,0,y,0);
+    band.rotation.x=-Math.PI/2;
+  }
+
+  // Flush stone marquetry. Two contrasting triangles make each point of the compass legible.
+  function star(parent:THREE.Group,y:number,radius:number) {
+    for(const side of [-1,1]) {
+      const vertices:number[]=[];
+      for(let i=0;i<8;i++) {
+        const a=i*Math.PI/4,length=radius*(i%2?.58:1);
+        const inner=a+side*Math.PI/8, mid=.228*radius;
+        const tip=[Math.sin(a)*length,y,Math.cos(a)*length], valley=[Math.sin(inner)*mid,y,Math.cos(inner)*mid];
+        const points=side>0?[0,y,0,...tip,...valley]:[0,y,0,...valley,...tip];
+        vertices.push(...points);
       }
-      // At eye level a raised lozenge and cap bands break up the carved stone pedestal.
-      const incised = place(face,latticeEye,honeyStone,0,-.535,.127,.50,.87,.66);
-      incised.rotation.z = Math.PI/8;
+      const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+      g.computeVertexNormals();place(parent,keep(g),side>0?slate:honeyStone,0,0,0);
     }
-    place(root,beaconCap,bronze,x,1.53,z);
-    const band=place(root,fascia,gilt,x,1.617,z);
-    band.rotation.x=Math.PI/2;
-    for (let k=0;k<8;k++) place(root,finialSeam,bronze,x,1.53,z).rotation.y=k*Math.PI/4;
-    place(root,crown,gilt,x,1.844,z);
-    colliders.push({x,z,halfX:.29,halfZ:.29});
+  }
+  function cloudInlay(parent:THREE.Group,r:number,y:number) {
+    const curve = new THREE.CatmullRomCurve3([
+      [-.38,-.04],[-.29,.002],[-.195,.082],[-.118,.115],[-.035,.083],[-.042,.008],[-.103,-.004],
+      [-.103,.033],[-.066,.035],
+    ].map(([x,z])=>new THREE.Vector3(x,0,z)));
+    const scroll=keep(new THREE.TubeGeometry(curve,20,.015,4,false));
+    const reflected=keep(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curve.points.map(p=>new THREE.Vector3(-p.x,p.y,p.z))),20,.015,4,false));
+    for(let i=0;i<8;i++){
+      const a=(i+.5)*tau/8, tile=new THREE.Group();tile.rotation.y=a;
+      tile.position.set(r*Math.sin(a),y,r*Math.cos(a));parent.add(tile);
+      place(tile,scroll,slate,.033,0,0);place(tile,reflected,slate,-.033,0,0);
+    }
   }
 
   cliff(0,34,4.2,.39);
-  cliff(26,5,4.3,1.2);
+  cliff(SUN_DAIS.x,SUN_DAIS.z,4.3,1.2);
   span(0,23.875,16.25,3.3,false,2);
   span(18.75,5,10.5,1.9,true,1);
   for (const side of [-1,1]) lantern(side*2.2,31.85);
+  for (const side of [-1,1]) lantern(12.35,5+side*1.59,.89);
+  const roseWindow=new THREE.Group();roseWindow.position.set(0,0,34);root.add(roseWindow);
+  floorRing(roseWindow,slate,2.83,.146,.312);
+  floorRing(roseWindow,honeyStone,2.43,.087,.313);
+  floorRing(roseWindow,slate,2.36,.027,.314);
+  star(roseWindow,.314,1.67);cloudInlay(roseWindow,1.90,.316);
   for (const side of [-1,1]) {
     // The gate terminates the bridge and anchors both wings of the welcoming terrace.
     line(side*2.20,13.06,side*6.10,13.06,2,.85);
@@ -228,41 +233,87 @@ export function buildCliffCrossings(
   arc(26,5,4.03,1.18*Math.PI,1.78*Math.PI,4,.80);
 
   // The disc is deliberately perforated: its only central image is the mountain beyond it.
-  const altar = new THREE.Group(); altar.position.set(26,0,5); root.add(altar);
-  tier(altar,palette.stone,0,0,.366,3.06,.094);
-  tier(altar,lime,0,0,.427,2.77,.065);
-  tier(altar,lime,0,0,.477,2.43,.056);
-  floors.round(altar,0,0,3.045,.370,2.75);
-  floors.round(altar,0,0,2.755,.431,2.41);
-  floors.round(altar,0,0,2.415,.481);
-  function rim(parent:THREE.Object3D, material:THREE.Material,r:number,thickness:number,y:number,z:number) {
-    return place(parent,keep(new THREE.TorusGeometry(r,thickness,10,96)),material,0,y,z);
-  }
-  for(const r of [2.10,2.19]) rim(altar,bronze,r,.013,.48,0).rotation.x=Math.PI/2;
-  for (let i=0;i<24;i++) {
-    const a=i*tau/24, r=2.145;
-    const notch=place(altar,block,bronze,r*Math.sin(a),.488,r*Math.cos(a),i%3?.017:.031,.009,i%3?.075:.13);
-    notch.rotation.y=a;
-  }
-  const frame=new THREE.Group(); frame.position.set(1.31,0,0); frame.rotation.y=-.98; altar.add(frame);
-  const ringRadius=2.54, centerY=3.03;
-  rim(frame,bronze,ringRadius,.153,centerY,0);
-  for(const d of [-1,1]) {
-    rim(frame,gilt,ringRadius-.081,.039,centerY,d*.123);
-    rim(frame,gilt,ringRadius+.077,.039,centerY,d*.123);
-  }
-  for(const side of [-1,1]) {
-    const fx=side*1.62;
-    place(frame,block,palette.stone,fx,.55,0,1.15,.24,.92);
-    place(frame,block,lime,fx,.72,0,.97,.12,.80);
-    place(frame,block,bronze,fx,.84,0,.83,.15,.65);
-    const scroll = [[.70,.90],[1.00,1.05],[1.25,1.29],[1.55,1.40],[1.96,1.37],[2.21,1.14],[2.18,.95],[2.02,.94],[2.02,1.04],[2.09,1.07]];
-    for(const d of [-1,1]) {
-      const points=scroll.map(([x,y])=>new THREE.Vector3(x*side,y,d*.14));
-      const sweep = new THREE.CatmullRomCurve3(points);
-      place(frame,keep(new THREE.TubeGeometry(sweep,36,.085,8,false)),bronze,0,0,0);
-      place(frame,keep(new THREE.TubeGeometry(sweep,36,.02,6,false)),gilt,0,.032,d*.067);
+  const altar = new THREE.Group(); altar.position.set(SUN_DAIS.x,0,SUN_DAIS.z); root.add(altar);
+  const courses=SUN_DAIS.steps;
+  courses.forEach(({radius,top},i)=>{
+    tier(altar,i?lime:palette.stone,0,0,top-.006,radius,i?.075:.10);
+    floors.round(altar,0,0,radius-.006,top,courses[i+1]?.radius??0);
+  });
+  const centreTop=courses[2].top;
+  floorRing(altar,slate,.91,.032,centreTop+.009);
+  star(altar,centreTop+.010,.69);
+  // Each dark ray is clipped to the tread on which it is laid.
+  courses.forEach(({radius,top},i)=>{
+    const inside=courses[i+1]?.radius??.96;
+    const vertices:number[]=[];
+    for(let ray=0;ray<12;ray++){
+      const a=ray*tau/12;
+      const pt=(r:number,d:number)=>[Math.sin(a+d)*r,top+.009,Math.cos(a+d)*r];
+      vertices.push(...pt(inside,-.020),...pt(radius-.012,-.020),...pt(radius-.012,.020),
+        ...pt(inside,-.020),...pt(radius-.012,.020),...pt(inside,.020));
     }
-    colliders.push({x:27.31+fx*Math.cos(.98),z:5+fx*Math.sin(.98),halfX:.49,halfZ:.55});
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+    g.computeVertexNormals();place(altar,keep(g),slate,0,0,0);
+  });
+  floorRing(altar,slate,3.48,.095,.310);
+
+  const frame=new THREE.Group();frame.position.set(1.31,0,0);frame.rotation.y=-Math.PI/2;altar.add(frame);
+  const ringRadius=2.54,centerY=3.03;
+  function castBand(profile:number[][],material:THREE.Material) {
+    const ring=keep(new THREE.LatheGeometry(profile.map(([r,d])=>new THREE.Vector2(ringRadius+r,d)),112));
+    const mesh=place(frame,ring,material,0,centerY,0);mesh.rotation.x=Math.PI/2;
+  }
+  castBand([[-.154,-.086],[-.170,-.06],[-.170,.06],[-.152,.086],[-.099,.100],[.104,.100],[.153,.082],[.171,.053],[.171,-.053],[.153,-.082],[.105,-.100],[-.099,-.100],[-.154,-.086]].reverse(),bronze);
+  for(const radius of [ringRadius-.135,ringRadius+.136]) for(const side of [-1,1]) {
+    place(frame,keep(new THREE.TorusGeometry(radius,.021,7,112)),gilt,0,centerY,side*.088);
+  }
+  const octagon=keep(new THREE.CylinderGeometry(1,1,1,8).rotateX(Math.PI/2));
+  const bead=keep(new THREE.SphereGeometry(1,16,10));
+  function rosette(x:number,y:number,z:number,size:number,side:number) {
+    place(frame,octagon,gilt,x,y,z,size,size,.045);
+    place(frame,octagon,bronze,x,y,z+side*.026,size*.85,size*.85,.030);
+    for(let j=0;j<8;j++) {
+      const a=j*tau/8, petal=place(frame,bead,gilt,x+size*.43*Math.sin(a),y+size*.43*Math.cos(a),z+side*.051,size*.101,size*.218,.023);
+      petal.rotation.z=-a;
+    }
+    place(frame,bead,gilt,x,y,z+side*.071,size*.19,size*.19,.036);
+  }
+  const solidTab=block;
+  for(const angle of [-Math.PI/2,0,Math.PI/2]) for(const side of [-1,1]) {
+    const x=ringRadius*Math.sin(angle), y=centerY+ringRadius*Math.cos(angle);
+    place(frame,solidTab,gilt,x,y,side*.101,.37,.37,.07).rotation.z=Math.PI/4;
+    place(frame,solidTab,bronze,x,y,side*.145,.298,.298,.027).rotation.z=Math.PI/4;
+    rosette(x,y,side*.165,.144,side);
+  }
+  // Solid cloud cheeks receive the sun disc. The two faces carry matching chased scrolls.
+  colliders.push({x:SUN_DAIS.x+1.31,z:SUN_DAIS.z,halfX:.13,halfZ:1.04});
+  const cheekOutline=[
+    [-.71,.03],[-.74,.21],[-.52,.31],[-.68,.50],[-.68,.68],[-.53,.82],[-.34,.83],[-.22,.70],
+    [-.01,.68],[.065,.84],[.026,1.00],[-.13,1.09],[-.20,1.23],[-.15,1.41],[.04,1.51],
+    [.26,1.49],[.42,1.33],[.43,1.17],[.52,1.08],[.71,1.11],[.82,1.02],[.82,.87],[.70,.74],
+    [.53,.72],[.40,.62],[.47,.47],[.68,.41],[.74,.27],[.66,.13],[.48,.09],[.43,.03],
+  ];
+  const upperScroll = [[-.12,1.21],[-.059,1.34],[.108,1.363],[.254,1.24],[.220,1.05],[.044,.93],[-.044,.77],[-.045,.57],[.100,.46],[.267,.47],[.382,.56]];
+  const lowerScroll = [[-.50,.61],[-.435,.674],[-.322,.61],[-.333,.492],[-.421,.413],[-.426,.307],[-.298,.246],[-.074,.319],[.138,.309],[.277,.19]];
+  for(const sign of [-1,1]){
+    const foot=sign*1.72;
+    ashlar(frame,slate,foot,.549,0,1.45,.144,1.10);
+    ashlar(frame,lime,foot,.711,0,1.28,.183,.96);
+    ashlar(frame,honeyStone,foot,.813,0,1.36,.055,1.02);
+    const shape=new THREE.Shape();
+    const boundary = new THREE.SplineCurve(cheekOutline.map(([x,y])=>new THREE.Vector2(foot+sign*x,y+.825)));
+    boundary.getPoints(76).forEach((p,i)=>i?shape.lineTo(p.x,p.y):shape.moveTo(p.x,p.y));shape.closePath();
+    const cheek=keep(new THREE.ExtrudeGeometry(shape,{depth:.39,bevelEnabled:true,bevelSize:.034,bevelThickness:.024,bevelSegments:2,steps:1}));
+    place(frame,cheek,bronze,0,0,-.195);
+    for(const depth of [-1,1]){
+      const rim=new THREE.CatmullRomCurve3(cheekOutline.map(([x,y])=>new THREE.Vector3(foot+sign*x,y+.825,depth*.212)),true);
+      place(frame,keep(new THREE.TubeGeometry(rim,74,.022,5,true)),gilt,0,0,0);
+      for(const line of [upperScroll,lowerScroll]){
+        const curve=new THREE.CatmullRomCurve3(line.map(([x,y])=>new THREE.Vector3(foot+sign*x,.825+y,depth*.229)));
+        place(frame,keep(new THREE.TubeGeometry(curve,24,.030,7,false)),gilt,0,0,0);
+      }
+      rosette(foot,.99,depth*.228,.252,depth);
+    }
+    colliders.push({x:SUN_DAIS.x+1.31,z:SUN_DAIS.z+foot,halfX:.55,halfZ:.75});
   }
 }
