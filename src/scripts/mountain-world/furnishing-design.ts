@@ -111,6 +111,68 @@ export function createBenchCushionGeometry(width: number, depth: number, height:
   return geometry;
 }
 
+function relief(shape: THREE.Shape, depth: number, edge: number) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth, steps: 1, curveSegments: 10,
+    bevelEnabled: true, bevelSize: edge, bevelThickness: edge, bevelSegments: 2 });
+  g.translate(0, 0, -depth / 2);
+  return g;
+}
+
+/** Cut from a single board. The lower edge alternates cloud heads and small lifted shoulders. */
+export function createCloudApron(width: number, height: number, depth: number) {
+  const h = height, w = width / 2, s = new THREE.Shape();
+  s.moveTo(-w, 0); s.lineTo(w, 0); s.lineTo(w, -h * .88);
+  s.bezierCurveTo(w*.94,-h*.99, w*.91,-h*.94, w*.88,-h*.67);
+  s.bezierCurveTo(w*.84,-h*.35, w*.75,-h*.52, w*.69,-h*.49);
+  s.bezierCurveTo(w*.59,-h*.40, w*.59,-h*.87, w*.49,-h*.80);
+  s.bezierCurveTo(w*.34,-h*.67, w*.26,-h*.39, w*.15,-h*.69);
+  s.quadraticCurveTo(w*.07,-h, 0,-h);
+  s.quadraticCurveTo(-w*.07,-h, -w*.15,-h*.69);
+  s.bezierCurveTo(-w*.26,-h*.39, -w*.34,-h*.67, -w*.49,-h*.80);
+  s.bezierCurveTo(-w*.59,-h*.87, -w*.59,-h*.40, -w*.69,-h*.49);
+  s.bezierCurveTo(-w*.75,-h*.52, -w*.84,-h*.35, -w*.88,-h*.67);
+  s.bezierCurveTo(-w*.91,-h*.94, -w*.94,-h*.99, -w,-h*.88); s.closePath();
+  return relief(s, depth, .003);
+}
+
+/** Through-carved ruyi back splat, with a second opening below the cloud-shaped head. */
+export function createPiercedSplat(width: number, height: number, depth: number) {
+  const s = new THREE.Shape();
+  s.moveTo(-.35,0); s.lineTo(.35,0);
+  s.bezierCurveTo(.19,.24,.18,.38,.35,.47); s.bezierCurveTo(.65,.62,.55,.79,.34,.82);
+  s.quadraticCurveTo(.21,.86,.21,1); s.lineTo(-.21,1); s.quadraticCurveTo(-.21,.86,-.34,.82);
+  s.bezierCurveTo(-.55,.79,-.65,.62,-.35,.47); s.bezierCurveTo(-.18,.38,-.19,.24,-.35,0); s.closePath();
+  const cloud = new THREE.Path();
+  cloud.moveTo(0,.46); cloud.bezierCurveTo(-.09,.56,-.36,.55,-.34,.68);
+  cloud.bezierCurveTo(-.32,.77,-.15,.76,-.09,.70); cloud.quadraticCurveTo(0,.86,.09,.70);
+  cloud.bezierCurveTo(.15,.76,.32,.77,.34,.68); cloud.bezierCurveTo(.36,.55,.09,.56,0,.46); cloud.closePath();
+  const stem = new THREE.Path();
+  stem.moveTo(0,.09); stem.quadraticCurveTo(-.13,.21,0,.43); stem.quadraticCurveTo(.13,.21,0,.09); stem.closePath();
+  s.holes.push(cloud,stem);
+  const g = relief(s, depth / width, .008);
+  g.scale(width,height,width); return g;
+}
+
+/** A bent end cheek of a Chinese scroll-ended painting table, extruded along its depth. */
+export function createScrollCheek(depth: number) {
+  const s = new THREE.Shape();
+  s.moveTo(-.015,0); s.bezierCurveTo(.06,.009,.105,.093,.119,.145);
+  s.bezierCurveTo(.136,.19,.171,.185,.17,.158);
+  s.bezierCurveTo(.167,.193,.121,.229,.09,.181);
+  s.bezierCurveTo(.06,.136,.027,.072,-.048,.052); s.lineTo(-.048,.012); s.closePath();
+  return relief(s,depth,.004);
+}
+
+export function createBentTableLeg(height: number) {
+  const s = new THREE.Shape();
+  s.moveTo(-.083,0); s.lineTo(.079,0); s.quadraticCurveTo(.093,.047,.055,.092);
+  s.bezierCurveTo(-.025,.19,-.005,height*.54,.053,height*.65);
+  s.bezierCurveTo(.104,height*.77,.118,height*.87,.088,height);
+  s.lineTo(-.093,height); s.bezierCurveTo(-.02,height*.79,-.055,height*.76,-.089,height*.66);
+  s.bezierCurveTo(-.135,height*.48,-.094,.15,-.073,.10); s.quadraticCurveTo(-.049,.065,-.083,0);
+  return relief(s,.135,.009);
+}
+
 /** Carved slate. A continuous top slopes from the grinding bed into an off-centre ink well. */
 export function createInkstoneGeometry() {
   const profile = [

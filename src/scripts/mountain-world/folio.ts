@@ -149,7 +149,7 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
     if (section === 'map') {
       const pose = options.getPose(), marker = el<SVGElement>('#map-player');
       marker.style.display = pose ? '' : 'none';
-      if (pose) marker.setAttribute('transform', `translate(${130 + pose.x * 6} ${83 + pose.z * 6}) rotate(${-pose.yaw * 180 / Math.PI})`);
+      if (pose) marker.setAttribute('transform', `translate(${pose.x} ${pose.z}) rotate(${-pose.yaw * 180 / Math.PI}) scale(.17)`);
     }
     if (activeKey === key && loaded) {
       if (opening) reading.scrollTop = positions.get(key) ?? reading.scrollTop;

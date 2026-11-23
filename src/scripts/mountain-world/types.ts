@@ -1,7 +1,16 @@
 import type * as THREE from 'three';
 
-export interface Collider { x: number; z: number; halfX: number; halfZ: number; }
-export interface WalkArea { x: number; z: number; halfX: number; halfZ: number; }
+export interface Collider {
+  x: number; z: number; halfX: number; halfZ: number;
+  window?: {
+    axis: 'x' | 'z';
+    from: number; to: number;
+    sillTop: number;
+    seat?: Collider;
+  };
+}
+export interface WalkArea { x: number; z: number; halfX: number; halfZ: number; shape?: 'ellipse'; }
+export interface Overhead { x: number; z: number; halfX: number; halfZ: number; bottom: number; }
 export type InteractionKind = 'books' | 'projects' | 'about' | 'lantern' | 'bench';
 export interface Interaction {
   id: string;
@@ -20,10 +29,12 @@ export interface Environment {
   outline: number[][];
   root: THREE.Group;
   colliders: Collider[];
+  overheads: Overhead[];
   walkAreas: WalkArea[];
   roofOccluders: THREE.Object3D[];
   assetsReady: Promise<void>;
-  update: (time: number, delta: number, indoor: boolean) => void;
+  disturbWater: (x: number, z: number, strength: number) => void;
+  update: (time: number, delta: number, indoor: boolean, reducedMotion: boolean) => void;
   dispose: () => void;
 }
 export interface Furnishings {
@@ -47,7 +58,7 @@ export interface WorldUI {
   setReady: () => void;
   setFailed: (reason: string) => void;
   setLocation: (name: string, nameEn: string) => void;
-  setInteraction: (interaction: Interaction | null, screen?: { x: number; y: number }) => void;
+  setInteraction: (interaction: Pick<Interaction, 'id' | 'label' | 'labelEn'> | null, screen?: { x: number; y: number }) => void;
   showToast: (text: string) => void;
   openContent: (kind: InteractionKind, catalogue?: boolean) => void;
   isOpen: () => boolean;

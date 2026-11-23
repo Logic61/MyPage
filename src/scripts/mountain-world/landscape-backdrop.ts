@@ -150,7 +150,7 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
   scene.add(root);
   const radius = THREE.MathUtils.clamp(options.radius ?? 108, 60, 130);
   const height = Math.PI * radius / IMAGE_ASPECT;
-  const horizonY = options.horizonY ?? 11.5;
+  const horizonY = options.horizonY ?? 25.5;
   const fogColor = new THREE.Color(options.fogColor ?? LANDSCAPE_FOG_COLOR);
   const cloudOpacity = THREE.MathUtils.clamp(options.cloudOpacity ?? .69, 0, 1);
   const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
@@ -198,7 +198,7 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
   }
   const panorama = mesh('continuous-180-degree-panoramas', panoramaGeometry, panoramaMaterial, -900);
   panorama.position.y = horizonY + height * (IMAGE_HORIZON_FROM_TOP - .5);
-  panorama.rotation.y = options.yaw ?? -.77 * Math.PI;
+  panorama.rotation.y = options.yaw ?? -.61 * Math.PI;
   panorama.userData.landscapeProjection = {
     imageAspect: IMAGE_ASPECT, imageHorizontalDegrees: 180, mirroredHalves: 2,
     radius, height, horizonY, imageHorizonFromTop: IMAGE_HORIZON_FROM_TOP,

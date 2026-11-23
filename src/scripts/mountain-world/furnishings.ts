@@ -1,8 +1,12 @@
 import * as THREE from 'three';
+import { NORTH_HALL_RISE } from './hall-terrace';
+import { POOL_LAMP } from './water-court';
+import { createStoneBeacon } from './court-beacon';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary, type SurfaceKind, type SurfaceOptions } from './materials';
 import { createFurnishingInk } from './furnishing-ink';
-import { createBrocadeMount, createBenchCushionGeometry, createBrushRestGeometry, createInkstoneGeometry, createScreenArtwork } from './furnishing-design';
+import { createBenchCushionGeometry, createBentTableLeg, createBrocadeMount, createBrushRestGeometry, createCloudApron, createInkstoneGeometry,
+  createPiercedSplat, createScreenArtwork, createScrollCheek } from './furnishing-design';
 import type { Collider, Furnishings, Interaction } from './types';
 
 /** Human-scale furnishings: all dimensions are metres; the common floor is y=.3. */
@@ -52,6 +56,12 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   const brass = surface('brass', { roughness: .44, metalness: .92, normalScale: .18, worldScale: 3 });
   const brassDark = surface('brass', { color: '#d2d8ca', roughness: .72, metalness: .82, normalScale: .18, worldScale: 3 });
   const ceramic = surface('ceramic', { roughness: .36, normalScale: .18, worldScale: 5 });
+  const rosewood = surface('paleWood', {color:'#b27957', worldScale:.85, normalScale:.22, roughness:.46});
+  const walnut = surface('paleWood', {color:'#936246', worldScale:.9, normalScale:.24, roughness:.56});
+  const agedGold = material({color:'#cfa35c',metalness:.62,roughness:.42});
+  const verdigris = material({color:'#526f63',roughness:.55,metalness:.49});
+  const straw = material({map:lettering.reedMat,roughness:.94});
+  const deskMat = material({map:lettering.reedMat,color:'#cfb78c',roughness:.92});
   const inkstone = surface('darkStone', { color: '#b8bfbd', roughness: .85, normalScale: .25, worldScale: 4 });
   const ink = material({ color: '#182724', roughness: .23, metalness: .08 });
   const cord = material({ color: '#c5b38a', roughness: .97 });
@@ -118,6 +128,15 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   function group(name: string, x: number, z: number) {
     const object = new THREE.Group(); object.name = name; object.position.set(x, .3, z); root.add(object); return object;
   }
+  function cloudApron(parent: THREE.Group, w: number, h: number, x: number, y: number, z: number, yaw = 0) {
+    const panel = new THREE.Group();
+    panel.position.set(x,y,z); panel.rotation.y=yaw; parent.add(panel);
+    const outline=geometry('carved-cloud-apron:'+w+':'+h,()=>createCloudApron(w,h,.037));
+    mesh(panel,outline,walnut);
+    mesh(panel,outline,agedGold,0,.001,.022).scale.set(.989,.93,.10);
+    mesh(panel,outline,rosewood,0,.002,.026).scale.set(.976,.86,.10);
+    return panel;
+  }
   function label(parent: THREE.Object3D, mat: THREE.Material, width: number, height: number, x: number, y: number, z: number) {
     const object = mesh(parent, geometry('plane', () => new THREE.PlaneGeometry(1, 1)), mat, x, y, z, false);
     object.scale.set(width, height, 1); return object;
@@ -178,10 +197,10 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
 
   /** Book axes: x is thickness, y is height, +z is the stitched, labelled spine. */
-  function boundBook(thickness: number, height: number, depth: number, color: number, title: number) {
+  function boundBook(thickness: number, height: number, depth: number, color: number, title: number,
+    binding = bindings[color % bindings.length], spineTag = title % 3 !== 1) {
     const result = new THREE.Group();
     result.name = `thread-bound-book-${lettering.titles[title % lettering.titles.length]}`;
-    const binding = bindings[color % bindings.length];
     box(result, paperEdge, thickness - .008, height - .012, depth - .012, 0, 0, -.002);
     for (const side of [-1, 1]) {
       bevel(result, binding, .0035, height, depth, side * (thickness / 2 - .0018), 0, 0, .0006);
@@ -190,7 +209,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     }
     bevel(result, binding, thickness, height, .012, 0, 0, depth / 2 - .004, .0015);
     // Some volumes have bare cloth spines: the shelf reads as books, not repeated ivory bars.
-    if (title % 3 !== 1) bookTag(result, title, Math.min(thickness * .62, .039), height * .68, 0, .012, depth / 2 + .0025);
+    if (spineTag) bookTag(result, title, Math.min(thickness * .62, .039), height * .68, 0, .012, depth / 2 + .0025);
     // Four stitched stations and their connecting thread are geometry, not a painted motif.
     for (const yy of [-.35, -.12, .12, .35]) {
       rod(result, cord, new THREE.Vector3(-thickness / 2 - .001, yy * height, depth / 2 - .011),
@@ -213,7 +232,21 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
 
   // A single circular landscape is the room's principal composition, with real depth and a silk face.
   const screen = group('circular-landscape-screen', 0, -9.36);
-  screen.position.y = 2.5;
+  screen.position.y = 2.5 + NORTH_HALL_RISE;
+  // Moon-shaped landscape set into a square lattice screen with a real lower sill and feet.
+  for(const sign of [-1,1]) {
+    bevel(screen,walnut,.105,3.37,.105,sign*1.68,0,-.135);
+    bevel(screen,rosewood,3.45,.105,.13,0,sign*1.67,-.128);
+    bevel(screen,walnut,.135,.53,.15,sign*1.48,-1.91,-.132);
+    bevel(screen,rosewood,.28,.095,.30,sign*1.48,-2.15,-.12);
+    for(let k=-7;k<=7;k++) {
+      const u=k*.20;
+      const reach=Math.sqrt(Math.max(0,1.54**2-u**2))-.025;
+      const span=1.63-reach;
+      bevel(screen,rosewood,.027,span,.037,u,sign*(reach+span/2),-.135,.003);
+      bevel(screen,walnut,span,.027,.037,sign*(reach+span/2),u,-.139,.003);
+    }
+  }
   // The frame is turned as one profile. The recess between its two lips catches
   // a different shadow as the visitor walks past the painting.
   const screenFrame = lathe(screen, woodDark, 'turned-landscape-frame', [
@@ -234,30 +267,9 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   silk.userData.artworkSource = 'canvas-fallback';
   mesh(screen, geometry('screen-silk-circle', () => new THREE.CircleGeometry(1.389, 128)), silk, 0, 0, .050, false);
 
-  // Paired yokes meet the curvature of the round frame and carry it down to
-  // the feet. The cutaway leaves daylight above the lower stretcher.
-  const yoke = geometry('carved-screen-yoke', () => {
-    const s = new THREE.Shape();
-    s.moveTo(.49,-1.477);
-    s.quadraticCurveTo(.86,-1.397,1.176,-1.048);
-    s.quadraticCurveTo(1.219,-1.018,1.207,-1.106);
-    s.bezierCurveTo(1.187,-1.271,1.083,-1.369,1.003,-1.430);
-    s.bezierCurveTo(.940,-1.474,.925,-1.563,.925,-1.652);
-    s.lineTo(.925,-2.087); s.lineTo(.779,-2.087); s.lineTo(.779,-1.702);
-    s.bezierCurveTo(.779,-1.579,.735,-1.551,.640,-1.557);
-    s.quadraticCurveTo(.511,-1.568,.49,-1.477);
-    s.closePath();
-    return new THREE.ExtrudeGeometry(s, { depth: .110, bevelEnabled: true,
-      bevelThickness: .009, bevelSize: .009, bevelSegments: 2, curveSegments: 10 });
-  });
-  for (const side of [-1, 1]) {
-    const joint = mesh(screen, yoke, wood, 0, 0, -.118);
-    joint.scale.x = side;
-    const x = side * .852;
-    bevel(screen, woodDark, .342, .080, .433, x, -2.160, -.108, .014);
-    bevel(screen, wood, .249, .058, .337, x, -2.096, -.104, .012);
+  for (const xx of [-.9, .9]) for (const yy of [-.9, .9]) {
+    cylinder(screen, woodDark, .045, .045, .45, xx, yy, -.285, 12).rotation.x = Math.PI / 2;
   }
-  bevel(screen, woodDark, 1.64, .072, .074, 0, -1.882, -.066, .008);
   batchStatic(screen);
   colliders.push({ x: 0, z: -9.5, halfX: 1.64, halfZ: .26 });
   const screenReady = artwork.ready.then(texture => {
@@ -266,7 +278,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     silk.userData.artworkSource = artwork.loaded ? 'generated-local-artwork' : 'canvas-fallback';
   });
 
-  const brocade = surface('cloth', {color:'#739486', repeat:[3,8], normalScale:.34, roughness:.84});
+  const brocade = surface('paper', {color:'#d9be94', repeat:[3,8], normalScale:.24, roughness:.84});
   const hostPaper = surface('paper', {roughness:.93, normalScale:.17, side:THREE.DoubleSide});
   hostPaper.map = lettering.portraitTexture;
   hostPaper.emissive.set('#b99056'); hostPaper.emissiveIntensity=0;
@@ -280,11 +292,14 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     sheet.computeVertexNormals(); return sheet;
   });
   function mountScroll(name: string, x: number, field: THREE.Material) {
-    const mount=group(name,x,-9.77); mount.position.y=2.13;
+    const mount=group(name,x,-9.60); mount.position.y=2.13 + NORTH_HALL_RISE;
+    for(const y of [-.84,.84]) bevel(mount,walnut,.94,.075,.162,0,y,-.106);
     bevel(mount,brocade,1.43,2.34,.022,0,0,-.017,.005);
     for (const side of [-1,1]) {
-      box(mount,cord,.014,1.91,.009,side*.608,0,.003);
-      box(mount,cord,1.23,.014,.009,0,side*.948,.003);
+      box(mount,walnut,.006,1.91,.009,side*.605,0,.003);
+      box(mount,agedGold,.009,1.94,.010,side*.624,0,.004);
+      box(mount,walnut,1.22,.006,.009,0,side*.948,.003);
+      box(mount,agedGold,1.26,.009,.010,0,side*.966,.004);
       const y=side*1.18, r=side<0?.052:.031;
       cylinder(mount,woodDark,r,r,1.49,0,y,0,24).rotation.z=Math.PI/2;
       for (const end of [-1,1]) {
@@ -300,14 +315,26 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   mountScroll('North wall poetic inscription',-3.68,written('scroll'));
   const hostMount=mountScroll('North wall host biography scroll',3.68,hostPaper);
   interactions.push({ id:'about', kind:'about', label:'展读简历', labelEn:'Read the CV',
-    position:new THREE.Vector3(3.68,2.22,-9.73), approach:new THREE.Vector3(3.68,.3,-7.46), radius:2.75, meshes:[hostMount] });
-  const assetsReady=Promise.all([screenReady,lettering.portraitReady]).then(()=>{});
+    position:new THREE.Vector3(3.68,2.22 + NORTH_HALL_RISE,-9.58), approach:new THREE.Vector3(3.68,.3 + NORTH_HALL_RISE,-7.46), radius:2.75, meshes:[hostMount] });
+  const woodTextures: THREE.Texture[]=[];
+  const timberReady=Promise.all((['map','normalMap'] as const).map(async channel=>{
+    const file=channel==='map'?'lacquer-grain.webp':'timber-normal.webp';
+    try {
+      const map=await new THREE.TextureLoader().loadAsync((import.meta.env?.BASE_URL??'/MyPage/').replace(/\/$/,'')+'/world/'+file);
+      if(disposed) {map.dispose();return;}
+      map.wrapS=map.wrapT=THREE.RepeatWrapping;map.anisotropy=4;
+      map.colorSpace=channel==='map'?THREE.SRGBColorSpace:THREE.NoColorSpace;
+      woodTextures.push(map);
+      for(const mat of [walnut,rosewood]) {mat[channel]=map;mat.needsUpdate=true;}
+    } catch { /* The shared procedural timber is ready synchronously. */ }
+  }));
+  const assetsReady=Promise.all([screenReady,lettering.portraitReady,timberReady]).then(()=>{});
 
   const wallPaper = surface('paper', { roughness: 1, normalScale: .25 });
   wallPaper.emissive.set('#ffcea0'); wallPaper.emissiveIntensity = .42;
   for (const x of [-2.29, 2.29]) {
     const wallLamp = group('north-wall-paper-sconce', x, -9.82);
-    wallLamp.position.y = 2.46;
+    wallLamp.position.y = 2.46 + NORTH_HALL_RISE;
     bevel(wallLamp, woodDark, .16, .42, .065, 0, .02, 0);
     bevel(wallLamp, wood, .038, .045, .25, 0, .24, .10);
     cylinder(wallLamp, wallPaper, .115, .115, .31, 0, .02, .23, 24);
@@ -325,138 +352,192 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
 
   // ---------------------------- The library ----------------------------
-  const shelf = group('library-carved-wood-shelf', -5.55, -3.2); shelf.rotation.y = Math.PI / 2;
-  for (let i = 0; i < 3; i++) bevel(shelf, woodDark, .874, 1.98, .033, (i - 1) * .88, 1.16, -.245, .002);
-  for (const xx of [-1.34, 1.34]) {
-    bevel(shelf, wood, .085, 2.15, .48, xx, 1.10, 0);
-    bevel(shelf, woodDark, .17, .11, .54, xx, .055, 0);
-    bevel(shelf, woodEdge, .018, 1.92, .012, xx - Math.sign(xx) * .026, 1.15, .247, .002);
-    for (const yy of [.19, .72, 1.28, 1.79, 2.14]) {
-      bevel(shelf, woodDark, .040, .042, .003, xx, yy, .244, .001);
-      cylinder(shelf, brassDark, .004, .004, .004, xx, yy, .248, 8).rotation.x = Math.PI / 2;
+  // The cabinet sits entirely inside the timber-floored bay. Model, collision and reading point move together.
+  const shelf = group('library-carved-wood-shelf', -5.53, -1.82);
+  shelf.rotation.y = Math.PI / 2;
+  const elm = surface('paleWood', { color: '#c4835b', worldScale: .85, roughness: .66, normalScale: .33 });
+  const polishedEdge = surface('paleWood', { color: '#d69a69', worldScale: .86, roughness: .59, normalScale: .22 });
+  const blueCloth = surface('cloth', { color: '#a1b5ed', roughness: .93, normalScale: .4 });
+  const russetCloth = surface('cloth', { color: '#f99c70', roughness: .92, normalScale: .4 });
+  blueCloth.color.setRGB(.98,1.09,1.82); russetCloth.color.setRGB(2.48,.65,.39);
+  const drawerPanel = surface('paleWood', { color:'#c58b65',repeat:[1.2,2.2],roughness:.68,normalScale:.22 });
+  const vaseGlaze = material({ color: '#94b6a5', roughness: .25, metalness: .02 });
+  // A shallow ogee under the three drawers is cut in silhouette, visible against the floor.
+  const apron = geometry('elm-archive-cloud-apron', () => {
+    const shape = new THREE.Shape();
+    shape.moveTo(-1.31,.337); shape.lineTo(1.31,.337); shape.lineTo(1.31,.073);
+    shape.bezierCurveTo(1.22,.074,1.30,.207,1.17,.210);
+    shape.bezierCurveTo(1.04,.211,1.02,.260,.91,.253);
+    shape.lineTo(.29,.253); shape.bezierCurveTo(.17,.254,.14,.198,0,.193);
+    shape.bezierCurveTo(-.14,.198,-.17,.254,-.29,.253); shape.lineTo(-.91,.253);
+    shape.bezierCurveTo(-1.02,.260,-1.04,.211,-1.17,.210);
+    shape.bezierCurveTo(-1.30,.207,-1.22,.074,-1.31,.073); shape.closePath();
+    return new THREE.ExtrudeGeometry(shape,{depth:.032,bevelEnabled:true,bevelThickness:.003,bevelSize:.003,bevelSegments:1,curveSegments:8});
+  });
+  mesh(shelf,apron,elm,0,0,.210);
+  for (const x of [-1.30,1.30]) {
+    for (const z of [-.194,.220]) bevel(shelf, elm, .094, .34, .09, x, .17, z, .006);
+    bevel(shelf, elm, .068, 1.88, .46, x, 1.265, -.004, .005);
+    bevel(shelf, polishedEdge, .029, 1.84, .014, x, 1.27, .231, .0025);
+  }
+  for (let i=0;i<9;i++) {
+    const pitch = 2.55/9;
+    bevel(shelf, walnut, pitch-.004, 1.77, .026, -1.275+(i+.5)*pitch, 1.30, -.218, .002);
+  }
+  function shelfBoard(left: number, right: number, top: number, depth = .468) {
+    bevel(shelf, elm, right-left,.042,depth,(left+right)/2,top-.021,0,.004);
+    bevel(shelf, polishedEdge, right-left,.011,.012,(left+right)/2,top-.031,depth/2+.001,.002);
+  }
+  function partition(x: number, low: number, high: number) {
+    bevel(shelf, elm,.04,high-low,.444,x,(low+high)/2,.002,.004);
+  }
+  shelfBoard(-1.37,1.37,.355,.525);
+  shelfBoard(-1.33,1.33,.650,.50);
+  partition(-.754,.650,1.536); partition(-.004,.952,1.536);
+  partition(-.284,1.536,2.164); partition(.647,.650,2.164);
+  shelfBoard(-1.27,-.754,.979); shelfBoard(-.754,-.004,1.232);
+  shelfBoard(-.004,.647,.952); shelfBoard(-1.27,.647,1.536);
+  shelfBoard(.647,1.27,.965); shelfBoard(.647,1.27,1.373);
+  // The crown projects in a series of thin mouldings rather than one heavy cap.
+  for (const [width,depth,y,height,mat] of [
+    [2.72,.50,2.148,.046,walnut],[2.77,.535,2.183,.032,elm],
+    [2.82,.559,2.207,.020,polishedEdge],[2.86,.580,2.237,.042,elm],
+  ] as const) bevel(shelf,mat,width,height,depth,0,y,0,.004);
+  function archiveDrawer(x: number, y: number, w: number, h: number) {
+    bevel(shelf,walnut,w,h,.047,x,y,.199,.005);
+    const panel=bevel(shelf,drawerPanel,h-.055,w-.055,.017,x,y,.228,.005);
+    panel.rotation.z=Math.PI/2;
+    for (const sign of [-1,1]) {
+      bevel(shelf,elm,w-.020,.018,.022,x,y+sign*(h-.035)/2,.232,.003);
+      bevel(shelf,elm,.018,h-.056,.022,x+sign*(w-.035)/2,y,.232,.003);
     }
+    // Peened escutcheon and hanging ring stand clear of the drawer face.
+    cylinder(shelf,brassDark,.034,.034,.010,x,y+.024,.248,20).rotation.x=Math.PI/2;
+    cylinder(shelf,brass,.013,.017,.023,x,y+.023,.260,14).rotation.x=Math.PI/2;
+    torus(shelf,brass,.044,.006,x,y-.014,.273,28).scale.y=1.06;
   }
-  const levels = [.18, .72, 1.28, 1.79];
-  for (const yy of [...levels, 2.16]) {
-    bevel(shelf, wood, 2.72, .048, .52, 0, yy, 0);
-    bevel(shelf, woodEdge, 2.59, .009, .016, 0, yy + .006, .269, .0015);
-    for (const xx of [-1.17, 1.17]) {
-      const bracket = bevel(shelf, woodDark, .048, .12, .16, xx, yy - .08, -.02);
-      bracket.rotation.x = -.38;
-    }
-  }
-  bevel(shelf, woodDark, 2.84, .055, .59, 0, 2.208, 0);
-  bevel(shelf, woodEdge, 2.78, .014, .56, 0, 2.241, 0, .002);
-  // The dividers follow three unequal bays; empty space is part of the composition.
-  bevel(shelf, wood, .044, .48, .46, -.32, .45, -.01);
-  bevel(shelf, wood, .044, .51, .46, -.48, 1.0, -.01);
-  bevel(shelf, wood, .044, .83, .46, .36, 1.72, -.01);
-  for (const xx of [.04, .82]) {
-    bevel(shelf, wood, .74, .435, .035, xx, .45, .222, .005);
-    bevel(shelf, woodDark, .62, .32, .008, xx, .45, .244, .003);
-    cylinder(shelf, brassDark, .014, .014, .012, xx - .25, .45, .252, 16).rotation.x = Math.PI / 2;
-    const pull = torus(shelf, brass, .021, .003, xx - .25, .432, .262, 24); pull.scale.y = .8;
-  }
-  const shelfTitle = written('shelf', 'books');
-  bevel(shelf, woodDark, .19, .27, .027, .98, 1.98, .284);
-  label(shelf, shelfTitle, .105, .218, .98, 1.98, .299);
+  for (const x of [-.86,0,.86]) archiveDrawer(x,.496,.844,.252);
+  archiveDrawer(.965,.808,.576,.268);
   let pulledBook: THREE.Group | null = null;
   let pulledBookBaseZ = 0;
-  function bookCluster(row: number, start: number, count: number, firstTitle: number, moving = -1) {
-    const bottom = levels[row] + .024;
-    let xx = start;
-    for (let i = 0; i < count; i++) {
-      const thickness = .046 + ((i * 3 + row) % 4) * .008;
-      const height = (row === 3 ? .255 : .29) + ((i * 2 + row) % 4) * .018;
-      const depth = .215 + i % 3 * .012;
-      const book = boundBook(thickness, height, depth, i + row * 2, firstTitle + i);
-      book.position.set(xx + thickness / 2, bottom + height / 2, .065 + Math.sin(i * 1.7 + row) * .009);
-      if (i === moving) {
-        pulledBook = book; book.name = 'book-that-slides-out'; pulledBookBaseZ = book.position.z;
+  function stitchedSet(x: number, bottom: number, count: number, height: number, thickness: number,
+    firstTitle: number, fabric: THREE.MeshStandardMaterial, moving = -1) {
+    for (let i=0;i<count;i++) {
+      const h=height + Math.sin((i+1)*1.9)*.005;
+      const book=boundBook(thickness,h,.236,0,firstTitle+i,fabric,false);
+      // Foil rules bind a whole set visually. One narrow title slip identifies the set, the other spines stay quiet.
+      for (const side of [-1,1]) {
+        box(book,cord,thickness*.88,.0045,.002,0,side*(h/2-.044),.1225);
+        box(book,cord,thickness*.86,.002,.002,0,side*(h/2-.052),.1225);
       }
-      shelf.add(book); xx += thickness + .011;
+      if (i===0) bookTag(book,firstTitle,Math.min(.025,thickness*.27),h*.40,-thickness*.19,.015,.124);
+      book.position.set(x+(i+.5)*(thickness+.005),bottom+h/2,.067+.005*Math.sin(i*1.7));
+      if (i===moving) { pulledBook=book; book.name='book-that-slides-out'; pulledBookBaseZ=book.position.z; }
+      shelf.add(book);
     }
   }
-  function bookStack(row: number, x: number, count: number, firstTitle: number) {
-    let bottom = levels[row] + .024;
-    for (let i = 0; i < count; i++) bottom += lyingBook(shelf, x, bottom, .035, firstTitle + i, (i - 1) * .025) + .002;
-    return bottom;
+  stitchedSet(-1.20,1.536,4,.486,.087,0,blueCloth);
+  stitchedSet(-.819,1.536,4,.380,.089,4,blueCloth);
+  stitchedSet(-.078,1.536,6,.446,.104,5,russetCloth);
+  stitchedSet(-.691,.650,5,.472,.107,8,blueCloth,2);
+  stitchedSet(.124,.952,4,.398,.106,11,blueCloth);
+  function folios(x: number, y: number, quantity: number, title: number) {
+    for(let i=0;i<quantity;i++) {
+      const volume=boundBook(.038,.405-i*.008,.245,0,title+i,i%3===2?russetCloth:blueCloth,false);
+      volume.rotation.set(0,Math.PI+(i%3-1)*.026,-Math.PI/2);
+      volume.position.set(x,y+.019,.055); shelf.add(volume); y+=.04;
+    }
   }
-  bookCluster(0, -1.23, 7, 0);
-  bookCluster(1, -1.21, 7, 5);
-  bookStack(1, .82, 3, 10);
-  lathe(shelf, ceramic, 'shelf-shallow-bowl', [[.035,0],[.04,.008],[.092,.055],[.096,.066],[.091,.07],[.078,.052],[.035,.015],[0,.012]],
-    -.04, levels[1] + .024, .035);
-  bookStack(2, -.95, 4, 2);
-  bookCluster(2, -.31, 7, 8, 3);
-  lathe(shelf, ceramic, 'celadon-meiping-vase', [[.05,0],[.06,.012],[.073,.065],[.095,.165],[.081,.238],[.036,.285],[.035,.328],
-    [.040,.332],[.040,.340],[.030,.340],[.028,.292],[.071,.235],[.084,.17],[.060,.055],[.043,.016],[0,.016]],
-    .84, levels[2] + .024, .01, 40);
-  const display = boundBook(.034, .28, .234, 1, 0);
-  display.rotation.y = -Math.PI / 2 + .10;
-  display.position.set(-.99, levels[3] + .164, .065); shelf.add(display);
-  bookCluster(3, -.33, 5, 3);
-  bookStack(3, .65, 2, 11);
-  batchStatic(shelf, pulledBook ? [pulledBook] : []);
+  folios(-1.01,.979,3,2); folios(-.379,1.232,4,5);
+  folios(.267,.650,4,7); folios(.956,.965,3,1);
+  // Six rolled leaves sit end-on; a bound rim, paper core and silk tie remain distinct at eye level.
+  for (let row=0;row<3;row++) for (let i=0;i<3-row;i++) {
+    const x=-1.17+i*.112+row*.056,y=.702+row*.087;
+    const roll=cylinder(shelf,paper,.052,.051,.265,x,y,.044,20); roll.rotation.x=Math.PI/2;
+    cylinder(shelf,walnut,.016,.016,.008,x,y,.181,12).rotation.x=Math.PI/2;
+    torus(shelf,cord,.035,.0022,x,y,.178,20);
+    cylinder(shelf,cord,.053,.053,.015,x,y,.092,20).rotation.x=Math.PI/2;
+  }
+  lathe(shelf,vaseGlaze,'archive-crackle-glazed-pear-vase',[[.046,0],[.064,.008],[.059,.022],[.079,.034],[.108,.078],
+    [.132,.158],[.135,.209],[.121,.259],[.084,.314],[.049,.363],[.034,.417],[.033,.478],[.039,.498],[.043,.507],
+    [.042,.515],[.032,.515],[.028,.501],[.024,.476],[.026,.409],[.038,.360],[.073,.308],[.112,.25],[.119,.20],
+    [.114,.153],[.094,.090],[.065,.046],[.045,.032],[0,.032]],.962,1.373,.027,40);
+  batchStatic(shelf,pulledBook ? [pulledBook] : []);
   if (pulledBook) batchStatic(pulledBook);
-  colliders.push({ x: -5.55, z: -3.2, halfX: .32, halfZ: 1.43 });
+  colliders.push({ x:shelf.position.x, z:shelf.position.z, halfX:.30, halfZ:1.43 });
   let bookOpen = false;
-  interactions.push({ id: 'books', kind: 'books', label: '取一卷书', labelEn: 'Browse the library',
-    position: new THREE.Vector3(-5.31, 1.76, -3.2), approach: new THREE.Vector3(-3.7, .3, -3.2),
-    radius: 2.15, meshes: [shelf], activate: () => { bookOpen = true; } });
+  interactions.push({ id:'books', kind:'books', label:'取一卷书', labelEn:'Browse the library',
+    position:shelf.localToWorld(new THREE.Vector3(-.42,.99,.194)), approach:new THREE.Vector3(shelf.position.x+1.85,.3,shelf.position.z+.18),
+    radius:2.15, meshes:[shelf], activate:()=>{bookOpen=true;} });
 
-  /** Framed top, breadboard ends, inset panels, mortise pegs, and shaped apron brackets. */
-  function writingTable(parent: THREE.Group, width: number, depth: number, top = .78) {
-    bevel(parent, woodDark, width, .058, depth, 0, top - .029, 0, .009);
-    for (const zz of [-1, 1]) bevel(parent, woodEdge, width - .04, .014, .072, 0, top - .007, zz * (depth / 2 - .05), .002);
-    for (const xx of [-1, 1]) bevel(parent, wood, .10, .014, depth - .15, xx * (width / 2 - .066), top - .007, 0, .002);
-    const panelWidth = width - .24;
-    for (let i = 0; i < 4; i++) bevel(parent, i % 2 ? wood : woodEdge,
-      panelWidth / 4 - .003, .013, depth - .174, (i - 1.5) * panelWidth / 4, top - .0065, 0, .0012);
-    const legX = width / 2 - .16, legZ = depth / 2 - .14;
-    for (const xx of [-legX, legX]) {
-      for (const zz of [-legZ, legZ]) {
-        bevel(parent, wood, .075, top - .068, .083, xx, (top - .068) / 2, zz, .005);
-        bevel(parent, woodDark, .085, .038, .094, xx, .026, zz, .004);
-        for (const yy of [top - .13, top - .19]) cylinder(parent, brassDark, .005, .005, .004,
-          xx, yy, zz + Math.sign(zz) * .043, 8).rotation.x = Math.PI / 2;
-        const bracketGeometry = geometry('table-ogee-bracket', () => {
-          const s = new THREE.Shape();
-          s.moveTo(0, 0); s.lineTo(.23, 0); s.lineTo(.23, -.035);
-          s.bezierCurveTo(.09, -.025, .105, -.12, .035, -.18); s.lineTo(0, -.18); s.closePath();
-          const result = new THREE.ExtrudeGeometry(s, { depth: .026, bevelEnabled: true, bevelSize: .002,
-            bevelThickness: .002, bevelSegments: 2, curveSegments: 8, steps: 1 });
-          result.translate(0, 0, -.013); return result;
-        });
-        const bracket = mesh(parent, bracketGeometry, wood, xx, top - .10, zz);
-        bracket.scale.x = -Math.sign(xx);
+  function paintingTable(parent: THREE.Group) {
+    const w=2.95, d=1.25;
+    bevel(parent,walnut,w,.074,d,0,.741,0,.011);
+    bevel(parent,rosewood,w-.035,.03,d-.032,0,.765,0,.008);
+    for(const side of [-1,1]) {
+      const cheek=mesh(parent,geometry('upturned-painting-table-end',()=>createScrollCheek(d-.014)),rosewood,side*(w/2-.11),.774,0);
+      cheek.scale.x=side;
+      for(const z of [-d/2+.012,d/2-.012]) {
+        tube(parent,agedGold,'scroll-edge:'+side+':'+z,
+          [new THREE.Vector3(side*(w/2-.135),.808,z),new THREE.Vector3(side*(w/2-.058),.878,z),
+            new THREE.Vector3(side*(w/2+.004),.960,z),new THREE.Vector3(side*(w/2+.048),.954,z),
+            new THREE.Vector3(side*(w/2+.056),.930,z)],.006,16);
       }
-      bevel(parent, woodDark, .048, .047, legZ * 2 + .09, xx, .19, 0, .004);
+      for(const z of [-.458,.458]) {
+        const x=side*1.27;
+        const leg=mesh(parent,geometry('bent-redwood-leg',()=>createBentTableLeg(.704)),rosewood,x,0,z);
+        leg.scale.x=side;
+        bevel(parent,agedGold,.153,.035,.149,x,.021,z,.006);
+        bevel(parent,walnut,.145,.025,.142,x,.052,z,.005);
+      }
+      cloudApron(parent,2.48,.18,0,.704,side*.47,side>0?0:Math.PI);
+      cloudApron(parent,.86,.14,side*1.27,.705,0,side*Math.PI/2);
     }
-    for (const zz of [-legZ, legZ]) {
-      bevel(parent, woodDark, legX * 2 + .03, .12, .045, 0, top - .13, zz);
-      bevel(parent, woodEdge, legX * 2 - .11, .006, .006, 0, top - .15, zz + Math.sign(zz) * .026, .001);
+  }
+
+  function drawer(parent: THREE.Group, x: number, y: number, z: number, w: number) {
+    bevel(parent,walnut,w,.131,.038,x,y,z,.003);
+    bevel(parent,rosewood,w-.023,.11,.014,x,y,z+.025,.003);
+    const rose=cylinder(parent,agedGold,.019,.019,.008,x,y+.004,z+.038,16);
+    rose.rotation.x=Math.PI/2;
+    const pull=torus(parent,agedGold,.029,.004,x,y-.020,z+.045,24);
+    pull.scale.y=.87;
+  }
+  function instrumentTable(parent: THREE.Group) {
+    bevel(parent,walnut,2.34,.066,1.1,0,.747,0,.009);
+    bevel(parent,rosewood,2.30,.019,1.066,0,.772,0,.004);
+    for(const x of [-1.065,-.63,.63,1.065]) for(const z of [-.45,.45]){
+      bevel(parent,rosewood,.065,.713,.072,x,.356,z,.005);
+      bevel(parent,agedGold,.077,.075,.080,x,.038,z,.004);
     }
-    bevel(parent, wood, legX * 2, .043, .048, 0, .19, 0, .004);
-    // A shallow central drawer; its pull and end-grain joint pins remain readable at arm's length.
-    bevel(parent, wood, .44, .095, .024, 0, top - .123, legZ + .026, .004);
-    for (const xx of [-.11, .11]) {
-      cylinder(parent, brassDark, .012, .012, .008, xx, top - .12, legZ + .043, 14).rotation.x = Math.PI / 2;
-      const pull = torus(parent, brass, .019, .0025, xx, top - .137, legZ + .051, 24);
-      pull.scale.y = .78;
+    for(const x of [-.85,.85]) {
+      bevel(parent,walnut,.474,.34,.87,x,.538,0);
+      for(const yy of [.457,.613]) for(const col of [-.113,.113]) drawer(parent,x+col,yy,.438,.210);
+      bevel(parent,rosewood,.48,.041,.914,x,.359,0);
+    }
+    const archShape=new THREE.Shape();
+    archShape.moveTo(-.63,.713);archShape.lineTo(.63,.713);archShape.lineTo(.63,.222);
+    archShape.bezierCurveTo(.52,.39,.22,.573,0,.573);archShape.bezierCurveTo(-.22,.573,-.52,.39,-.63,.222);archShape.closePath();
+    const arch=geometry('joinery-arch-workbench',()=>new THREE.ExtrudeGeometry(archShape,{depth:.037,bevelEnabled:true,
+      bevelSize:.004,bevelThickness:.004,bevelSegments:1,curveSegments:16}));
+    mesh(parent,arch,rosewood,0,0,.425);
+    tube(parent,agedGold,'workbench-arch-banded-edge',[
+      new THREE.Vector3(-.625,.257,.468),new THREE.Vector3(-.41,.475,.468),new THREE.Vector3(0,.598,.468),
+      new THREE.Vector3(.41,.475,.468),new THREE.Vector3(.625,.257,.468)],.0055,30);
+    bevel(parent,walnut,2.31,.071,.51,0,1.095,-.251);
+    bevel(parent,rosewood,2.25,.021,.485,0,1.139,-.251,.005);
+    for(const x of [-1.075,-.12,1.075]) {
+      bevel(parent,rosewood,.059,.277,.446,x,.922,-.254);
+      bevel(parent,agedGold,.068,.030,.45,x,1.038,-.254,.002);
     }
   }
 
   // ---------------------- Writing desk and open book ----------------------
   const desk = group('writing-desk', 0, -7);
-  writingTable(desk, 2.95, 1.25);
-  // One generous woven field gathers the writing tools; the tea and letter have their own space.
-  bevel(desk, cloth, 1.74, .003, .89, -.06, .7815, -.015, .0005);
-  const stitch = material({ color: '#a4aca0', roughness: .96 });
-  for (const xx of [-.91, .79]) rod(desk, stitch,
-    new THREE.Vector3(xx, .7833, -.435), new THREE.Vector3(xx, .7833, .405), .00065, 4);
-  for (const zz of [-.435, .405]) rod(desk, stitch,
-    new THREE.Vector3(-.91, .7833, zz), new THREE.Vector3(.79, .7833, zz), .00065, 4);
+  desk.position.y += NORTH_HALL_RISE;
+  paintingTable(desk);
+  bevel(desk,walnut,2.56,.003,1.00,0,.7815,0,.001);
+  bevel(desk,deskMat,2.51,.003,.97,0,.784,0,.001);
   const notebook = new THREE.Group();
   notebook.name = 'open-handwritten-notebook';
   notebook.position.set(-.38, .786, .08); notebook.rotation.y = -.10; desk.add(notebook);
@@ -486,30 +567,20 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   bookmark.rotation.x = .23;
   for (let i = 0; i < 4; i++) cylinder(notebook, red, .0008, .0008, .026, .077 + i * .0026, -.005, .270, 4).rotation.x = .38;
 
-  const tableY = .78;
-  const deskLamp = new THREE.Group();
-  deskLamp.name = 'curved-stem-silk-desk-lamp'; deskLamp.position.set(-1.17, tableY, -.42); desk.add(deskLamp);
-  lathe(deskLamp, woodDark, 'desk-lamp-low-base', [[0,0],[.125,0],[.139,.012],[.135,.025],[.11,.033],[0,.033]], 0, 0, 0, 40);
-  torus(deskLamp, brassDark, .123, .0026, 0, .025, 0, 48).rotation.x = Math.PI / 2;
-  tube(deskLamp, brassDark, 'desk-lamp-curved-stem', [new THREE.Vector3(-.065,.025,0), new THREE.Vector3(-.11,.23,0),
-    new THREE.Vector3(-.095,.55,0), new THREE.Vector3(.07,.62,0), new THREE.Vector3(.10,.575,0)], .009, 32);
-  const deskShade = surface('paper', { roughness: .94, normalScale: .22, side: THREE.DoubleSide });
-  deskShade.emissive.set('#ffe1bd'); deskShade.emissiveIntensity = .24;
-  lathe(deskLamp, deskShade, 'desk-lamp-silk-shade', [[.112,0],[.131,.015],[.145,.06],[.143,.19],[.123,.29],[.103,.31]], .10,.258,0,40);
-  for (const yy of [.257, .57]) {
-    const r = yy < .3 ? .114 : .106;
-    cylinder(deskLamp, woodDark, r, r, .014, .10, yy, 0, 40);
-    torus(deskLamp, brassDark, r, .0025, .10, yy + .008, 0, 48).rotation.x = Math.PI / 2;
+  const tableY = .786;
+  const chair = new THREE.Group();
+  chair.name='Redwood horseshoe chair'; chair.position.set(0,0,-1.01); desk.add(chair);
+  bevel(chair,walnut,.56,.045,.49,0,.455,0);
+  bevel(chair,straw,.493,.023,.419,0,.489,0,.006);
+  for(const x of [-.224,.224]) {
+    for(const z of [-.193,.193]) bevel(chair,rosewood,.043,.452,.045,x,.225,z,.004);
+    tube(chair,rosewood,'chair-rounded-arm:'+x,
+      [new THREE.Vector3(x,.74,.18),new THREE.Vector3(x,.745,-.06),new THREE.Vector3(x,.98,-.21)],.019,14);
+    bevel(chair,rosewood,.034,.236,.034,x,.606,.157);
   }
-  for (let i = 0; i < 6; i++) {
-    const a = i * Math.PI / 3;
-    tube(deskLamp, woodEdge, `desk-lamp-silk-seam:${i}`, [new THREE.Vector3(.10 + Math.sin(a) * .112,.265,Math.cos(a) * .112),
-      new THREE.Vector3(.10 + Math.sin(a) * .146,.34,Math.cos(a) * .146),
-      new THREE.Vector3(.10 + Math.sin(a) * .143,.45,Math.cos(a) * .143),
-      new THREE.Vector3(.10 + Math.sin(a) * .104,.565,Math.cos(a) * .104)], .0016, 16);
-  }
-  const deskLight = new THREE.PointLight('#ffe0bb', .75, 2.5, 2);
-  deskLight.position.set(.10,.40,.01); deskLamp.add(deskLight);
+  tube(chair,rosewood,'chair-crest',[new THREE.Vector3(-.224,.98,-.21),new THREE.Vector3(0,1.045,-.24),new THREE.Vector3(.224,.98,-.21)],.025,18);
+  mesh(chair,geometry('chair-pierced-splat',()=>createPiercedSplat(.145,.50,.030)),rosewood,0,.515,-.221);
+  for (let i=0,h=tableY;i<3;i++) h+=lyingBook(desk,.974,h,.058,7+i,(i-1)*.055)+.002;
   const porcelain = material({ map:lettering.brushGlaze,roughness:.28,metalness:.015 });
   const porcelainLip = material({color:'#e6e4cc',roughness:.24});
   const cobalt = material({color:'#426378',roughness:.32});
@@ -573,20 +644,24 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     }
   }
   batchStatic(desk, [notebook]); batchStatic(notebook, [turningLeaf]);
-  colliders.push({ x: 0, z: -7, halfX: 1.49, halfZ: .64 });
+  colliders.push({ x: 0, z: -7, halfX: 1.54, halfZ: .64 });
+  colliders.push({ x: 0, z: -8.01, halfX: .28, halfZ: .26 });
 
   // ----------------------- The instrument workbench -----------------------
-  const workbench = group('project-workbench', 5, -2.8); workbench.rotation.y = -Math.PI / 2; writingTable(workbench, 2.3, 1.1);
-  const instrumentBase = new THREE.Group(); instrumentBase.name = 'armillary-pedestal'; instrumentBase.position.set(-.15, 0, -.03); workbench.add(instrumentBase);
-  bevel(instrumentBase, woodDark, .55, .042, .48, 0, .805, 0);
-  bevel(instrumentBase, woodEdge, .51, .012, .44, 0, .832, 0, .002);
-  lathe(instrumentBase, brassDark, 'armillary-turned-pedestal', [[0,0],[.17,0],[.175,.012],[.15,.025],[.10,.045],[.038,.075],[.028,.19],[.046,.208],[.048,.224],[.033,.23]], 0, .84, 0, 40);
+  const workbench = group('project-workbench', 5, -2.8); workbench.rotation.y = -Math.PI / 2;
+  instrumentTable(workbench);
+  const instrumentBase = new THREE.Group(); instrumentBase.name = 'armillary-pedestal';
+  instrumentBase.position.set(-.43,.37,-.245); workbench.add(instrumentBase);
+  lathe(instrumentBase,walnut,'octagonal-instrument-plinth',[[.31,0],[.32,.021],[.278,.035],[.272,.081],[.29,.096],[.28,.107]],0,.786,0,8);
+  for (const y of [.814,.871]) cylinder(instrumentBase,agedGold,.286,.286,.007,0,y,0,8);
+  lathe(instrumentBase,verdigris,'armillary-turned-pedestal',[[.18,0],[.19,.023],[.14,.045],[.089,.053],[.066,.11],[.054,.146],[.076,.169],[.07,.188]],0,.885,0,32);
   for (let i = 0; i < 4; i++) {
     const a = i * Math.PI / 2;
     cylinder(instrumentBase, brass, .012, .012, .004, Math.sin(a) * .145, .856, Math.cos(a) * .145, 16);
   }
   const armillary = new THREE.Group(); armillary.name = 'moving-armillary-sphere';
-  armillary.position.set(-.15, 1.385, -.03); armillary.rotation.z = .409; workbench.add(armillary);
+  armillary.position.set(-.43,1.755,-.245); armillary.rotation.set(-.72,0,.48,'ZXY');
+  armillary.scale.setScalar(1.19); workbench.add(armillary);
   function band(parent: THREE.Group, radius: number, width: number, depth: number, mat: THREE.Material) {
     const geo = geometry(`engraved-ring:${radius}:${width}:${depth}`, () => {
       const shape = new THREE.Shape(); shape.absarc(0,0,radius,0,Math.PI*2,false);
@@ -597,16 +672,16 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     });
     return mesh(parent, geo, mat);
   }
-  const outerRing = new THREE.Group(); armillary.add(outerRing); band(outerRing, .345, .023, .007, brass);
+  const outerRing = new THREE.Group(); armillary.add(outerRing); band(outerRing,.345,.040,.024,agedGold);
   for (let i = 0; i < 72; i++) {
     const a = i / 72 * Math.PI * 2, long = i % 6 === 0;
-    const tick = box(outerRing, brassDark, long ? .002 : .001, long ? .015 : .008, .0012,
-      Math.sin(a) * .333, Math.cos(a) * .333, .0048); tick.rotation.z = -a;
+    const tick = box(outerRing, verdigris, long ? .0026 : .0016, long ? .022 : .012, .0018,
+      Math.sin(a) * .326, Math.cos(a) * .326, .0145); tick.rotation.z = -a;
   }
   const middle = new THREE.Group(); armillary.add(middle); middle.rotation.y = Math.PI / 2; band(middle, .297, .018, .005, brass);
   const inner = new THREE.Group(); armillary.add(inner); inner.rotation.x = Math.PI / 2; band(inner, .253, .018, .005, brassDark);
   const ecliptic = band(armillary, .275, .014, .005, brass); ecliptic.rotation.x = .6;
-  const globe = mesh(armillary, geometry('armillary-globe', () => new THREE.SphereGeometry(.078, 24, 18)), ceramic);
+  const globe = mesh(armillary, geometry('armillary-globe', () => new THREE.SphereGeometry(.078, 24, 18)), agedGold);
   globe.castShadow = false;
   for (const elevation of [-.5, 0, .5]) {
     const ring = torus(armillary, brassDark, Math.cos(elevation) * .079, .0014, 0, Math.sin(elevation) * .079, 0, 48);
@@ -618,121 +693,148 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     cylinder(armillary, brassDark, .012, .012, .020, 0, yy, 0, 16);
     mesh(armillary, geometry('axis-finial', () => new THREE.SphereGeometry(.013, 12, 8)), brass, 0, yy + Math.sign(yy) * .018, 0);
   }
-  const horizon = band(instrumentBase, .368, .022, .008, brassDark); horizon.rotation.x = Math.PI / 2; horizon.position.y = 1.385;
+  const horizon = band(instrumentBase,.407,.023,.012,verdigris); horizon.rotation.x=Math.PI/2-.24; horizon.position.y=1.385;
   for (const side of [-1, 1]) {
-    tube(instrumentBase, brassDark, `instrument-fork:${side}`, [new THREE.Vector3(0,1.04,0), new THREE.Vector3(side*.16,1.11,0), new THREE.Vector3(side*.32,1.25,0), new THREE.Vector3(side*.34,1.385,0)], .006, 18);
+    const cheek=mesh(instrumentBase,geometry('armillary-foliated-standard',()=>createPiercedSplat(.18,.365,.041)),verdigris,side*.22,.971,0);
+    cheek.rotation.z=-side*.34;
+    tube(instrumentBase,verdigris,`instrument-fork:${side}`,[new THREE.Vector3(side*.13,.97,0),
+      new THREE.Vector3(side*.17,1.07,0),new THREE.Vector3(side*.34,1.22,0),new THREE.Vector3(side*.397,1.372,0)],.014,18);
+    torus(instrumentBase,agedGold,.026,.006,side*.371,1.334,.015,28);
   }
-  const projectCard = new THREE.Group(); projectCard.name = 'project-identification-card'; projectCard.position.set(.64,.80,.27); projectCard.rotation.x = -.32; workbench.add(projectCard);
-  bevel(projectCard, woodDark, .20, .24, .018, 0,.10,0,.003);
-  label(projectCard, written('project', 'projects'), .12,.205,0,.10,.010);
-  const schematic = label(workbench, written('schematic'), .32,.43,.67,.782,-.14); schematic.rotation.x = -Math.PI / 2;
-  let bookHeight = .78;
-  for (let i = 0; i < 3; i++) bookHeight += lyingBook(workbench,-.86,bookHeight,-.03,8+i,(i-1)*.05)+.002;
+  const projectCard = new THREE.Group(); projectCard.name='Framed star chart on a sloping easel';
+  projectCard.position.set(.635,1.15,-.118); projectCard.rotation.x=-.35; workbench.add(projectCard);
+  bevel(projectCard,walnut,.843,.620,.052,0,.309,0,.009);
+  bevel(projectCard,agedGold,.806,.584,.008,0,.309,.031,.002);
+  label(projectCard,written('schematic','projects'),.775,.555,0,.309,.038);
+  for (const x of [-.392,.392]) for(const y of [.039,.58]) {
+    const rivet=cylinder(projectCard,agedGold,.011,.011,.008,x,y,.041,10);rivet.rotation.x=Math.PI/2;
+  }
+  const port = new THREE.Group();port.name='Measuring dividers';port.position.set(-.18,.789,.26);port.rotation.y=.20;workbench.add(port);
+  for(const side of [-1,1]) {
+    rod(port,agedGold,new THREE.Vector3(0,.018,-.12),new THREE.Vector3(side*.109,.011,.135),.007,10);
+    rod(port,verdigris,new THREE.Vector3(side*.109,.011,.135),new THREE.Vector3(side*.123,.008,.174),.004,8);
+  }
+  cylinder(port,agedGold,.016,.016,.015,0,.018,-.12,16);
+  bevel(workbench,rosewood,.44,.019,.049,.54,.793,.20,.003);
+  for(let i=0;i<17;i++) box(workbench,agedGold,.002,.001,i%4? .013:.027,.352+i*.0235,.803,.206);
+  const drafts=label(workbench,written('schematic'),.347,.253,-.70,.783,.255);drafts.rotation.x=-Math.PI/2;
+  // Shallow pigeonholes sit behind the raised instrument shelf and stay within the wing's wall line.
+  for(let i=0;i<7;i++) bevel(workbench,walnut,.315,.008+1.88,.032,(i-3)*.319,1.39,-.880,.003);
+  for(const x of [-1.115,-.29,.45,1.115]) bevel(workbench,walnut,.044,2.10,.215,x,1.32,-.78);
+  for(const yy of [.49,1.20,1.77,2.36]) bevel(workbench,rosewood,2.29,.044,.229,0,yy,-.78);
+  for(const x of [-.72,.82]) {
+    for(let j=0;j<5;j++){
+      const thickness=.044+(j%2)*.023,h=.267+.07*Math.cos(j*2.2);
+      bevel(workbench,j%3===2?paperEdge:bindings[j%bindings.length],thickness,h,.128,x+j*.075-.17,1.80+h/2,-.745,.002);
+      box(workbench,cord,thickness*.66,.046,.002,x+j*.075-.17,1.80+h*.70,-.679);
+    }
+  }
+  for(let i=0;i<5;i++){
+    const px=-.11+(i%3)*.089,py=1.832+Math.floor(i/3)*.071;
+    const roll=cylinder(workbench,paperEdge,.040,.040,.184,px,py,-.755,14);roll.rotation.x=Math.PI/2;
+    torus(workbench,walnut,.022,.002,px,py,-.661,18);
+  }
+  lathe(workbench,verdigris,'workshop-brush-jar',[[.05,0],[.07,.012],[.096,.096],[.072,.17],[.078,.18],[.071,.183],[.058,.169],[.055,.04]],.89,.781,.345,32);
+  for(let i=0;i<3;i++) {
+    const b = new THREE.Group(); b.position.set(.88+(i-1)*.015,.855,.343);b.rotation.z=(i-1)*.15;b.scale.setScalar(.72);workbench.add(b);writingBrush(b);
+  }
   batchStatic(workbench,[armillary,instrumentBase,projectCard]); batchStatic(instrumentBase); batchStatic(projectCard);
   batchStatic(armillary,[outerRing,middle,inner]); batchStatic(outerRing); batchStatic(middle); batchStatic(inner);
-  colliders.push({ x: 5, z: -2.8, halfX: .565, halfZ: 1.16 });
+  colliders.push({ x: 5.17, z: -2.8, halfX: .72, halfZ: 1.17 });
   let instrumentImpulse = 0;
   interactions.push({ id:'projects',kind:'projects',label:'翻阅项目',labelEn:'Explore projects',
-    position:new THREE.Vector3(5.03,1.685,-2.95),approach:new THREE.Vector3(3.15,.3,-2.8),radius:2.45,
+    position:workbench.localToWorld(armillary.position.clone()),approach:new THREE.Vector3(3.15,.3,-2.8),radius:2.45,
     meshes:[armillary,instrumentBase,projectCard],activate:()=>{instrumentImpulse=2.7;} });
 
-  // ------------------------- Six-sided silk lantern -------------------------
-  function courtLamp(side: number, id: string) {
-    const lamp = group('courtyard-paper-lantern', side * 3.53, 4.55);
-    if (side > 0) lamp.rotation.y = Math.PI;
-    bevel(lamp, woodDark, .48, .09, .44, -.53, .045, 0, .014);
-    bevel(lamp, wood, .37, .028, .34, -.53, .102, 0, .009);
-    cylinder(lamp, wood, .030, .047, 1.96, -.53, 1.10, 0, 20);
-    tube(lamp, wood, 'lantern-curved-crook', [new THREE.Vector3(-.53,2.05,0), new THREE.Vector3(-.51,2.30,0),
-      new THREE.Vector3(-.35,2.43,0), new THREE.Vector3(-.06,2.43,0), new THREE.Vector3(.15,2.34,0)], .030, 36);
-    for (const yy of [1.97, 2.015]) torus(lamp, brassDark, .032, .0025, -.53, yy, 0, 28).rotation.x = Math.PI / 2;
-    const lantern = new THREE.Group(); lantern.name = 'hanging-lantern'; lantern.position.set(.15,2.34,0); lamp.add(lantern);
-    cylinder(lantern, cord, .0035, .0035, .23, 0,-.115,0,8);
-    const hook = torus(lantern,brassDark,.019,.003,0,-.225,0,28); hook.scale.y = 1.4;
-    const lanternPaper = surface('paper', { normalScale: .28, roughness: .98, side: THREE.DoubleSide });
-    lanternPaper.emissive.set('#ffd3a0'); lanternPaper.emissiveIntensity = .7;
-    const lanternPanels = geometry('lantern-six-silk-panels', () => {
-      const positions: number[] = [], uvs: number[] = [], indices: number[] = [];
-      for (let i = 0; i < 6; i++) {
-        const a = Math.PI / 6 + i * Math.PI / 3, b = a + Math.PI / 3;
-        const base = positions.length / 3;
-        positions.push(Math.sin(a) * .158,-.75,Math.cos(a) * .158, Math.sin(b) * .158,-.75,Math.cos(b) * .158,
-          Math.sin(a) * .178,-.32,Math.cos(a) * .178, Math.sin(b) * .178,-.32,Math.cos(b) * .178);
-        uvs.push(0,0,1,0,0,1,1,1); indices.push(base,base+1,base+2,base+2,base+1,base+3);
-      }
-      const result = new THREE.BufferGeometry();
-      result.setAttribute('position', new THREE.Float32BufferAttribute(positions,3));
-      result.setAttribute('uv', new THREE.Float32BufferAttribute(uvs,2)); result.setIndex(indices); result.computeVertexNormals(); return result;
-    });
-    mesh(lantern, lanternPanels, lanternPaper);
-    cylinder(lantern, woodDark, .073, .244, .094, 0,-.267,0,6).rotation.y = Math.PI / 6;
-    cylinder(lantern, woodDark, .187, .185, .024, 0,-.325,0,6).rotation.y = Math.PI / 6;
-    cylinder(lantern, woodDark, .171, .181, .032, 0,-.765,0,6).rotation.y = Math.PI / 6;
-    for (let i = 0; i < 6; i++) {
-      const a = Math.PI / 6 + i * Math.PI / 3, b = a + Math.PI / 3;
-      rod(lantern, woodEdge, new THREE.Vector3(Math.sin(a)*.162,-.75,Math.cos(a)*.162),
-        new THREE.Vector3(Math.sin(a)*.182,-.32,Math.cos(a)*.182), .008, 8);
-      for (const [r,y] of [[.186,-.338],[.175,-.748]]) rod(lantern, brassDark,
-        new THREE.Vector3(Math.sin(a)*r,y,Math.cos(a)*r), new THREE.Vector3(Math.sin(b)*r,y,Math.cos(b)*r), .0023, 6);
-    }
-    const glyph = label(lantern, written('lamp',id), .042,.066,0,-.52,.1477); glyph.rotation.x = .040;
-    const knot = torus(lantern, red, .010, .0023, 0,-.798,0,24); knot.scale.x = .65;
-    cylinder(lantern, cord, .0018,.0018,.29,.125,-.91,.01,6);
-    lathe(lantern, brassDark, 'lantern-pull-bead', [[.002,0],[.008,.006],[.009,.018],[.005,.028],[.002,.03]],.125,-1.075,.01,16);
-    const lampLight = new THREE.PointLight('#ffd2a0',5.8,6.5,2); lampLight.position.set(0,-.535,0); lantern.add(lampLight);
+  // Two nearer corner lamps can be switched from the side walks. The far pair reflects in the pool.
+  const castBeacon = createStoneBeacon(geometry => { geometries.add(geometry); return geometry; });
+  const lampStone = surface('limestone',{color:'#d4c7b3',worldScale:.75,roughness:.86});
+  const lampRebate = surface('limestone',{color:'#aaa399',worldScale:.75,roughness:.88});
+  const patina = surface('limestone',{color:'#789687',worldScale:3.7,normalScale:.18,roughness:.57,metalness:.40});
+  function courtLamp(side: number, z: number, id?: string) {
+    const lamp = group('Courtyard stone lantern',side*POOL_LAMP.postX,z);
+    lamp.scale.setScalar(.78);
+    const silk = material({color:'#edca7d',emissive:'#ffc577',emissiveIntensity:.76,roughness:.91});
+    const lantern = castBeacon(lamp,{stone:lampStone,shadeStone:lampRebate,bronze:patina,gilt:agedGold,silk});
+    colliders.push({x:lamp.position.x,z,halfX:.248,halfZ:.248});
     batchStatic(lamp,[lantern]); batchStatic(lantern);
-    // The standard stands on the stone coping. Its shade hangs freely over the water.
-    colliders.push({x:side*4.06,z:4.55,halfX:.22,halfZ:.18});
-    let lampOn=true,lampAmount=1;
+    if (!id) return;
+    const glow = new THREE.PointLight('#ffd294',2.1,3.5,2);
+    glow.position.set(0,.923,0); lantern.add(glow);
+    let lit=true, amount=1;
     interactions.push({id,kind:'lantern',label:'拨一盏灯',labelEn:'Switch the lantern',
-      position:new THREE.Vector3(side*3.38,2.105,4.55),approach:new THREE.Vector3(side*1.99,.3,4.55),radius:1.95,
-      meshes:[lantern],activate:()=>{lampOn=!lampOn;} });
-    return (time: number, dt: number) => {
-      lantern.rotation.z = Math.sin(time * .8) * .018;
-      lantern.rotation.x = Math.sin(time * .61 + side * .9) * .009;
-      lampAmount = THREE.MathUtils.damp(lampAmount, lampOn ? 1 : 0, 9, dt);
-      const flicker = 1 + Math.sin(time * 4.2) * .010 + Math.sin(time * 9.1) * .006;
-      lampLight.intensity = lampAmount * 5.8 * flicker;
-      lanternPaper.emissiveIntensity = .025 + lampAmount * .70 * flicker;
+      position:new THREE.Vector3(lamp.position.x,.3+.78*.923,z),
+      approach:new THREE.Vector3(side*POOL_LAMP.approachX,.3,POOL_LAMP.approachZ),radius:2.05,
+      meshes:[lantern],activate:()=>{lit=!lit;}});
+    return (time:number,dt:number)=>{
+      amount=THREE.MathUtils.damp(amount,lit?1:0,9,dt);
+      const flame = 1+.014*Math.sin(time*4.2+side)+.008*Math.sin(time*9.1);
+      silk.emissiveIntensity=.025+.76*amount*flame;
+      glow.intensity=2.1*amount*flame;
     };
   }
-  const courtyardLights = [courtLamp(-1, 'lantern'), courtLamp(1, 'east-lantern')];
+  const courtyardLights = [courtLamp(-1,POOL_LAMP.z,'lantern')!,courtLamp(1,POOL_LAMP.z,'east-lantern')!];
+  for(const side of [-1,1]) courtLamp(side,POOL_LAMP.northZ);
 
   // --------------------------- Overlook bench ---------------------------
   const bench = group('overlook-carved-bench',10,5);
-  for (const xx of [-1.07,1.07]) {
-    for (const zz of [-.235,.235]) {
-      bevel(bench,wood,.082,.44,.085,xx,.22,zz);
-      bevel(bench,woodDark,.11,.038,.11,xx,.026,zz);
+  for(const x of [-1.075,1.075]) {
+    for(const z of [-.238,.238]){
+      bevel(bench,rosewood,.084,.45,.082,x,.226,z);
+      bevel(bench,walnut,.102,.047,.11,x,.026,z);
     }
-    bevel(bench,wood,.052,.043,.55,xx,.17,0);
-    bevel(bench,wood,.064,.61,.069,xx,.745,.265);
-    bevel(bench,wood,.055,.29,.061,xx,.625,-.235);
-    tube(bench,woodEdge,`bench-swept-arm:${xx}`,[new THREE.Vector3(xx,.78,-.27),new THREE.Vector3(xx,.795,-.15),
-      new THREE.Vector3(xx,.83,.04),new THREE.Vector3(xx,.91,.27)],.026,24);
-    rod(bench,wood,new THREE.Vector3(xx,.60,.235),new THREE.Vector3(xx,.765,-.13),.016,8);
+    bevel(bench,walnut,.043,.047,.48,x,.153,0);
+    bevel(bench,rosewood,.061,.43,.062,x,.701,-.238);
+    bevel(bench,rosewood,.065,.56,.072,x,.749,.242);
+    tube(bench,rosewood,'horseshoe-arm:'+x,[new THREE.Vector3(x,.90,-.247),
+      new THREE.Vector3(x,.941,-.178),new THREE.Vector3(x*1.025,.916,-.018),new THREE.Vector3(x,.946,.204),new THREE.Vector3(x,.988,.265)],.031,22);
   }
-  for (let i=0;i<3;i++) bevel(bench,wood,2.46,.065,.185,0,.4475,(i-1)*.20,.009);
-  for (const zz of [-.235,.235]) bevel(bench,woodDark,2.2,.072,.038,0,.374,zz);
-  tube(bench,woodDark,'bench-curved-crest',[new THREE.Vector3(-1.20,1.03,.24),new THREE.Vector3(-.65,1.13,.31),
-    new THREE.Vector3(0,1.17,.34),new THREE.Vector3(.65,1.13,.31),new THREE.Vector3(1.20,1.03,.24)],.035,48);
-  tube(bench,wood,'bench-lower-bow',[new THREE.Vector3(-1.07,.67,.25),new THREE.Vector3(0,.72,.30),
-    new THREE.Vector3(1.07,.67,.25)],.021,32);
-  for (let i=0;i<5;i++) {
-    const x=(i-2)*.43, f=1-(x/1.2)**2;
-    tube(bench,wood,`bench-shaped-splat:${i}`,[new THREE.Vector3(x,.69,.28),new THREE.Vector3(x,.84,.31),
-      new THREE.Vector3(x,1.02+f*.12,.24+f*.09)],.014,20);
+  bevel(bench,walnut,2.41,.077,.594,0,.441,0);
+  bevel(bench,agedGold,2.374,.009,.570,0,.476,0,.002);
+  bevel(bench,rosewood,2.175,.089,.078,0,.507,.257);
+  for (const sign of [-1,1]) {
+    cloudApron(bench,2.095,.126,0,.410,sign*.244,sign>0?0:Math.PI);
+    bevel(bench,rosewood,2.135,.039,.038,0,.148,sign*.231);
   }
-  bevel(bench,wood,2.14,.043,.045,0,.17,0);
-  bevel(bench,woodDark,.31,.205,.021,0,.875,.294,.004);
-  const benchPlaque=label(bench,written('bench','bench'),.12,.18,0,.875,.282);benchPlaque.rotation.y=Math.PI;
-  const cushion = geometry('bench-tailored-cushion',()=>createBenchCushionGeometry(2.03,.435,.036));
-  mesh(bench,cushion,cloth,0,.500,-.01);
-  // A single fine welt follows the cushion; no loose cloth intrudes into the walkable terrace.
-  for (const zz of [-.2275,.2075]) rod(bench,stitch,new THREE.Vector3(-1.012,.500,zz),new THREE.Vector3(1.012,.500,zz),.0016,5);
-  for (const xx of [-1.014,1.014]) rod(bench,stitch,new THREE.Vector3(xx,.500,-.225),new THREE.Vector3(xx,.500,.205),.0016,5);
+  tube(bench,rosewood,'continuous-bowed-back',[new THREE.Vector3(-1.083,.989,.264),new THREE.Vector3(-.72,.999,.274),
+    new THREE.Vector3(-.42,1.026,.296),new THREE.Vector3(-.20,1.105,.314),new THREE.Vector3(0,1.135,.324),
+    new THREE.Vector3(.20,1.105,.314),new THREE.Vector3(.42,1.026,.296),new THREE.Vector3(.72,.999,.274),new THREE.Vector3(1.083,.989,.264)],.034,36);
+  const welt=material({color:'#897b4d',roughness:.91});
+  const cushion=geometry('individual-woven-seat',()=>createBenchCushionGeometry(.701,.448,.039));
+  for(let i=-1;i<=1;i++) {
+    const x=i*.712, height=i===0?.589:.461;
+    const splat=mesh(bench,geometry('ruyi-seat-back:'+height,()=>createPiercedSplat(i===0?.259:.210,height,.04)),
+      rosewood,x,.521,i===0?.284:.253);
+    splat.rotation.x=.052;
+    const inset=mesh(bench,splat.geometry,agedGold,x,.527,i===0?.259:.228);
+    inset.rotation.x=.052; inset.scale.set(.85,.965,.10);
+    const face=mesh(bench,splat.geometry,rosewood,x,.532,i===0?.254:.223);
+    face.rotation.x=.052;face.scale.set(.77,.942,.10);
+    mesh(bench,cushion,straw,x,.500,-.012);
+    for(const z of [-.231,.207]) rod(bench,welt,new THREE.Vector3(x-.34,.497,z),new THREE.Vector3(x+.34,.497,z),.002,5);
+  }
   batchStatic(bench);
-  colliders.push({x:10,z:5,halfX:1.24,halfZ:.40});
+  colliders.push({x:10,z:5,halfX:1.22,halfZ:.37});
+
+  const teaStand=group('Side table with covered cup and Yixing pot',8.50,5.36);
+  bevel(teaStand,rosewood,.47,.044,.445,0,.514,0,.007);
+  for(const x of [-.19,.19])for(const z of [-.173,.173]) bevel(teaStand,walnut,.039,.49,.041,x,.245,z,.003);
+  cloudApron(teaStand,.363,.059,0,.487,-.174,Math.PI);
+  bevel(teaStand,walnut,.401,.023,.306,0,.549,0,.006);
+  for(const z of [-.141,.141]) bevel(teaStand,rosewood,.401,.026,.016,0,.573,z,.003);
+  const celadon=material({color:'#9ebba6',metalness:.025,roughness:.22});
+  lathe(teaStand,celadon,'covered-tea-bowl',[[.034,0],[.034,.006],[.054,.021],[.063,.046],[.064,.052],[.060,.054]],-.094,.559,-.024,32);
+  lathe(teaStand,celadon,'tea-bowl-cover',[[.058,0],[.054,.006],[.027,.019],[.011,.021],[.013,.030],[0,.034]],-.094,.611,-.024,32);
+  const clay=material({color:'#79482f',roughness:.61});
+  lathe(teaStand,clay,'unglazed-clay-pot',[[.033,0],[.041,.005],[.069,.028],[.071,.053],[.058,.077],[.045,.082],[.040,.079]],
+    .079,.559,.013,36);
+  lathe(teaStand,clay,'clay-pot-cover',[[.047,0],[.046,.006],[.029,.015],[.007,.018],[.013,.024],[.011,.032],[0,.036]],
+    .079,.64,.013,32);
+  tube(teaStand,clay,'arched-teapot-handle',[new THREE.Vector3(.122,.627,.013),new THREE.Vector3(.159,.640,.013),
+    new THREE.Vector3(.170,.608,.013),new THREE.Vector3(.143,.588,.013)],.007,14);
+  const spout=lathe(teaStand,clay,'teapot-bent-spout',[[.014,0],[.017,.009],[.013,.03],[.010,.048],[.011,.06],[.008,.061],[.006,.044]],.028,.600,.013,18);
+  spout.rotation.z=.84;
+  batchStatic(teaStand);colliders.push({x:teaStand.position.x,z:teaStand.position.z,halfX:.235,halfZ:.223});
   // The guide faces the broad cushion. Its surface is also the seated camera's height reference.
   const seatContact = new THREE.Vector3(10, .824, 4.88);
   interactions.push({
@@ -769,6 +871,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
       root.removeFromParent();
       for (const geo of geometries) geo.dispose();
       for (const mat of materials) mat.dispose();
+      for (const tex of woodTextures) tex.dispose();
       lettering.dispose();
       artwork.dispose();
       if (ownsLibrary) library.dispose();

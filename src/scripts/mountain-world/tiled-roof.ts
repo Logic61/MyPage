@@ -23,6 +23,7 @@ interface RoofSpec {
   rise: number;
   lift: number;
   tileWidth?: number;
+  gildedVerge?: boolean;
 }
 
 interface RoofMaterials {
@@ -30,11 +31,12 @@ interface RoofMaterials {
   ridge: THREE.Material;
   soffit: THREE.Material;
   timber: THREE.Material;
+  bronze: THREE.Material;
 }
 
 /** Each face runs from a real overhanging eave to a hip, ridge or lantern drum.
  * Barrel tiles, fascia and rafters share that surface, including its lifted corners. */
-export function tiledRoof({ name, eave, ridge, height, rise, lift, tileWidth = .215 }: RoofSpec, m: RoofMaterials) {
+export function tiledRoof({ name, eave, ridge, height, rise, lift, tileWidth = .215, gildedVerge = false }: RoofSpec, m: RoofMaterials) {
   const group = new THREE.Group();
   group.name = name;
   const add = (geometry: THREE.BufferGeometry, material: THREE.Material, label: string) => {
@@ -56,7 +58,7 @@ export function tiledRoof({ name, eave, ridge, height, rise, lift, tileWidth = .
       const y = height + rise * (.20 * t + .80 * t * t) + lift * corner * (1 - t) ** 2;
       return new THREE.Vector3(THREE.MathUtils.lerp(outerX, innerX, t), y + offset, THREE.MathUtils.lerp(outerZ, innerZ, t));
     };
-    const windward = new THREE.Color('#81918a'), shadow = new THREE.Color('#465855');
+    const windward = new THREE.Color('#a9aeb1'), shadow = new THREE.Color('#52616a');
     const rib = (u: number) => Math.max(0, -Math.cos(u * runs * Math.PI * 2));
     // Each course laps the one below it. Paired rows form a rounded lip with a small shadow line.
     const slope = point(.5, 0).distanceTo(point(.5, 1));
@@ -79,6 +81,24 @@ export function tiledRoof({ name, eave, ridge, height, rise, lift, tileWidth = .
     moulding(eaveLine, .035, m.timber, 'Swept eave fascia');
     const hip = Array.from({ length: 13 }, (_, j) => point(0, j / 12, .055));
     moulding(hip, .065, m.ridge, 'Raised hip ridge');
+    if (gildedVerge) {
+      const inset = Array.from({length:33}, (_,j) => point(j/32, .014, -.045));
+      moulding(inset, .021, m.bronze, 'Bronze seam along the eave');
+      // The metal ridge shoe curls past the last tile. In profile it narrows to a lifted beak.
+      const tip = hip[0], outward = tip.clone().sub(hip[2]).setY(0).normalize();
+      const curve = new THREE.CatmullRomCurve3([
+        hip[1].clone().add(new THREE.Vector3(0,.042,0)),
+        tip.clone().add(new THREE.Vector3(0,.065,0)),
+        tip.clone().addScaledVector(outward,.13).add(new THREE.Vector3(0,.19,0)),
+        tip.clone().addScaledVector(outward,.21).add(new THREE.Vector3(0,.43,0)),
+      ]);
+      const blade = gridSurface(14,7,(t,v) => {
+        const p=curve.getPointAt(t), a=v*Math.PI*2, taper=1-t;
+        return p.addScaledVector(new THREE.Vector3(-outward.z,0,outward.x),Math.cos(a)*(.075*taper+.004))
+          .addScaledVector(new THREE.Vector3(0,1,0),Math.sin(a)*(.065*taper+.002));
+      });
+      add(blade,m.bronze,'Lifted bronze hip shoe');
+    }
     // Clay antefix discs and exposed rafter ends are perceptible looking up from the path.
     const outward = new THREE.Vector3(a.y - b.y, 0, b.x - a.x).normalize();
     const capTemplate = new THREE.CylinderGeometry(.049, .051, .058, 10).rotateX(Math.PI / 2);
@@ -101,6 +121,19 @@ export function tiledRoof({ name, eave, ridge, height, rise, lift, tileWidth = .
       transform.scale.set(1, dir.length(), 1); transform.updateMatrix(); rafters.setMatrixAt(k, transform.matrix);
     }
     group.add(caps, rafters);
+  }
+  // The opposite slopes end on either face of a narrow ridge. Its purlin closes the joint seen from below.
+  if (ridge.length===4) {
+    const bounds=new THREE.Box2().setFromPoints(ridge),span=bounds.getSize(new THREE.Vector2());
+    if (Math.min(span.x,span.y)<.22 && Math.max(span.x,span.y)>.5) {
+      const alongX=span.x>span.y, length=Math.max(span.x,span.y)+.10, width=Math.min(span.x,span.y)+.13;
+      const center=bounds.getCenter(new THREE.Vector2());
+      const purlin=add(new THREE.BoxGeometry(alongX?length:width,.12,alongX?width:length),m.timber,'Closed ridge purlin');
+      purlin.position.set(center.x,height+rise-.086,center.y);
+      const cap=add(new THREE.CylinderGeometry(width*.51,width*.51,length,12),m.ridge,'Round ridge cover');
+      cap.position.set(center.x,height+rise+.007,center.y);
+      if (alongX) cap.rotation.z=Math.PI/2; else cap.rotation.x=Math.PI/2;
+    }
   }
   return group;
 }

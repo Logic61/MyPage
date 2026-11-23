@@ -131,7 +131,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
       const value = en ? nameEn : name;
       if (locationLabel.textContent !== value) locationLabel.textContent = value;
     },
-    setInteraction(interaction: Interaction | null, screen) {
+    setInteraction(interaction: Pick<Interaction, 'id' | 'label' | 'labelEn'> | null, screen) {
       if (!interaction || failed) { prompt.hidden = true; currentInteraction = null; return; }
       if (currentInteraction !== interaction.id) {
         currentInteraction = interaction.id;

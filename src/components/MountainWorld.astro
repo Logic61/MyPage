@@ -24,12 +24,15 @@ const marks = [
 <Layout title={isEn ? 'Cloud Court Study · Shane Lorien' : '云庭书斋 · Shane Lorien'} section="home" spatial>
   <div class="mountain-world" data-mountain-world data-state="poster" data-language={isEn ? 'en' : 'zh'}>
     <main inert id="main-content" class="mw-stage" tabindex="-1" aria-label={isEn ? 'Explore the cloud courtyard' : '探索云庭书斋'}>
-      <canvas id="mountain-canvas" tabindex="0" aria-label={isEn ? 'First-person cloud courtyard. WASD to walk. Hold Shift to run. Press Space to jump. When the mouse is locked, aim with the centre dot and press E or click. After unlocking, click the scene to lock the mouse again. Escape to pause. Touch: use the left thumbstick to walk, drag on the right to look, and tap Jump.' : '第一人称云庭书斋。WASD 行走，按住 Shift 奔跑，空格跳跃。鼠标锁定时用中心准心瞄准，按 E 或左键交互；脱锁后点击画面即可重新锁定。Esc 暂停。触屏使用左侧摇杆行走、右侧拖动环顾，轻触「跳跃」起跳。'}></canvas>
+      <canvas id="mountain-canvas" tabindex="0" aria-label={isEn ? 'First-person cloud courtyard. WASD to walk, Shift to run. Space to jump, or vault when facing an open window nearby. Aim with the centre dot and press E or click to interact. Click the scene to lock the mouse again. Escape to pause. On touchscreens use the left stick to walk, drag to look, and tap Jump or Vault.' : '第一人称云庭书斋。WASD 行走，Shift 奔跑，空格跳跃。靠近打开的窗，面向窗洞按空格翻窗。用准心瞄准，按 E 或点击交互。鼠标脱离后点击画面重新锁定。Esc 暂停。触屏使用左侧摇杆行走，拖动环顾，点右侧按钮跳跃或翻窗。'}></canvas>
       <div class="mw-vignette" aria-hidden="true"></div>
     </main>
 
     <div class="mw-arrival" data-world-arrival>
-      <img class="mw-cover" src={`${base}/world/courtyard-entrance.webp`} width="1680" height="1000" fetchpriority="high" alt="" />
+      <picture class="mw-cover-picture">
+        <source media="(orientation: portrait)" srcset={`${base}/world/courtyard-entrance-portrait.webp`} width="936" height="2026" />
+        <img class="mw-cover" src={`${base}/world/courtyard-entrance.webp`} width="1920" height="1200" fetchpriority="high" alt="" />
+      </picture>
       <h1 class="mw-cover-title" lang="en">Shane Lorien's Page</h1>
       <div class="mw-cover-actions">
         <button type="button" class="mw-enter-button" data-world-load>{isEn ? 'Enter the courtyard' : '走进云庭'}</button>
@@ -49,7 +52,7 @@ const marks = [
           <span class="mw-sr-only" data-sound-label>{isEn ? 'Background music' : '背景音乐'}</span>
         </button>
         <button type="button" data-world-settings-open aria-haspopup="dialog"><Icon name="mdi:cog-outline" /><span>{isEn ? 'Settings' : '设置'}</span></button>
-        <button type="button" class="mw-tool-button" data-world-action="reset" aria-label={isEn ? 'Return to the courtyard gate' : '回到庭门'} disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></svg></button>
+        <button type="button" class="mw-tool-button" data-world-action="reset" aria-label={isEn ? 'Return to Cloudwatch Landing' : '回到候云台'} disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></svg></button>
         <button type="button" class="mw-tool-button" data-world-pause aria-label={isEn ? 'Pause exploring' : '暂停探索'} hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg></button>
         <a class="mw-language" href={languageHref} lang={isEn ? 'zh-CN' : 'en'} aria-label={isEn ? '中文版本' : 'English version'}>{isEn ? '中' : 'EN'}</a>
       </nav>
@@ -92,7 +95,11 @@ const marks = [
     </nav>
     <div class="mw-reticle" data-world-reticle aria-hidden="true"><span></span></div>
     <div class="mw-thumbstick" data-world-stick role="group" aria-label={isEn ? 'Drag to walk' : '拖动摇杆行走'}><span class="mw-thumbstick-ring"></span><span class="mw-thumbstick-knob" data-world-stick-thumb></span></div>
-    <button type="button" class="mw-jump" data-world-jump aria-keyshortcuts="Space">{isEn ? 'Jump' : '跳跃'}</button>
+    <button type="button" class="mw-jump" data-world-jump aria-keyshortcuts="Space">
+      <kbd>{isEn ? 'Space' : '空格'}</kbd>
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 19h14" /></svg>
+      <span class="mw-jump-label">{isEn ? 'Jump' : '跳跃'}</span><span class="mw-vault-label">{isEn ? 'Vault' : '翻窗'}</span>
+    </button>
 
     <section class="mw-fallback" data-world-fallback aria-labelledby="mw-fallback-title" hidden>
       <img src={`${base}/world/immortal-mountains-panorama.webp`} width="2172" height="724" alt="" loading="lazy" decoding="async" />
@@ -105,10 +112,10 @@ const marks = [
     </section>
 
     <footer class="mw-hud">
-      <div class="mw-place"><span class="mw-place-overline">{isEn ? 'YOU ARE HERE' : '此刻所在'}</span><strong data-world-location>{isEn ? 'The cloud mountain path' : '云山石径'}</strong><span class="mw-place-note">{isEn ? 'Take your time.' : '此间无事，随意走走。'}</span></div>
+      <div class="mw-place"><span class="mw-place-overline">{isEn ? 'YOU ARE HERE' : '此刻所在'}</span><strong data-world-location>{isEn ? 'Cloudwatch Landing' : '候云台'}</strong><span class="mw-place-note">{isEn ? 'Take your time.' : '此间无事，随意走走。'}</span></div>
       <div class="mw-hint" data-world-hint role="status" hidden>
-        <p class="mw-hint-desktop"><span><kbd>WASD</kbd> {isEn ? 'walk' : '行走'}</span><span class="mw-look-locked">{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span class="mw-look-pointer">{isEn ? 'Drag or move to the edge to look' : '拖动或靠边环顾'}</span><span class="mw-look-pending">{isEn ? 'Locking the mouse…' : '正在锁定鼠标…'}</span><span><kbd>Shift</kbd> {isEn ? 'run' : '奔跑'}</span><span><kbd>{isEn ? 'Space' : '空格'}</kbd> {isEn ? 'jump' : '跳跃'}</span><span><kbd>Esc</kbd> {isEn ? 'pause' : '暂停'}</span></p>
-        <p class="mw-hint-touch">{isEn ? 'Left to walk · drag right to look · tap Jump or an object prompt' : '左侧行走 · 右侧环顾 · 轻触「跳跃」或物件提示'}</p>
+        <p class="mw-hint-desktop"><span><kbd>WASD</kbd> {isEn ? 'walk' : '行走'}</span><span class="mw-look-locked">{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span class="mw-look-pointer">{isEn ? 'Drag or move to the edge to look' : '拖动或靠边环顾'}</span><span class="mw-look-pending">{isEn ? 'Locking the mouse…' : '正在锁定鼠标…'}</span><span><kbd>Shift</kbd> {isEn ? 'run' : '奔跑'}</span><span><kbd>{isEn ? 'Space' : '空格'}</kbd> {isEn ? 'jump / vault' : '跳跃／翻窗'}</span><span><kbd>Esc</kbd> {isEn ? 'pause' : '暂停'}</span></p>
+        <p class="mw-hint-touch">{isEn ? 'Left stick to walk · drag to look · tap Jump, Vault, or an object prompt' : '左侧行走 · 拖动环顾 · 轻触跳跃、翻窗或物件提示'}</p>
         <button type="button" data-world-action="dismiss-hint" aria-keyshortcuts="H" title={isEn ? 'Dismiss (H)' : '收起提示（H）'} aria-label={isEn ? 'Dismiss movement guide' : '收起操作提示'}>×</button>
       </div>
       <button type="button" class="mw-map-button" data-world-action="map"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="m5 9 8-3 10 3 8-3v22l-8 3-10-3-8 3V9Zm8-3v22m10-19v22" /><path d="m9 20 9-6 9 7" stroke-dasharray="2 3" /></svg><span>{isEn ? 'Around here' : '山居小引'}</span></button>
@@ -130,10 +137,13 @@ const marks = [
   <noscript><style is:inline>[data-world-load]{display:none!important}</style></noscript>
   <script>
     import { createAmbience } from '../scripts/mountain-world/music';
+    import { createCourtyardMouseLock } from '../scripts/mountain-world/pointer-lock';
     const courtyard = document.querySelector<HTMLElement>('[data-mountain-world]');
-    courtyard?.querySelector('[data-world-load]')?.addEventListener('click', async () => {
+    courtyard?.querySelector<HTMLButtonElement>('[data-world-load]')?.addEventListener('click', async event => {
       courtyard.dataset.state = 'loading';
       const canvas = courtyard.querySelector<HTMLCanvasElement>('#mountain-canvas')!;
+      const mouseLock = createCourtyardMouseLock(courtyard, canvas);
+      if (event.detail > 0) mouseLock.remember(event.clientX, event.clientY);
       const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       const ambience = createAmbience(base, () => courtyard.dispatchEvent(new Event('mountain-music-error')));
       let sound = true;
@@ -143,22 +153,20 @@ const marks = [
       } catch {}
       if (sound) ambience.toggle();
       // Mouse lock and audio playback both use the original entrance gesture.
-      if (!matchMedia('(pointer: coarse)').matches) {
-        try { canvas.requestPointerLock?.()?.catch(() => {}); } catch {}
-      }
+      if (!matchMedia('(pointer: coarse)').matches && canvas.requestPointerLock) mouseLock.start();
       const releaseLock = () => { if (document.pointerLockElement === canvas) document.exitPointerLock(); };
       const pending = new AbortController();
       document.addEventListener('visibilitychange', () => ambience.setHidden(document.hidden), { signal: pending.signal });
       window.addEventListener('pagehide', event => {
-        if (!event.persisted) { pending.abort(); ambience.dispose(); releaseLock(); }
+        if (!event.persisted) { pending.abort(); mouseLock.dispose(); ambience.dispose(); releaseLock(); }
       }, { signal: pending.signal });
       try {
         const { initializeWorld } = await import('../scripts/mountain-world/main');
         if (pending.signal.aborted) return;
         pending.abort();
-        await initializeWorld(courtyard, ambience);
+        await initializeWorld(courtyard, ambience, mouseLock);
       } catch {
-        pending.abort(); ambience.dispose(); releaseLock();
+        pending.abort(); mouseLock.dispose(); ambience.dispose(); releaseLock();
         courtyard.dataset.state = 'failed';
         courtyard.querySelector<HTMLElement>('[data-world-fallback]')!.hidden = false;
       }

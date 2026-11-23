@@ -20,11 +20,11 @@ This file was generated specifically for MyPage with no reference image or stock
 
 The panorama was created specifically for MyPage with the built-in `image_gen` tool and no reference image or stock-image source. It is a fantasy environment matte painting rather than a photograph of a real place. The exact prompt is preserved in [immortal-mountains-prompt.txt](./immortal-mountains-prompt.txt).
 
-The generated PNG is **2172 × 724 pixels**, exactly 3:1, and **2,116,399 bytes**. Its lossless WebP delivery copy is **1,503,338 bytes**. Decoded RGB pixels were compared and are identical; this is a format conversion with no crop, resize or visual alteration. The generated PNG remains in the image-generation output outside the repository.
+The 2172 × 724 WebP depicts granite pinnacles in morning haze. The separate cloud-pass-granite.webp image is an original generated stone colour texture for the island cliffs. See the [architectural concept and site plan](../../docs/design/cloud-pass-study.webp).
 
 ### 3D integration
 
-`landscape-backdrop.ts` maps one image across 180 degrees of a 108 m radius cylinder and mirrors the geometry's U coordinates across the other half. Its height is `π × radius / 3` (about 113.1 m), preserving the 3:1 ratio along each half-circumference. The distant ridgeline is calibrated at 46% from the image top and placed at world y=11.5 m, so mountains remain visible through the windows and above the terrace rail. These dimensions keep the geometry within the default 230 m camera far plane.
+`landscape-backdrop.ts` maps one image across 180 degrees of a 108 m radius cylinder and mirrors the geometry's U coordinates across the other half. Its height is `π × radius / 3` (about 113.1 m), preserving the 3:1 ratio along each half-circumference. The distant ridgeline is calibrated at 46% from the image top and placed at world y=25.5 m, so mountains remain visible through the windows and above the terrace rail. These dimensions keep the geometry within the default 230 m camera far plane.
 
 The local texture is sRGB with `flipY=true`, `repeat=[1,1]` and clamped UV sampling. Ordinary `MeshBasicMaterial` uses the same tone mapping as the rest of the scene. A separate linear alpha map softens the sky/cloud edges and mirror folds. The upper edge blends into the sky canopy. Two translucent surfaces at y=-11 m and -17 m carry a tileable cloud density field on independent wind currents. Their perimeter fades into the mountain painting.
 
@@ -51,6 +51,8 @@ The gate, hall, galleries, paired pavilions and planted courts use original, met
 | cloud-crane-frieze.webp | Original built-in ImageGen painting. The 2172 × 724 original was cropped to its painted band and encoded at 1280 px wide. The beam UVs allocate a pair of cranes to each painted panel. |
 | pine-bough.webp | Original built-in ImageGen botanical cutout. The alpha channel is retained in the 960 px WebP. Each blade cluster bends around its twig attachment. |
 | court-stone.webp | 512 px cool stone derived from the Meridian Observatory's CC0 limestone blend. [Concrete Floor Worn 001](https://polyhaven.com/a/concrete_floor_worn_001), [Aerial Rocks 02](https://polyhaven.com/a/aerial_rocks_02) |
+| honed-limestone.webp | 768 px warm matte paving stone. The mineral grain uses the same CC0 court-stone source with a pale ochre grade, fine pores and calcite bands. |
+| oiled-elm.webp | 768 px timber floor albedo with lengthwise vessels, growth bands and restrained wear from the lacquer-grain source below. |
 | lacquer-grain.webp | 512 px greyscale modulation for red lacquer derived from the Meridian Observatory timber map. [Wood Table Worn](https://polyhaven.com/a/wood_table_worn), [Poly Haven CC0 licence](https://polyhaven.com/license) |
 
 ### Crane frieze prompt

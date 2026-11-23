@@ -5,16 +5,16 @@ import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUnifo
 export function createStudyLighting(scene: THREE.Scene, coarse = false) {
   RectAreaLightUniformsLib.init();
   const lights: THREE.Light[] = [];
-  const sky = new THREE.HemisphereLight(0xdbe5e2, 0x969581, .73);
+  const sky = new THREE.HemisphereLight(0xe1e7e5, 0xb2a58c, .84);
   scene.add(sky); lights.push(sky);
 
-  const sun = new THREE.DirectionalLight(0xffebcf, 2.05);
+  const sun = new THREE.DirectionalLight(0xffe9cb, 2.46);
   sun.name = 'Clear morning over the open courtyard';
-  sun.position.set(-12, 13, 8);
-  sun.target.position.set(0, 0, -2);
+  sun.position.set(-24, 31, 29);
+  sun.target.position.set(3, 0, 8);
   sun.castShadow = true;
   sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
-  Object.assign(sun.shadow.camera, { left: -19, right: 19, top: 18, bottom: -18, near: 1, far: 65 });
+  Object.assign(sun.shadow.camera, { left: -31, right: 31, top: 29, bottom: -29, near: 1, far: 100 });
   sun.shadow.bias = -0.00012;
   sun.shadow.normalBias = 0.035;
   scene.add(sun, sun.target); lights.push(sun);
@@ -24,9 +24,9 @@ export function createStudyLighting(scene: THREE.Scene, coarse = false) {
   doorway.position.set(0, 3.3, -5.3); doorway.lookAt(0, 1.5, -9.6);
   scene.add(doorway); lights.push(doorway);
 
-  const shelfBounce = new THREE.RectAreaLight(0xe8eee6, 1.6, 3.8, 2.2);
+  const shelfBounce = new THREE.RectAreaLight(0xf4e8d4, 1.8, 3.8, 2.2);
   shelfBounce.name = 'Open-court sky in the library wing';
-  shelfBounce.position.set(-2.95, 2.7, -3.2); shelfBounce.lookAt(-5.9, 1.4, -3.2);
+  shelfBounce.position.set(-2.95, 2.76, -1.38); shelfBounce.lookAt(-5.55, 1.45, -1.82);
   scene.add(shelfBounce); lights.push(shelfBounce);
 
   const sideSky = new THREE.RectAreaLight(0xe4edf0, 1.6, 3.8, 2.2);

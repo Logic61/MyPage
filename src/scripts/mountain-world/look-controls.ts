@@ -1,5 +1,6 @@
 export type LookInput = 'locked' | 'drag' | 'touch';
 type Position = { x: number; y: number; z: number };
+type LockWarp = { x: number; y: number; pixelRatio: number; acquiredAt: number };
 
 /** CSS client coordinates, not drawing-buffer pixels, determine the visible mouse ray. */
 export function pointerToNDC(clientX: number, clientY: number, rect: { left: number; top: number; width: number; height: number }) {
@@ -25,7 +26,7 @@ export class LookController {
   private source: LookInput | null = null;
   private startedAt = 0;
   private lastSampleAt = 0;
-  private firstLockedSample = false;
+  private lockWarp: LockWarp | null = null;
 
   constructor(yaw = 0, pitch = -0.035) {
     this.yaw = this.targetYaw = yaw;
@@ -38,10 +39,11 @@ export class LookController {
     this.automatic = false;
   }
 
-  begin(source: LookInput, now: number) {
+  begin(source: LookInput, now: number, warp: LockWarp | null = null) {
+    if (source === 'locked' && this.source === 'locked') return;
     this.source = source;
     this.startedAt = this.lastSampleAt = now;
-    this.firstLockedSample = source === 'locked';
+    this.lockWarp = source === 'locked' && warp && Math.hypot(warp.x, warp.y) >= 32 ? warp : null;
     // A new input session must not inherit an unrendered flick from the previous one.
     if (!this.automatic) { this.targetYaw = this.yaw; this.targetPitch = this.pitch; }
   }
@@ -67,10 +69,16 @@ export class LookController {
     if (timestamp < this.startedAt - 1 || timestamp < this.lastSampleAt || now - timestamp > 120 || timestamp > now + 32) return false;
     if (!dx && !dy) return false;
     this.lastSampleAt = timestamp;
-    const first = this.firstLockedSample; this.firstLockedSample = false;
-    // Some platforms report a cursor recenter as the first locked delta. Scope this
-    // guard to the handoff: ordinary fast turns are never clamped or shortened.
-    if (first && timestamp - this.startedAt < 80 && Math.max(Math.abs(dx), Math.abs(dy)) > 160) return false;
+    // A cursor warp may follow an ordinary packet. Match the measured displacement
+    // to the canvas centre during acquisition; handheld flicks have no magnitude cap.
+    if (this.lockWarp) {
+      const warp = this.lockWarp;
+      if (timestamp - warp.acquiredAt > 200) this.lockWarp = null;
+      else {
+        const matches = (scale: number) => Math.abs(dx - warp.x * scale) <= 2 && Math.abs(dy - warp.y * scale) <= 2;
+        if (matches(1) || matches(warp.pixelRatio)) { this.lockWarp = null; return false; }
+      }
+    }
     const gain = (source === 'touch' ? TOUCH_GAIN : MOUSE_GAIN) * sensitivity;
     this.rotate(-dx * gain, -dy * gain);
     return true;

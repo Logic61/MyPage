@@ -127,10 +127,10 @@ export function createFurnishingInk(isEn: boolean) {
   function page(kind: 'notes' | 'poem' | 'schematic' | 'scroll' | 'shelf' | 'bench' | 'lamp' | 'project') {
     const previous = cache.get(kind);
     if (previous) return previous;
-    const { canvas: source, ctx } = canvas(kind === 'scroll' ? 768 : 512, kind === 'scroll' ? 1024 : 704);
+    const { canvas: source, ctx } = canvas(kind === 'scroll' || kind==='schematic' ? 768 : 512, kind === 'scroll' ? 1024 : kind==='schematic'?552:704);
     const w = source.width;
     const h = source.height;
-    paper(ctx, w, h);
+    paper(ctx, w, h,kind==='schematic'?'#dbc5a2':'#e8e3d1');
     ctx.fillStyle = '#32372f';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -155,20 +155,35 @@ export function createFurnishingInk(isEn: boolean) {
       const step = Math.min(142, 490 / letters.length);
       letters.forEach((letter, i) => ctx.fillText(letter, 256, (704 - (letters.length - 1) * step) / 2 + i * step));
     } else if (kind === 'schematic') {
-      ctx.font = `500 49px ${font}`;
-      ctx.fillText(isEn ? 'Celestial notes' : '格物札记', 256, 74);
-      ctx.strokeStyle = '#646a57';
-      ctx.lineWidth = 2;
-      for (const r of [71, 105, 139]) {
-        ctx.beginPath();
-        ctx.ellipse(256, 299, r, r * .60, -.45, 0, Math.PI * 2);
-        ctx.stroke();
+      const x=377,y=281,radius=218;
+      ctx.strokeStyle='#967951';ctx.lineWidth=1.7;ctx.strokeRect(19,17,730,518);
+      ctx.save(); ctx.translate(x,y); ctx.strokeStyle='#554733';
+      for(const r of [41,76,114,154,196,radius]) {
+        ctx.lineWidth=r===radius?3.3:1.65;
+        ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.stroke();
       }
-      ctx.beginPath(); ctx.arc(256, 299, 139, 0, Math.PI * 2); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(256, 140); ctx.lineTo(256, 460); ctx.moveTo(96, 299); ctx.lineTo(417, 299); ctx.stroke();
-      ctx.font = 'italic 27px Georgia, serif';
-      ['x² + y² + z² = r²', 'θ = ωt + φ', '23° 26′'].forEach((line, i) => ctx.fillText(line, 256, 506 + i * 45));
-      stamp(ctx, 405, 601, 42);
+      for(let i=0;i<96;i++) {
+        const a=i*Math.PI/48,c=Math.cos(a),s=Math.sin(a),major=i%8===0;
+        ctx.lineWidth=major?1.6:1.2;
+        ctx.beginPath();ctx.moveTo(c*(major?29:radius-6),s*(major?29:radius-6));ctx.lineTo(c*radius,s*radius);ctx.stroke();
+      }
+      ctx.strokeStyle='#a16143';ctx.lineWidth=1.7;ctx.beginPath();ctx.ellipse(0,0,206,103,-.51,0,Math.PI*2);ctx.stroke();
+      for(let cluster=0;cluster<23;cluster++) {
+        const a=cluster*2.40,r=Math.sqrt((cluster+.63)/23)*172;
+        const ox=Math.cos(a)*r,oy=Math.sin(a)*r;
+        let lastX=ox,lastY=oy;
+        for(let j=0;j<3+cluster%3;j++){
+          const px=ox+Math.sin(cluster*2.8+j*3.71)*21+j*2,py=oy+Math.cos(cluster*4.7+j*2.1)*17;
+          ctx.strokeStyle='#5b4a38';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(lastX,lastY);ctx.lineTo(px,py);ctx.stroke();
+          ctx.fillStyle=j%3?'#30281d':'#8e4f32';ctx.beginPath();ctx.arc(px,py,j%3?3.1:4.3,0,Math.PI*2);ctx.fill();lastX=px;lastY=py;
+        }
+      }
+      ctx.font=isEn?'19px Georgia,serif':`19px ${font}`;
+      for(let i=0;i<12;i++){const a=i*Math.PI/6-Math.PI/2;ctx.fillText(isEn?String(i*2):'子丑寅卯辰巳午未申酉戌亥'[i],Math.cos(a)*235,Math.sin(a)*235);}
+      ctx.restore();ctx.fillStyle='#40392e';ctx.font=isEn?'italic 21px Georgia,serif':`32px ${font}`;
+      if(isEn) {ctx.save();ctx.translate(65,279);ctx.rotate(-Math.PI/2);ctx.fillText('Celestial chart',0,0);ctx.restore();}
+      else [...'浑天星图'].forEach((v,j)=>ctx.fillText(v,68,190+j*52));
+      stamp(ctx,663,444,38,isEn?'L':'星');
     } else {
       ctx.font = `500 49px ${font}`;
       ctx.fillText(kind === 'notes' ? (isEn ? 'Recent writing' : '近作') : (isEn ? 'On reading poetry' : '读诗小记'), 256, 79, 430);
@@ -217,5 +232,22 @@ export function createFurnishingInk(isEn: boolean) {
     }
   }
   const brushGlaze = texture(porcelain.canvas);
-  return { titles, bookAtlas, pageEdges, page, portraitTexture, portraitReady, brushGlaze, dispose: () => { disposed = true; for (const item of textures) item.dispose(); textures.clear(); } };
+  // A two-over, two-under reed mat. Shade the rounded strips and the knots where a strand dives.
+  const mat = canvas(128,128), mc=mat.ctx;
+  mc.fillStyle='#7e7246'; mc.fillRect(0,0,128,128);
+  for(let j=0;j<8;j++) for(let i=0;i<8;i++) {
+    const vertical=(i+j)%4<2, x=i*16, y=j*16;
+    const shade=vertical?mc.createLinearGradient(x,y,x+16,y):mc.createLinearGradient(x,y,x,y+16);
+    shade.addColorStop(0,'#8d8055'); shade.addColorStop(.18,'#b5aa79');
+    shade.addColorStop(.52,vertical?'#d3c89a':'#b9aa79'); shade.addColorStop(.91,vertical?'#bcb484':'#a49765'); shade.addColorStop(1,'#857b51');
+    mc.fillStyle=shade; mc.fillRect(x,y,16,16);
+    mc.fillStyle='rgba(255,243,191,.20)';
+    for(const k of [4,9,12]) {
+      if(vertical) mc.fillRect(x+k,y,.8,16); else mc.fillRect(x,y+k,16,.8);
+    }
+  }
+  const reedMat=texture(mat.canvas);
+  reedMat.wrapS=reedMat.wrapT=THREE.RepeatWrapping; reedMat.repeat.set(14,9);
+  return { titles, bookAtlas, pageEdges, page, portraitTexture, portraitReady, brushGlaze, reedMat,
+    dispose: () => { disposed = true; for (const item of textures) item.dispose(); textures.clear(); } };
 }
