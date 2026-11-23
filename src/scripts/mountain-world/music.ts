@@ -11,6 +11,9 @@ export function createMusic(base: string, onFailure: () => void) {
   let current = '', audible = false, revision = 0;
   const failed = new Set<string>();
 
+  let gestures: AbortController | undefined;
+  function clearGestures() { gestures?.abort(); gestures = undefined; }
+
   function release() {
     if (!player) return;
     player.onended = player.onerror = null;
@@ -41,6 +44,14 @@ export function createMusic(base: string, onFailure: () => void) {
     void active.play().catch((error: DOMException) => {
       if (request !== revision || active !== player || !audible || error.name === 'AbortError') return;
       if (error.name === 'NotSupportedError') { failed.add(current); release(); play(); }
+      else if (error.name === 'NotAllowedError') {
+        clearGestures(); gestures = new AbortController();
+        const retry = (event: Event) => {
+          if (!event.isTrusted || (event.target instanceof Element && event.target.closest('[data-world-action="sound"]'))) return;
+          clearGestures(); play();
+        };
+        for (const type of ['click','keydown']) document.addEventListener(type,retry,{capture:true,signal:gestures.signal});
+      }
       else { audible = false; active.pause(); onFailure(); }
     });
   }
@@ -48,9 +59,9 @@ export function createMusic(base: string, onFailure: () => void) {
   return {
     setAudible(value: boolean) {
       if (value === audible) return;
-      audible = value; revision++;
+      clearGestures(); audible = value; revision++;
       if (value) play(); else player?.pause();
     },
-    dispose() { audible = false; revision++; release(); },
+    dispose() { clearGestures(); audible = false; revision++; release(); },
   };
 }

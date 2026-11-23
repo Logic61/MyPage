@@ -571,6 +571,10 @@ async function initializeWorld(root: HTMLElement) {
     if (!alive || resourcesDisposed) return;
     pipeline.render(0);
     if (shaderFailed) throw new Error('A scene material shader could not compile.');
+    if (typeof Audio !== 'undefined') {
+      ambience.setHidden(document.hidden);
+      ui.setSound(ambience.toggle());
+    }
     ui.setReady(); setMode(ui.isOpen() ? 'reading' : 'welcome');
 
     function tick(now: number) {
