@@ -227,20 +227,38 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-arrival::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg,rgba(16,28,27,.78),transparent 36%); }
 .mw-cover-title {
   position: absolute; z-index: 1; inset: 22% 0 auto; margin: 0; padding-inline: 12px;
-  transform: translateY(-50%); text-align: center;
-  color: #fff9e9; font: 500 clamp(32px,5.1vw,80px)/1.05 var(--font-serif,Georgia,serif);
-  text-shadow: 0 1px 3px #1d363d, 0 2px 15px #182f3abc;
+  transform: translateY(-50%); text-align: center; isolation: isolate;
+  color: #152f32; font: 600 clamp(35px,5.5vw,82px)/1.08 var(--font-serif,Georgia,serif);
+  text-shadow: 0 1px 2px #fcf6e4c7;
+}
+.mw-cover-title::before {
+  content: ''; position: absolute; z-index: -1; pointer-events: none; left: 50%; top: 50%;
+  width: min(18em,125vw); height: 3em; transform: translate(-50%,-50%);
+  background: radial-gradient(ellipse,#f7f2dfed 0%,#f5efdeb8 43%,transparent 72%);
 }
 .mw-cover-actions {
   position: absolute; z-index: 1; left: 50%; bottom: max(16%,env(safe-area-inset-bottom));
-  transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 5px;
+  transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px;
 }
 .mw-cover-actions :is(button,a) {
-  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; white-space: nowrap;
-  padding: 4px 10px; text-shadow: 0 1px 3px #0a211e, 0 1px 8px #0a211e;
+  display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+  width: max-content; min-width: 7.6em; padding: .18em .95em; line-height: 1.5;
+  border: 1px solid #d3bd88; border-radius: 2px; text-shadow: none; letter-spacing: .08em;
+  box-shadow: 0 3px 12px #172a244a;
 }
-.mw-cover-actions .mw-enter-button { font-size: clamp(20px,1.7vw,26px); }
-.mw-cover-actions .mw-read-button { color: #fff6df; }
+.mw-cover-actions .mw-enter-button {
+  min-height: 50px; font-size: clamp(25px,2.45vw,34px); font-weight: 600;
+  color: #20392f; background: #f4e8cdee;
+}
+.mw-cover-actions .mw-read-button {
+  min-height: 46px; font-size: clamp(21px,1.85vw,27px); font-weight: 500;
+  color: #fff5d9; background: #183830ec;
+}
+.mw-cover-actions .mw-enter-button:is(:hover,:focus-visible) { background: #fff3d8; }
+.mw-cover-actions .mw-read-button:is(:hover,:focus-visible) { background: #245043; }
+@media (max-height: 480px) {
+  .mw-cover-actions { bottom: max(6%,env(safe-area-inset-bottom)); gap: 6px; }
+}
 .mountain-world:not([data-state="poster"]) :is(.mw-cover-title,.mw-cover-actions),
 .mountain-world:not([data-state="loading"]) .mw-loading,
 .mountain-world[data-state="failed"] .mw-arrival,
