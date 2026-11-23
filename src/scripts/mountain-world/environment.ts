@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary } from './materials';
 import { branchGeometry, gridSurface, mistTexture, naturalRock, roundedBlock, seeded } from './environment-geometry';
+import { bambooWind, buildBamboo } from './bamboo';
 import { branchWind, buildPines } from './pine-grove';
 import { COURTYARD_POOLS, createStudyArchitecture } from './environment-design';
 import type { Collider, Environment } from './types';
@@ -26,8 +27,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   const moss = own(library.material('moss', { worldScale: 1.1, normalScale: .4 }));
   const iron = own(new THREE.MeshStandardMaterial({ color: '#4b4c43', metalness: .63, roughness: .72 }));
   const ropeMaterial = own(new THREE.MeshStandardMaterial({ color: '#b4aa8b', roughness: 1 }));
-  const bambooMaterial = own(library.material('bark', { color: '#dae5c5', repeat: [1, 2], normalScale: .23 }));
-  const bambooLeafMaterial = own(new THREE.MeshStandardMaterial({ color: '#596e4c', roughness: .95, side: THREE.DoubleSide }));
+  const fernMaterial = own(new THREE.MeshStandardMaterial({ color: '#596e4c', roughness: .95, side: THREE.DoubleSide }));
   const block = keep(roundedBlock()), cube = keep(new THREE.BoxGeometry(1, 1, 1));
   const cylinder = keep(new THREE.CylinderGeometry(1, 1, 1, 12));
   const rocks = [keep(naturalRock(12)), keep(naturalRock(49)), keep(naturalRock(87))];
@@ -125,13 +125,18 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     batch(deckGeometry, deckWood, planks, 'Individual weathered veranda planks');
     batch(cylinder, iron, nails, 'Recessed iron plank nails').castShadow = false;
     const railPosts: Placed[] = [];
-    for (let z = -7.8; z <= 8.2; z += 2) railPosts.push({ x: side * 12.87, y: .77, z, sx: .12, sy: .94, sz: .12 });
+    for (let z = -7.8; z <= 8.2; z += 2) if (z < 3.8 || z > 6.0) railPosts.push({ x: side * 12.87, y: .77, z, sx: .12, sy: .94, sz: .12 });
     for (let x = 7.9; x < 12.8; x += 2.3) railPosts.push({ x: side * x, y: .77, z: -7.9, sx: .12, sy: .94, sz: .12 });
     batch(block, wood, railPosts, 'Carved veranda posts');
-    timber(new THREE.Vector3(side * 12.87, 1.23, -7.9), new THREE.Vector3(side * 12.87, 1.23, 8.2), .045, deckWood);
-    timber(new THREE.Vector3(side * 12.87, .68, -7.9), new THREE.Vector3(side * 12.87, .68, 8.2), .026);
+    // A real opening in each rail connects the pavilion deck to the outer ledge.
+    for (const [start,end] of [[-7.9,3.8],[6.2,8.2]]) {
+      for (const [y,r] of [[1.23,.045],[.68,.026]]) {
+        timber(new THREE.Vector3(side*12.87,y,start),new THREE.Vector3(side*12.87,y,end),r,deckWood);
+      }
+      obstacle(side*12.87,(start+end)/2,.11,(end-start)/2);
+    }
     timber(new THREE.Vector3(side * 7.8, 1.23, -7.9), new THREE.Vector3(side * 12.87, 1.23, -7.9), .045, deckWood);
-    obstacle(side * 12.87, .15, .11, 8.18); obstacle(side * 10.3, -7.95, 2.75, .1);
+    obstacle(side * 10.3, -7.95, 2.75, .1);
     for (const z of [-6.3, -.2, 6.4]) {
       timber(new THREE.Vector3(side * 9.8, -2.4, z), new THREE.Vector3(side * 12.62, -.12, z), .105);
       mesh(block, wood, side * 11, -.17, z, 4.1, .28, .22);
@@ -155,23 +160,23 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   own(pines.material);
 
   // Slender bamboo and small ferns occupy the western rock edge only.
-  const bambooStems: Placed[] = [], bambooNodes: Placed[] = [], bambooLeaves: Placed[] = [];
+  const bamboo = buildBamboo(rng);
+  const culms = own(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .57 }));
+  const blades = own(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .79, side: THREE.DoubleSide }));
+  for (const [geometry, material, name] of [[bamboo.stems, culms, 'Jointed bamboo culms and twigs'], [bamboo.leaves, blades, 'Folded bamboo foliage']] as const) {
+    bambooWind(material, windTime);
+    const plant = mesh(keep(geometry), material);
+    plant.name = name; plant.userData.dynamic = true;
+  }
+  obstacle(-13.7, -.75, .72, 1.38);
   const leafShape = keep(new THREE.BufferGeometry());
   leafShape.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -.07, .012, .24, 0, .025, .58, 0, 0, 0, 0, .025, .58, .055, -.006, .24], 3));
   leafShape.setAttribute('uv', new THREE.Float32BufferAttribute([.5, 0, 0, .45, .5, 1, .5, 0, .5, 1, 1, .45], 2)); leafShape.computeVertexNormals();
-  for (let i = 0; i < 15; i++) {
-    const x = -13.7 + (rng() - .5) * 1.2, z = -.75 + (rng() - .5) * 2.5, height = 2.3 + rng() * 1.9;
-    bambooStems.push({ x, y: .3 + height / 2, z, sx: .028 + rng() * .012, sy: height, sz: .034 });
-    for (let y = .65; y < height; y += .44) bambooNodes.push({ x, y, z, sx: .043, sy: .022, sz: .043 });
-    for (let j = 0; j < 12; j++) bambooLeaves.push({ x, y: height * (.48 + j / 24), z, sx: .75, sy: .75, sz: .75, ry: j * 2.4 + i, rx: -.25 + rng() * .5 });
-  }
-  batch(cylinder, bambooMaterial, bambooStems, 'Fine bamboo stems'); batch(cylinder, cutStone, bambooNodes, 'Bamboo joints');
-  branchWind(bambooLeafMaterial, windTime, 'y', .065);
-  batch(leafShape, bambooLeafMaterial, bambooLeaves, 'Lanceolate bamboo leaves'); obstacle(-13.7, -.75, .72, 1.38);
+  branchWind(fernMaterial, windTime, 'y', .065);
   const ferns: Placed[] = [];
   for (const [x, z] of [[-13.6, 6.8], [-13.1, 6.2], [-13.4, -.1], [11.8, 9.4]]) for (let j = 0; j < 12; j++)
     ferns.push({ x, y: .3, z, sx: .6, sy: .7, sz: .7, ry: j * Math.PI / 6, rx: -.8 + (j % 3) * .1 });
-  batch(leafShape, bambooLeafMaterial, ferns, 'Low edge ferns');
+  batch(leafShape, fernMaterial, ferns, 'Low edge ferns');
 
   // Low stones guard the outer ledge without obstructing the entrance or the lookout.
   const edging: Placed[] = [];
@@ -189,14 +194,14 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     const x = Math.cos(angle) * (radius + rng()*6), z = Math.sin(angle) * (radius + rng()*5);
     const y = distant ? 6 + rng()*4.2 : high ? -.7 - rng()*1.25 : -3.6 - rng()*4.2;
     const width = (distant ? 22 : high ? 17 : 23) + rng()*8, height = (high ? 3.6 : 5.8) + rng()*1.8;
-    const opacity = distant ? .40 : high ? .47 : .41;
+    const opacity = distant ? .40 : high ? .47 : .64;
     const material = own(new THREE.SpriteMaterial({ map: mistMap, color: high ? '#fffcf3' : '#dbe9ed',
       opacity, transparent: true, depthWrite: false, fog: true }));
     const sprite = new THREE.Sprite(material);
     sprite.name = high ? 'High cliff wisp' : 'Low valley mist'; sprite.userData.ignoreInteractionRay = true;
     sprite.userData.ignoreAmbientOcclusion = true;
     sprite.position.set(x, y, z); sprite.scale.set(width, height, 1); root.add(sprite);
-    return { sprite, x, y, z, width, height, opacity, travel: distant ? 9 : 4.5, phase: rng() * Math.PI * 2 };
+    return { sprite, x, y, z, width, height, opacity, travel: distant ? 9 : high ? 4.5 : 8.6, phase: rng() * Math.PI * 2 };
   });
   const dustGeometry = keep(new THREE.BufferGeometry()), dust = new Float32Array(38 * 3), origins: number[] = [];
   for (let i = 0; i < 38; i++) { const x = (rng() - .5) * 5.7, y = .7 + rng() * 3.5, z = -5.5 + rng() * 6.5; dust.set([x, y, z], i * 3); origins.push(x, y, z, rng() * 6); }
@@ -209,10 +214,40 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   architecture.materials.forEach(material => materials.add(material));
   colliders.push(...architecture.colliders);
   mergeStatic();
+  // A shallow swept wing, shaped in plan, hinges on the long axis of the body.
+  const feathers = keep(new THREE.BufferGeometry());
+  feathers.setAttribute('position', new THREE.Float32BufferAttribute([
+    0,0,.22,  .49,.09,.12,  .66,.055,-.14,
+    0,0,.22,  .66,.055,-.14,  0,0,-.18,
+    .49,.09,.12,  1.16,.035,-.32,  .66,.055,-.14,
+  ],3));
+  feathers.computeVertexNormals();
+  const plumage = own(new THREE.MeshBasicMaterial({color:'#46575b',side:THREE.DoubleSide}));
+  const breast = keep(new THREE.SphereGeometry(1,8,6));
+  const flights = [
+    { count: 3, phase: -.1, radius: 42, height: 13.5 },
+    { count: 2, phase: 2.0, radius: 46, height: 15 },
+    { count: 3, phase: 4.1, radius: 44, height: 14 },
+  ];
+  const birds = flights.flatMap(({count, phase, radius, height}, flightIndex) => Array.from({length:count}, (_,i) => {
+    const bird=new THREE.Group(), body=new THREE.Mesh(breast,plumage);
+    body.scale.set(.095,.085,.43); bird.add(body);
+    const wings=[-1,1].map(side=>{
+      const wing=new THREE.Mesh(feathers,plumage); wing.scale.x=side; bird.add(wing); return wing;
+    });
+    bird.scale.setScalar(.49+.045*((i+flightIndex)%3)); root.add(bird);
+    return {bird, wings, phase: phase+i*.044, radius: radius+i*.85, height: height+i*.22, beat: i+flightIndex*2};
+  }));
   return {
-    root, colliders, walkAreas, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready]).then(() => {}),
+    root, colliders, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready]).then(() => {}),
     update(time, delta, _indoor) {
-      // All three roofs remain real geometry. Only leaves, pool and mist move.
+      birds.forEach(({bird,wings,phase,radius,height,beat})=>{
+        const a=time*.091+phase;
+        bird.position.set(Math.sin(a)*radius,height+.45*Math.sin(2*a+beat),-Math.cos(a)*radius);
+        bird.rotation.set(0,Math.PI/2-a,.12*Math.sin(a+beat));
+        const flap=.16+.48*Math.sin(time*5+beat)*Math.max(0,Math.sin(time*.68+beat*.9));
+        wings[0].rotation.z=-flap; wings[1].rotation.z=flap;
+      });
       architecture.update(time);
       windTime.value = time;
       for (const cloud of clouds) {

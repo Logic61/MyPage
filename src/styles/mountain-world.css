@@ -214,3 +214,70 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-stand kbd { font:11px var(--font-sans,sans-serif); border:1px solid #a8997c; padding:2px 4px; }
 .mountain-world:not([data-mode="exploring"]) .mw-stand, .mountain-world[data-seated="true"] :is(.mw-hint,.mw-place-note), .mountain-world[data-touch="true"] .mw-stand kbd { display:none; }
 .mountain-world[data-seated="true"][data-mode="exploring"] .mw-stand { display:flex; }
+.mw-fall[open] { position:fixed; inset:0; margin:0; width:100%; height:100%; max-width:none; max-height:none; border:0; padding:0; display:grid; place-items:center; background:transparent; color:#fff; text-align:center; }
+.mw-fall::backdrop { background:transparent; }
+.mw-fall-panel { visibility:hidden; }
+[data-mode="fallen"] .mw-fall { background:#656969; }
+[data-mode="fallen"] .mw-fall-panel { visibility:visible; }
+.mw-fall-panel p { font:clamp(21px,4vw,34px)/1.6 var(--font-serif,serif); padding:0 1rem; }
+.mw-fall-panel button { color:inherit; border:1px solid #c7cbca; background:#545858; padding:.7rem 1.4rem; cursor:pointer; }
+
+.mw-arrival { position: absolute; inset: 0; z-index: 4; background: #35413b; }
+.mw-cover { width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
+.mw-arrival::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg,rgba(16,28,27,.78),transparent 36%); }
+.mw-cover-title {
+  position: absolute; z-index: 1; inset: 22% 0 auto; margin: 0; padding-inline: 12px;
+  transform: translateY(-50%); text-align: center; isolation: isolate;
+  color: #152f32; font: 600 clamp(35px,5.5vw,82px)/1.08 var(--font-serif,Georgia,serif);
+  text-shadow: 0 1px 2px #fcf6e4c7;
+}
+.mw-cover-title::before {
+  content: ''; position: absolute; z-index: -1; pointer-events: none; left: 50%; top: 50%;
+  width: min(18em,125vw); height: 3em; transform: translate(-50%,-50%);
+  background: radial-gradient(ellipse,#f7f2dfed 0%,#f5efdeb8 43%,transparent 72%);
+}
+.mw-cover-actions {
+  position: absolute; z-index: 1; left: 50%; bottom: max(16%,env(safe-area-inset-bottom));
+  transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.mountain-world[data-state="poster"] .mw-arrival::after {
+  background: linear-gradient(0deg,#101e1cdd 0%,#132923bf 21%,#172d2552 39%,transparent 55%);
+}
+.mw-cover-actions :is(button,a) {
+  display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
+  min-height: 46px; padding: .1em .6em; border: 0; background: transparent;
+  line-height: 1.5; text-shadow: 0 1px 5px #10231e; letter-spacing: .12em;
+}
+.mw-cover-actions .mw-enter-button { color: #fff4d6; font-size: clamp(25px,2.45vw,34px); font-weight: 600; }
+.mw-cover-actions .mw-enter-button::before,.mw-cover-actions .mw-enter-button::after {
+  content: ''; width: clamp(22px,3vw,43px); height: 1px;
+  background: linear-gradient(90deg,transparent,#e5ca91);
+}
+.mw-cover-actions .mw-enter-button::after { transform: rotate(180deg); }
+.mw-cover-actions .mw-read-button { color: #f6edd9; font-size: clamp(21px,1.85vw,27px); }
+.mw-cover-actions :is(button,a):is(:hover,:focus-visible) {
+  color: #fff; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .28em;
+}
+@media (max-height: 480px) {
+  .mw-cover-actions { bottom: max(6%,env(safe-area-inset-bottom)); gap: 6px; }
+}
+.mountain-world:not([data-state="poster"]) :is(.mw-cover-title,.mw-cover-actions),
+.mountain-world:not([data-state="loading"]) .mw-loading,
+.mountain-world[data-state="failed"] .mw-arrival,
+.mountain-world:not([data-state="ready"]) :is(.mw-header,.mw-hud),
+.mountain-world[data-mode="welcome"] .mw-header { display: none; }
+.mountain-world .mw-loading { z-index: 5; background: rgba(21,33,34,.56); }
+.mountain-world[data-arriving] .mw-stage { animation: mw-open-gate .95s cubic-bezier(.16,.76,.25,1) both; }
+.mountain-world[data-arriving] :is(.mw-header,.mw-hud,.mw-waymarks,.mw-thumbstick,.mw-reticle) { visibility: hidden; }
+@keyframes mw-open-gate { from { transform: scale(1.045) translateY(.6%); filter: brightness(.66); } to { transform: none; filter: brightness(1); } }
+@media (prefers-reduced-motion: reduce) { .mountain-world[data-arriving] .mw-stage { animation: none; } }
+.mw-tools [data-world-settings-open] { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px; border: 0; color: inherit; background: transparent; }
+dialog.mw-settings { position: fixed; inset: max(66px,10vh) max(16px,4vw) auto auto; width: min(335px,calc(100vw - 32px)); max-height: 80dvh; overflow: auto; margin: 0; padding: 21px 24px 26px; border: 1px solid #758075; background: #223432; color: #f0ead8; box-shadow: 0 12px 48px #101d2099; }
+.mw-settings::backdrop { background: rgba(18,28,27,.34); }
+.mw-settings-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.mw-settings-head { border-bottom: 1px solid #ffffff25; padding-bottom: 10px; }
+.mw-settings-head h2 { margin: 0; font: 20px/1.5 var(--font-serif,serif); }
+.mw-settings button { color: #eadbb7; background: transparent; border: 0; min-height: 36px; }
+.mw-settings-head button { font-size: 22px; width: 36px; }
+.mountain-world .mw-hint { position: absolute; left: 50%; bottom: 4vh; right: auto; transform: translateX(-50%); width: max-content; max-width: min(90vw,620px); background: rgba(28,43,41,.9); border: 1px solid #ddd0ac66; color: #f2eddf; border-radius: 3px; padding: 9px 14px; pointer-events: auto; }
+@media (max-width: 540px) { .mw-tools [data-world-settings-open] span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } }

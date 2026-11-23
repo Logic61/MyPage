@@ -152,7 +152,7 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
   const height = Math.PI * radius / IMAGE_ASPECT;
   const horizonY = options.horizonY ?? 11.5;
   const fogColor = new THREE.Color(options.fogColor ?? LANDSCAPE_FOG_COLOR);
-  const cloudOpacity = THREE.MathUtils.clamp(options.cloudOpacity ?? .56, 0, 1);
+  const cloudOpacity = THREE.MathUtils.clamp(options.cloudOpacity ?? .69, 0, 1);
   const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
   let disposed = false;
   const keepGeometry = <T extends THREE.BufferGeometry>(value: T) => { geometries.add(value); return value; };
@@ -245,8 +245,8 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
     update(time) {
       if (disposed) return;
       // The far bank moves more slowly. Both textures wrap continuously while their perimeter stays feathered.
-      upperClouds.offset.set(-time * .024, time * .007);
-      lowerClouds.offset.set(.27 - time * .0095, .13 + time * .0046);
+      upperClouds.offset.set(-time * .038, time * .007);
+      lowerClouds.offset.set(.27 - time * .015, .13 + time * .0046);
       canopyMaterial.map?.offset.set(-.053 * Math.sin(time * .06), .024 * Math.sin(time * .046));
     },
     dispose() {

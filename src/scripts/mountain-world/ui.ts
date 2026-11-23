@@ -38,10 +38,6 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
   let toastTimer = 0;
   let failed = false;
 
-  try {
-    if (sessionStorage.getItem('mountain-study:hint-dismissed') === '1') one<HTMLElement>('[data-world-hint]').hidden = true;
-  } catch { /* Private browsing may disable storage. */ }
-
   function showToast(message: string) {
     window.clearTimeout(toastTimer);
     toast.textContent = message;
@@ -103,7 +99,6 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
         showToast(playing ? (en ? 'Background music on.' : '背景音乐已开启。') : (en ? 'Background music off.' : '背景音乐已关闭。'));
       } else if (action === 'dismiss-hint') {
         one<HTMLElement>('[data-world-hint]').hidden = true;
-        try { sessionStorage.setItem('mountain-study:hint-dismissed', '1'); } catch { /* Storage is optional. */ }
       }
       return;
     }

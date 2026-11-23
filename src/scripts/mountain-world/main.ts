@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createMusic } from './music';
+import type { createAmbience } from './music';
 import { createEnvironment } from './environment';
 import { createFurnishings } from './furnishings';
 import { createSurfaceLibrary } from './materials';
@@ -13,7 +13,7 @@ import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from 
 import { createPointerLockRequest } from './pointer-lock';
 import type { Interaction, WorldConfig } from './types';
 
-type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition';
+type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition' | 'falling' | 'fallen';
 type InputMode = 'none' | 'pending' | 'locked' | 'pointer' | 'drag' | 'touch';
 
 // A free cursor can turn the camera inside the outer 15% of each edge.
@@ -39,20 +39,15 @@ function describePlace(x: number, z: number) {
   return { name: '云山石径', nameEn: 'The cloud mountain path', indoor: false };
 }
 
-const root = document.querySelector<HTMLElement>('[data-mountain-world]');
-if (root) void initializeWorld(root);
-
-async function initializeWorld(root: HTMLElement) {
+export async function initializeWorld(root: HTMLElement, ambience: ReturnType<typeof createAmbience>) {
   const canvas = root.querySelector<HTMLCanvasElement>('#mountain-canvas');
   const configElement = document.getElementById('mountain-world-config');
   if (!canvas || !configElement) return;
   const config: WorldConfig = JSON.parse(configElement.textContent || '{}');
   const en = config.isEn;
   const abort = new AbortController(), { signal } = abort;
-  const ambience = createAmbience(config.base, () => {
-    ui.setSound(false);
-    ui.showToast(en ? 'Music could not play. Click the speaker to retry.' : '音乐暂时无法播放，点击喇叭可重试。');
-  });
+  const musicPreferenceKey = 'mountain-study:music';
+
   let alive = true, teardown = () => {};
   let suspendAction = () => {}, resumeAction = () => {};
   let interactionAction = () => {}, resetAction = () => {};
@@ -60,9 +55,24 @@ async function initializeWorld(root: HTMLElement) {
   let visitorPose: () => { x: number; z: number; yaw: number } | null = () => null;
   const ui = createWorldUI(root, config, {
     onInteract: () => interactionAction(), onReset: () => resetAction(),
-    onSound: () => ambience.toggle(), onNavigate: id => navigateAction(id),
+    onSound: () => {
+      const playing = ambience.toggle();
+      try { localStorage.setItem(musicPreferenceKey, playing ? 'on' : 'off'); } catch {}
+      return playing;
+    }, onNavigate: id => navigateAction(id),
     onReadingChange: open => readingAction(open), getPose: () => visitorPose(),
   });
+  root.addEventListener('mountain-music-error', () => {
+    ui.setSound(false);
+    ui.showToast(en ? 'Music could not play. Click the speaker to retry.' : '音乐暂时无法播放，点击喇叭可重试。');
+  }, { signal });
+  function failWorld(reason: string) {
+    ambience.dispose();
+    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    ui.setFailed(reason);
+  }
+  document.addEventListener('visibilitychange', () => ambience.setHidden(document.hidden), { signal });
+  ambience.setHidden(document.hidden);
   window.addEventListener('pagehide', event => {
     // BFCache restores this same document and its listeners, so retain its resources.
     if (event.persisted) { suspendAction(); return; }
@@ -74,7 +84,7 @@ async function initializeWorld(root: HTMLElement) {
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
   } catch {
-    ui.setFailed('WebGL2 could not be initialized.');
+    failWorld('WebGL2 could not be initialized.');
     return;
   }
   const resources: (() => void)[] = [() => renderer.dispose()];
@@ -134,7 +144,7 @@ async function initializeWorld(root: HTMLElement) {
     const lighting = createStudyLighting(scene, coarse); resources.unshift(() => lighting.dispose());
     lighting.sun.shadow.autoUpdate = false; lighting.sun.shadow.needsUpdate = true;
     const pipeline = createStudyRenderer(renderer, scene, camera, coarse); resources.unshift(() => pipeline.dispose());
-    const navigation = createNavigation(environment.walkAreas, [...environment.colliders, ...furniture.colliders]);
+    const navigation = createNavigation(environment.walkAreas, [...environment.colliders, ...furniture.colliders], .32, environment.outline);
     const picker = createInteractionPicker([environment.root, furniture.root], furniture.interactions);
     const entrance = { x: 0, z: 17.65 };
     const arrivalPitch = .085;
@@ -152,6 +162,7 @@ async function initializeWorld(root: HTMLElement) {
     const stance = new StanceTransition(.3);
     let sensitivity = 1, headBob = false;
     let mode: Mode = 'welcome';
+    let achievementUntil = 0;
     let route: Point[] = [], destination: Interaction | null = null;
     let aimed: Interaction | null = null, seatedAt: Interaction | null = null;
     let seatReturn: THREE.Vector3 | null = null;
@@ -167,8 +178,17 @@ async function initializeWorld(root: HTMLElement) {
     let stickPointer: number | null = null;
     const entry = root.querySelector<HTMLElement>('[data-world-entry]')!;
     const enterButton = root.querySelector<HTMLButtonElement>('[data-world-enter]')!;
-    const entryTitle = root.querySelector<HTMLElement>('[data-world-entry-title]')!;
-    const entryCopy = root.querySelector<HTMLElement>('[data-world-entry-copy]')!;
+    const trackSelect = root.querySelector<HTMLSelectElement>('[data-world-track]')!;
+    trackSelect.value = ambience.selection;
+    trackSelect.addEventListener('change', () => {
+      ambience.select(trackSelect.value);
+      try { localStorage.setItem('mountain-study:track', ambience.selection); } catch {}
+    }, { signal });
+    const stage = root.querySelector<HTMLElement>('.mw-stage')!;
+    const hint = root.querySelector<HTMLElement>('[data-world-hint]')!;
+    const settings = root.querySelector<HTMLDialogElement>('[data-world-settings]')!;
+    const settingsButton = root.querySelector<HTMLButtonElement>('[data-world-settings-open]')!;
+    let introTimer = 0, hintTimer = 0, resumeAfterSettings = false;
     const pauseButton = root.querySelector<HTMLButtonElement>('[data-world-pause]')!;
     const standButton = root.querySelector<HTMLButtonElement>('[data-world-stand]');
     const lockButton = root.querySelector<HTMLButtonElement>('[data-world-lock]');
@@ -204,6 +224,7 @@ async function initializeWorld(root: HTMLElement) {
         if (document.pointerLockElement === canvas) return;
         dragLook = true; relockOnTap = false;
         syncInputMode();
+        if (performance.now() < achievementUntil) return;
         ui.showToast(en ? 'Move the pointer to an edge or drag to look around. Click open ground to retry mouse lock.' : '鼠标靠近画面边缘或按住拖动都能环顾。点击空处可重试锁定。');
       },
     });
@@ -255,20 +276,21 @@ async function initializeWorld(root: HTMLElement) {
       stickThumb.style.transform = 'translate(-50%, -50%)';
     }
     function cancelRoute() { route = []; destination = null; delete root.dataset.guided; }
+    const fallDialog = root.querySelector<HTMLDialogElement>('[data-world-fall]');
+    const respawnButton = root.querySelector<HTMLButtonElement>('[data-world-respawn]');
+    let fallTime = 0, fallDX = 0, fallDZ = 0, awardedThisVisit = false;
+    function inFall() { return mode === 'falling' || mode === 'fallen'; }
     function save() {
+      if (inFall()) return;
       const p = seatReturn || position;
       try { sessionStorage.setItem(stateKey, JSON.stringify({ x: p.x, z: p.z, yaw: look.yaw, pitch: look.pitch })); } catch {}
     }
     function setMode(value: Mode) {
       mode = value; root.dataset.mode = value;
-      const visible = value === 'welcome' || value === 'paused';
-      entry.hidden = !visible;
-      if (visible) {
-        entryTitle.textContent = value === 'welcome' ? (en ? 'A quiet courtyard, above the clouds.' : '云庭有光，且坐片刻。') : (en ? 'Stay a little longer.' : '稍作停留。');
-        entryCopy.textContent = value === 'welcome'
-          ? (en ? 'Follow the stone path into the courtyard. Find a book, and take in the mountains.' : '循着石径走进云庭，取一卷书，看看山色。')
-          : (en ? 'The study is waiting, just where you left it.' : '书斋仍在，回到刚才驻足的地方。');
-        enterButton.querySelector('[data-world-enter-label]')!.textContent = value === 'welcome' ? (en ? 'Enter the courtyard' : '走进云庭') : (en ? 'Continue exploring' : '继续探索');
+      entry.hidden = value !== 'paused';
+      if (value !== 'exploring' && value !== 'welcome') {
+        window.clearTimeout(introTimer); window.clearTimeout(hintTimer);
+        delete root.dataset.arriving; hint.hidden = true;
       }
       pauseButton.hidden = value !== 'exploring';
       if (value !== 'exploring') {
@@ -279,7 +301,7 @@ async function initializeWorld(root: HTMLElement) {
     }
     function unlock() { if (document.pointerLockElement === canvas) document.exitPointerLock(); }
     function pause() {
-      if (mode === 'reading' || mode === 'welcome') return;
+      if (mode === 'reading' || mode === 'welcome' || inFall()) return;
       window.clearTimeout(interactionTimer); cancelRoute(); setMode('paused'); unlock(); save();
       enterButton.focus({ preventScroll: true });
     }
@@ -380,6 +402,7 @@ async function initializeWorld(root: HTMLElement) {
       else if (inputMode === 'locked') ui.useCentredWaymark();
     };
     readingAction = open => {
+      if (inFall()) return;
       if (open) {
         window.clearTimeout(interactionTimer); cancelRoute(); setMode('reading'); unlock(); save();
       } else if (mode === 'reading') {
@@ -398,12 +421,27 @@ async function initializeWorld(root: HTMLElement) {
       enter(); ui.showToast(en ? `Walking to ${item.labelEn.toLowerCase()}. Look around or move to take control.` : `向${item.label}走去。转动视线或自行走动即可接管。`);
     };
     resetAction = () => {
+      if (inFall()) return;
       window.clearTimeout(interactionTimer);
       if (mode === 'transition') setMode('paused');
       standUp(); cancelRoute(); clearMovement();
       position.set(spawn.x, FLOOR_HEIGHT, spawn.z); look.snap(0, arrivalPitch); stance.reset();
       updateCamera(1); save(); ui.showToast(en ? 'Back at the courtyard gate.' : '回到庭门，云庭就在眼前。');
     };
+    fallDialog?.addEventListener('cancel', event => event.preventDefault(), {signal});
+    respawnButton?.addEventListener('click', () => {
+      if (mode !== 'fallen') return;
+      fallDialog?.close();
+      setMode('paused'); resetAction(); enter();
+      const key = 'mountain-study:achievement:first-fall';
+      let first = !awardedThisVisit;
+      try { first = first && !localStorage.getItem(key); localStorage.setItem(key,'1'); } catch {}
+      awardedThisVisit = true;
+      if (first) {
+        achievementUntil = performance.now()+3400;
+        ui.showToast(en ? 'Achievement unlocked: A Flying Leap of Three Thousand Feet' : '获得成就：飞人直下三千尺');
+      }
+    }, {signal});
     function savePreferences() {
       try { localStorage.setItem('mountain-first-person:preferences', JSON.stringify({ quality: qualitySelect.value, sensitivity, headBob })); } catch {}
     }
@@ -412,6 +450,17 @@ async function initializeWorld(root: HTMLElement) {
     }, { signal });
     sensitivityInput.addEventListener('input', () => { sensitivity = Number(sensitivityInput.value); savePreferences(); }, { signal });
     bobInput.addEventListener('change', () => { headBob = bobInput.checked && !reducedMotion; savePreferences(); }, { signal });
+    settingsButton.addEventListener('click', () => {
+      if (mode !== 'exploring' && mode !== 'paused') return;
+      resumeAfterSettings = mode === 'exploring';
+      if (resumeAfterSettings) pause();
+      settings.showModal();
+    }, { signal });
+    root.querySelector('[data-world-settings-close]')!.addEventListener('click', () => {
+      settings.close();
+      if (resumeAfterSettings) enter();
+      else settingsButton.focus();
+    }, { signal });
     enterButton.addEventListener('click', enter, { signal });
     standButton?.addEventListener('click', () => {
       if (mode === 'exploring' && seatedAt) { standUp(true); canvas!.focus({ preventScroll: true }); }
@@ -423,6 +472,7 @@ async function initializeWorld(root: HTMLElement) {
       const wasLocked = hadPointerLock;
       hadPointerLock = locked;
       if (locked) {
+        if (mode === 'welcome') return;
         pointerLock.onLocked();
         clearDrag(); clearPointer();
         if (!alive || ui.isOpen() || mode !== 'exploring') {
@@ -494,7 +544,7 @@ async function initializeWorld(root: HTMLElement) {
     canvas.addEventListener('webglcontextlost', event => {
       event.preventDefault(); window.clearTimeout(interactionTimer);
       cancelRoute(); setMode('paused'); teardown();
-      ui.setFailed('The graphics context was lost. Reload the page to restart the study.');
+      failWorld('The graphics context was lost. Reload the page to restart the study.');
     }, { signal });
     function updateStick(event: PointerEvent) {
       const rect = stick.getBoundingClientRect();
@@ -518,6 +568,8 @@ async function initializeWorld(root: HTMLElement) {
     stick.addEventListener('pointercancel', endStick, { signal });
     stick.addEventListener('lostpointercapture', endStick, { signal });
     window.addEventListener('keydown', event => {
+      if (settings.open) return;
+      if (event.code === 'KeyH' && mode === 'exploring' && !hint.hidden) { hint.hidden = true; return; }
       if (ui.isOpen() || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.code === 'Escape' && mode === 'exploring' && seatedAt && (document.pointerLockElement === canvas || performance.now() - lastSeatUnlock < 180)) {
         if (document.pointerLockElement === canvas) unlock();
@@ -535,7 +587,7 @@ async function initializeWorld(root: HTMLElement) {
     window.addEventListener('keyup', event => keys.delete(event.code), { signal });
     window.addEventListener('blur', () => { clearMovement(); if (mode === 'exploring') pause(); }, { signal });
     document.addEventListener('visibilitychange', () => {
-      ambience.setHidden(document.hidden); clearMovement();
+      clearMovement();
       if (document.hidden) { save(); if (mode === 'exploring') pause(); }
       previousFrame = performance.now();
     }, { signal });
@@ -559,7 +611,7 @@ async function initializeWorld(root: HTMLElement) {
       shaderFailed = true; console.error('Mountain study material could not compile:', gl.getProgramInfoLog(program));
     };
     stopWorld = () => {
-      save(); window.clearTimeout(interactionTimer); cancelAnimationFrame(frame);
+      save(); window.clearTimeout(interactionTimer); window.clearTimeout(introTimer); window.clearTimeout(hintTimer); cancelAnimationFrame(frame);
       pointerLock.cancel(); look.suspend(); clearMovement(); unlock();
     };
     // Painting and mountains share one deadline. Their existing fallbacks remain
@@ -570,11 +622,21 @@ async function initializeWorld(root: HTMLElement) {
     if (!alive || resourcesDisposed) return;
     pipeline.render(0);
     if (shaderFailed) throw new Error('A scene material shader could not compile.');
-    if (typeof Audio !== 'undefined') {
-      ambience.setHidden(document.hidden);
-      ui.setSound(ambience.toggle());
-    }
-    ui.setReady(); setMode(ui.isOpen() ? 'reading' : 'welcome');
+    ui.setReady(); ui.setSound(ambience.enabled);
+    root.querySelector<HTMLElement>('[data-world-arrival]')!.hidden = true;
+    stage.inert = false;
+    hadPointerLock = document.pointerLockElement === canvas;
+    dragLook = !hadPointerLock;
+    setMode(ui.isOpen() ? 'reading' : document.hidden ? 'paused' : 'exploring');
+    if (!ui.isOpen() && !document.hidden) {
+      canvas.focus({ preventScroll: true });
+      if (hadPointerLock) look.begin('locked', performance.now());
+      root.dataset.arriving = 'true';
+      introTimer = window.setTimeout(() => {
+        delete root.dataset.arriving; hint.hidden = false;
+        hintTimer = window.setTimeout(() => { hint.hidden = true; }, 5000);
+      }, motionPreference.matches ? 0 : 950);
+    } else { unlock(); }
 
     function tick(now: number) {
       if (!alive) return;
@@ -625,13 +687,28 @@ async function initializeWorld(root: HTMLElement) {
         velocity.x = THREE.MathUtils.lerp(velocity.x, movement.x * pace, damping);
         velocity.y = THREE.MathUtils.lerp(velocity.y, movement.z * pace, damping);
         if (!seatedAt) {
-          const next = navigation.move(position, velocity.x * delta, velocity.y * delta);
+          const next = navigation.move(position, velocity.x * delta, velocity.y * delta, !guided);
           const distance = Math.hypot(next.x - position.x, next.z - position.z);
           position.x = next.x; position.z = next.z;
           speed = distance / delta; walked += distance;
+          if (!navigation.hasFloor(next.x,next.z)) {
+            fallTime = 0; fallDX = velocity.x; fallDZ = velocity.y;
+            cancelRoute(); clearAim(); setMode('falling'); unlock(); fallDialog?.showModal();
+          }
         }
       }
       updateCamera(Math.min(0.05, Math.max(0, rawDelta)), speed);
+      if (inFall()) {
+        if (mode === 'falling') {
+          const dt = Math.min(.12, Math.max(0,rawDelta));
+          fallTime += dt; position.x += fallDX*dt; position.z += fallDZ*dt;
+          if (fallTime >= (motionPreference.matches ? .12 : 1.15)) {
+            setMode('fallen'); respawnButton?.focus();
+          }
+        }
+        camera.position.y -= 4.9*fallTime*fallTime;
+        camera.updateMatrixWorld();
+      }
       const place = describePlace(position.x, position.z), indoor = place.indoor;
       // Clouds keep the same pace across frame rates. A preference change freezes the current view.
       const landscapeDelta = motionPreference.matches || mode === 'reading' ? 0 : Math.min(.25, Math.max(0, rawDelta));
@@ -661,56 +738,7 @@ async function initializeWorld(root: HTMLElement) {
     teardown();
     if (alive) {
       console.error('The mountain study could not open:', error);
-      ui.setFailed(error instanceof Error ? error.message : 'The 3D scene could not start.');
+      failWorld(error instanceof Error ? error.message : 'The 3D scene could not start.');
     }
   }
-}
-
-function createAmbience(base: string, onFailure: () => void) {
-  let context: AudioContext | null = null, master: GainNode | null = null, windGain: GainNode | null = null;
-  let enabled = false, hidden = false, footClock = 0;
-  const music = createMusic(base, () => {
-    enabled = false;
-    if (master && context) master.gain.setTargetAtTime(0, context.currentTime, .1);
-    onFailure();
-  });
-  const sources: AudioScheduledSourceNode[] = [];
-  function ensure() {
-    if (context) return;
-    context = new AudioContext();
-    master = context.createGain(); master.gain.value = 0; master.connect(context.destination);
-    const noise = context.createBuffer(1, context.sampleRate * 4, context.sampleRate);
-    const samples = noise.getChannelData(0);
-    let previous = 0;
-    for (let i = 0; i < samples.length; i++) { previous = (previous + (Math.random() * 2 - 1) * 0.02) / 1.02; samples[i] = previous * 3; }
-    const source = context.createBufferSource(); source.buffer = noise; source.loop = true;
-    const low = context.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 750;
-    windGain = context.createGain(); windGain.gain.value = 0.18;
-    source.connect(low).connect(windGain).connect(master); source.start(); sources.push(source);
-  }
-  return {
-    toggle() {
-      enabled = !enabled;
-      music.setAudible(enabled && !hidden);
-      try { ensure(); void context?.resume().catch(() => {}); master?.gain.setTargetAtTime(enabled && !hidden ? .6 : 0, context!.currentTime, .4); }
-      catch { /* Music can play without synthesized footsteps. */ }
-      return enabled;
-    },
-    setHidden(value: boolean) { hidden = value; music.setAudible(enabled && !hidden); if (master && context) master.gain.setTargetAtTime(enabled && !hidden ? 0.6 : 0, context.currentTime, 0.2); },
-    update(indoor: boolean, speed: number, delta: number) {
-      if (!context || !enabled || hidden) return;
-      windGain?.gain.setTargetAtTime(indoor ? .025 : .055, context.currentTime, 1.2);
-      footClock += speed * delta;
-      if (speed > 0.5 && footClock > 1.1) {
-        footClock = 0;
-        const tone = context.createOscillator(), gain = context.createGain();
-        tone.type = 'sine'; tone.frequency.setValueAtTime(indoor ? 130 : 95, context.currentTime);
-        tone.frequency.exponentialRampToValueAtTime(40, context.currentTime + 0.07);
-        gain.gain.setValueAtTime(0.035, context.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.09);
-        tone.connect(gain).connect(master!); tone.start(); tone.stop(context.currentTime + 0.1);
-        tone.onended = () => { tone.disconnect(); gain.disconnect(); };
-      }
-    },
-    dispose() { music.dispose(); sources.forEach(source => source.stop()); void context?.close(); },
-  };
 }

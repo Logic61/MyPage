@@ -28,6 +28,18 @@ test('music resumes the same recording, draws a different successor and bounds f
   assert.equal(failures,1);
   assert.equal(new Set(players.slice(1).map(audio => audio.url)).size,5);
   music.setAudible(true);
+  music.select('heart-linked');
+  assert.equal(players.at(-1).url, '/MyPage/world/music/heart-linked.m4a');
+  players.at(-1).onended();
+  assert.equal(players.at(-1).url, '/MyPage/world/music/heart-linked.m4a');
+  music.setAudible(false);
+  const count = players.length;
+  music.select('misty-boat');
+  assert.equal(players.length,count);
+  music.setAudible(true);
+  assert.equal(players.at(-1).url, '/MyPage/world/music/misty-boat.m4a');
+  music.select('shuffle');
+  assert.equal(players.at(-1).url,'/MyPage/world/music/barcarolle.m4a');
   const last = players.at(-1);
   music.dispose();
   assert.equal(last.paused,true); assert.equal(last.onended,null);
