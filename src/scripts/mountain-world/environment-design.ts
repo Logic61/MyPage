@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createLotusPlanting } from './lotus-pond';
-import { COURTYARD_POOL, setPoolReflections } from './water-court';
+import { COURTYARD_POOL, POOL_BED_Y, POOL_COPING_Y, POOL_WATER_Y, setPoolReflections } from './water-court';
 import { createFloorFinishes } from './courtyard-paving';
 import { buildTimberHalls } from './timber-halls';
 import { buildCloudGallery } from './cloud-gallery';
@@ -50,7 +50,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     color: '#83ada6', vertexColors:true, roughness: .16, metalness: .09, transparent: true, opacity: .60,
     clearcoat: .63, clearcoatRoughness: .18, depthWrite: false, side: THREE.DoubleSide,
   }));
-  setPoolReflections(waterMaterial);
+  const poolWaves = setPoolReflections(waterMaterial);
   const blocks = new Map<string, THREE.BufferGeometry>(), unitCube = keep(new THREE.BoxGeometry(1, 1, 1));
   const vUp = new THREE.Vector3(0, 1, 0);
 
@@ -182,12 +182,12 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   const waterW = COURTYARD_POOL.x1 - COURTYARD_POOL.x0, waterD = COURTYARD_POOL.z1 - COURTYARD_POOL.z0;
   const waterCentre = (COURTYARD_POOL.z0 + COURTYARD_POOL.z1) / 2;
   const shallow=new THREE.Color('#c2c9a9'), deep=new THREE.Color('#547d77');
-  const waterGeometry = keep(gridSurface(42,44,(u,v) => new THREE.Vector3((u-.5)*waterW,.257,(v-.5)*waterD),true,
+  const waterGeometry = keep(gridSurface(88,82,(u,v) => new THREE.Vector3((u-.5)*waterW,POOL_WATER_Y,(v-.5)*waterD),true,
     (u,v)=>shallow.clone().lerp(deep,THREE.MathUtils.smoothstep(Math.min(u,v,1-u,1-v),0,.38))));
   const bedStone = own(library.material('darkStone',{color:'#b2bda8',worldScale:.45,roughness:.88,normalScale:.44}));
   const pebble = keep(new THREE.IcosahedronGeometry(1,1));
   const lotus = createLotusPlanting(group,geometries,materials);
-  box(waterW,.06,waterD,0,.13,waterCentre,bedStone,'Recessed pool bed',.005).castShadow=false;
+  box(waterW,.06,waterD,0,POOL_BED_Y-.03,waterCentre,bedStone,'Recessed pool bed',.005).castShadow=false;
   // Fine curved caustics stay continuous at eye level without tessellating the bed.
   const pixels=256, cells=15;
   const seeds=new Map<number,[number,number]>();
@@ -215,11 +215,11 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   bedMap.generateMipmaps=true;bedMap.needsUpdate=true;
   const caustics=own(new THREE.MeshStandardMaterial({map:bedMap,roughness:.94}));
   caustics.addEventListener('dispose',()=>bedMap.dispose());
-  const lightBed=keep(gridSurface(1,1,(u,v)=>new THREE.Vector3((u-.5)*waterW,.164,(v-.5)*waterD),true));
+  const lightBed=keep(gridSurface(1,1,(u,v)=>new THREE.Vector3((u-.5)*waterW,POOL_BED_Y+.004,(v-.5)*waterD),true));
   const bed=add(lightBed,caustics,'Light refracted across the shallow pool',0,0,waterCentre);bed.castShadow=false;
   for (let k=0;k<24;k++) {
     const px=1.90*Math.sin(k*2.43), pz=waterCentre+2.06*Math.sin(k*1.47+.3);
-    const stone=add(pebble,bedStone,'Submerged river stone',px,.164,pz);
+    const stone=add(pebble,bedStone,'Submerged river stone',px,POOL_BED_Y+.004,pz);
     stone.scale.set(.034+.013*(k%3),.014+.004*(k%2),.027+.012*(k%4)); stone.rotation.y=k*2.4;
   }
   for (const side of [-1,1]) {
@@ -228,8 +228,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     box(.18,.19,waterD+.38,side*(halfW+.09),.300,waterCentre,sidePaving,'Lower wall of the pool',.008);
     box(waterW,.19,.18,0,.300,waterCentre+side*(halfD+.09),sidePaving,'Lower wall of the pool',.008);
     for(let i=0;i<4;i++) {
-      box(.23,.092,(waterD+.42)/4-.008,side*(halfW+.092),.424,COURTYARD_POOL.z0-.21+(i+.5)*(waterD+.42)/4,limestone,'Stone pool coping',.011);
-      box(waterW/4-.007,.092,.23,COURTYARD_POOL.x0+(i+.5)*waterW/4,.424,waterCentre+side*(halfD+.092),limestone,'Stone pool coping',.011);
+      box(.23,.092,(waterD+.42)/4-.008,side*(halfW+.092),POOL_COPING_Y-.046,COURTYARD_POOL.z0-.21+(i+.5)*(waterD+.42)/4,limestone,'Stone pool coping',.011);
+      box(waterW/4-.007,.092,.23,COURTYARD_POOL.x0+(i+.5)*waterW/4,POOL_COPING_Y-.046,waterCentre+side*(halfD+.092),limestone,'Stone pool coping',.011);
     }
   }
   const poolBronze=own(new THREE.MeshStandardMaterial({color:'#6a8171',metalness:.54,roughness:.61}));
@@ -243,7 +243,6 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
       box(.030,.025,.014,x,.395,z+face*.118,poolGold,'Square brass rivet',.003);
     }
   }
-  obstacle(0,waterCentre,waterW/2+.205,waterD/2+.205);
   const water=add(waterGeometry,waterMaterial,'Open reflecting pool',0,0,waterCentre);
   water.castShadow=false; water.userData.dynamic=true; water.userData.ignoreInteractionRay=true;
   // Two stronger colonies leave open water on the diagonal between the gate and the hall.
@@ -252,6 +251,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   lotus.plant(1.30,4.91,1,-.45,1.08);
   lotus.plant(.47,5.12,-1,.86,.75);
   lotus.plant(1.47,2.53,1,.44,.64);
+  lotus.finish();
   for (const planter of [FORECOURT_PLANTER,mirrorRect(FORECOURT_PLANTER)]) {
     const x=(planter.x0+planter.x1)/2,z=(planter.z0+planter.z1)/2,w=planter.x1-planter.x0,d=planter.z1-planter.z0;
     box(w,.065,d,x,.305,z,soil,'Pine bed',.01);
@@ -387,18 +387,12 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   return {
     geometries, materials, colliders, overheads, walkAreas, floors, galleryStone, ready: Promise.all([halls.ready,lotus.ready,floors.ready]).then(()=>{}),
     dispose() { halls.dispose(); lotus.dispose(); floors.dispose(); },
-    update(time: number) {
-      const { position, normal } = waterGeometry.attributes;
-      for (let i = 0; i < position.count; i++) {
-        const x = position.getX(i), z = position.getZ(i);
-        const a=x*6.4+z*4.8+time*.85,b=z*8.1-time*.55;
-        const dx=x+.36,dz=z-.35,r=Math.sqrt(dx*dx+dz*dz+.001);
-        const ripple=r*22-time*2.6, falloff=1/(1+4*r*r);
-        const radialSlope=.0036*falloff*(22*Math.cos(ripple)-8*r*falloff*Math.sin(ripple));
-        position.setY(i,.257+.0045*Math.sin(a)+.002*Math.cos(b)+.0036*falloff*Math.sin(ripple));
-        normal.setXYZ(i,-.029*Math.cos(a)-radialSlope*dx/r,1,-.022*Math.cos(a)+.016*Math.sin(b)-radialSlope*dz/r);
-      }
-      position.needsUpdate = normal.needsUpdate = true;
+    disturbWater(x: number, z: number, strength: number) {
+      if (poolWaves.disturb(x, z, strength)) lotus.disturb(x, z, Math.min(1, strength));
+    },
+    update(time: number, delta = 0, reducedMotion = false) {
+      poolWaves.update(time, delta, reducedMotion);
+      lotus.update(delta, reducedMotion);
     },
   };
 }

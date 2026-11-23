@@ -1,5 +1,15 @@
 import * as THREE from 'three';
 import { gridSurface } from './environment-geometry';
+import { POOL_BED_Y, POOL_WATER_Y, POOL_RIPPLE_START, POOL_RIPPLE_SPEED } from './water-court';
+
+interface Shoot {
+  root: THREE.Vector3;
+  tip: THREE.Vector3;
+  frequency: number;
+  motion: { at: number; x: number; z: number; strength: number }[];
+  parts: { mesh: THREE.InstancedMesh; index: number; rest: THREE.Matrix4 }[];
+  tilted: boolean;
+}
 
 function leafBlade(phase: number) {
   const spokes = 64, rings = 8;
@@ -61,14 +71,27 @@ export function createLotusPlanting(parent: THREE.Group, geometries: Set<THREE.B
   const receptacle = keep(new THREE.LatheGeometry([[.009,0],[.018,.012],[.034,.041],[.044,.048],[.045,.054],[.038,.057],[0,.056]]
     .map(([r,y])=>new THREE.Vector2(r,y)),24));
   const dot = keep(new THREE.SphereGeometry(1,8,6)), up = new THREE.Vector3(0,1,0);
-  let colony: THREE.Group;
+  const planting = new THREE.Group();
+  planting.name = 'Lotus shoots rooted in the pool bed';
+  planting.userData.dynamic = planting.userData.pondPlant = true;
+  parent.add(planting);
+  const shoots: Shoot[] = [];
+  const models: { shoot: Shoot; group: THREE.Group }[] = [];
+  let colony: THREE.Group, twig: THREE.Group;
   function place(geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) {
     const mesh = new THREE.Mesh(geometry,material); mesh.position.set(x,y,z);
-    mesh.castShadow = mesh.receiveShadow = true; colony.add(mesh); return mesh;
+    twig.add(mesh); return mesh;
   }
   function stem(x: number, y: number, z: number, lean: number) {
-    const delta = new THREE.Vector3(lean,y-.20,.018);
-    const mesh = place(stalk,green,x-lean/2,(.20+y)/2,z-.009);
+    const rootY = (POOL_BED_Y - .005 - colony.position.y) / colony.scale.y;
+    const root = new THREE.Vector3(x-lean,rootY,z-.018).applyMatrix4(colony.matrix);
+    const tip = new THREE.Vector3(x,y,z).applyMatrix4(colony.matrix);
+    const shoot: Shoot = { root, tip, frequency: 10.5 - (tip.y-root.y)*4 + .7*Math.cos(shoots.length*2.4),
+      motion: [], parts: [], tilted: false };
+    twig = new THREE.Group(); colony.add(twig);
+    models.push({ shoot, group: twig }); shoots.push(shoot);
+    const delta = new THREE.Vector3(lean,y-rootY,.018);
+    const mesh = place(stalk,green,x-lean/2,(rootY+y)/2,z-.009);
     mesh.quaternion.setFromUnitVectors(up,delta.clone().normalize()); mesh.scale.y = delta.length();
   }
   function blossom(x: number, y: number, z: number, phase: number, bud: boolean) {
@@ -96,7 +119,7 @@ export function createLotusPlanting(parent: THREE.Group, geometries: Set<THREE.B
   function seedHead(x:number,y:number,z:number,heading:number) {
     stem(x,y+.008,z,.047);
     const group=new THREE.Group();group.position.set(x,y,z);group.rotation.set(.41,heading,.12,'YXZ');
-    group.scale.setScalar(1.57);colony.add(group);
+    group.scale.setScalar(1.57);twig.add(group);
     const pod=new THREE.Mesh(receptacle,saffron);group.add(pod);
     for(let i=0;i<12;i++){
       const angle=i*2.39996,rad=.030*Math.sqrt(i/11);
@@ -104,6 +127,87 @@ export function createLotusPlanting(parent: THREE.Group, geometries: Set<THREE.B
       socket.scale.set(.0058,.0019,.0058);socket.position.set(rad*Math.cos(angle),.057,rad*Math.sin(angle));
       group.add(socket);
     }
+  }
+  // Share draws across colonies while retaining one moving hinge per individual stem.
+  function finish() {
+    const groups = new Map<string, { part: THREE.Mesh<THREE.BufferGeometry,THREE.Material>; shoot: Shoot }[]>();
+    for (const { group, shoot } of models) {
+      group.updateWorldMatrix(true,true);
+      group.traverse(part => {
+        if (!(part instanceof THREE.Mesh)) return;
+        const key = part.geometry.uuid + part.material.uuid;
+        const list = groups.get(key) ?? [];
+        if (!list.length) groups.set(key,list);
+        list.push({part,shoot});
+      });
+    }
+    for (const items of groups.values()) {
+      const { geometry, material } = items[0].part;
+      const mesh = new THREE.InstancedMesh(geometry,material,items.length);
+      mesh.name = material.name || 'Lotus stems and details';
+      mesh.castShadow = mesh.receiveShadow = true;
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      items.forEach(({part,shoot},index) => {
+        mesh.setMatrixAt(index,part.matrixWorld);
+        const rest = new THREE.Matrix4().makeTranslation(-shoot.root.x,-shoot.root.y,-shoot.root.z).multiply(part.matrixWorld);
+        shoot.parts.push({ mesh, index, rest });
+      });
+      mesh.computeBoundingSphere();
+      mesh.boundingSphere!.radius += .40;
+      planting.add(mesh);
+    }
+    for (const {group} of models) group.clear();
+    models.length = 0;
+  }
+
+  let elapsed = 0;
+  const contact = new THREE.Vector3(), axis = new THREE.Vector3(), scale = new THREE.Vector3();
+  const rotation = new THREE.Quaternion(), bend = new THREE.Matrix4(), instance = new THREE.Matrix4();
+  const dirty = new Set<THREE.InstancedMesh>();
+  function disturb(x: number, z: number, strength: number) {
+    planting.worldToLocal(contact.set(x,POOL_WATER_Y,z));
+    for (const shoot of shoots) {
+      const dx = shoot.tip.x-contact.x, dz = shoot.tip.z-contact.z;
+      const distance = Math.hypot(dx,dz);
+      if (distance >= 1.75 || shoot.motion.length >= 8) continue;
+      // The leaves lean in the direction the expanding ring is travelling.
+      const heading = distance > .001 ? Math.atan2(dz,dx) : shoot.frequency;
+      shoot.motion.push({ at:elapsed+Math.max(0,distance-POOL_RIPPLE_START)/POOL_RIPPLE_SPEED,
+        x:Math.cos(heading), z:Math.sin(heading), strength:strength*(1-distance/1.75)**1.3 });
+    }
+  }
+  function update(dt: number, reducedMotion = false) {
+    if (dt <= 0 && !reducedMotion) return;
+    elapsed += dt;
+    for (const shoot of shoots) {
+      if (reducedMotion) shoot.motion.length = 0;
+      if (!shoot.motion.length && !shoot.tilted) continue;
+      let tiltX = 0, tiltZ = 0, lift = 0;
+      const height = shoot.tip.y-shoot.root.y;
+      for (let i = shoot.motion.length-1; i >= 0; i--) {
+        const hit = shoot.motion[i], age = elapsed-hit.at;
+        if (age < 0) continue;
+        if (age >= 1.55) { shoot.motion.splice(i,1); continue; }
+        const envelope = hit.strength*Math.exp(-2.65*age)*Math.min(1,(1.55-age)/.35);
+        const lean = envelope*Math.sin(age*shoot.frequency)*(height < .24 ? .50 : .38);
+        tiltX += hit.z*lean; tiltZ -= hit.x*lean;
+        lift += envelope*Math.sin(age*(shoot.frequency+1.3))*.032;
+      }
+      const angle = Math.hypot(tiltX,tiltZ);
+      const moved = angle > .0001 || Math.abs(lift) > .0001;
+      if (!moved && !shoot.tilted) continue;
+      shoot.tilted = moved;
+      if (moved && angle > .0001) rotation.setFromAxisAngle(axis.set(tiltX/angle,0,tiltZ/angle),Math.min(.42,angle));
+      else rotation.identity();
+      scale.set(1,1 + (moved ? THREE.MathUtils.clamp(lift/height,-.19,.19) : 0),1);
+      bend.compose(shoot.root,rotation,scale);
+      for (const part of shoot.parts) {
+        part.mesh.setMatrixAt(part.index,instance.multiplyMatrices(bend,part.rest));
+        dirty.add(part.mesh);
+      }
+    }
+    for (const mesh of dirty) mesh.instanceMatrix.needsUpdate = true;
+    dirty.clear();
   }
   let disposed = false, texture: THREE.Texture | undefined;
   const url = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/,'')+'/world/lotus-leaf.webp';
@@ -113,11 +217,16 @@ export function createLotusPlanting(parent: THREE.Group, geometries: Set<THREE.B
     blade.color.set('#f1f5e7'); blade.map=map; blade.needsUpdate=true;
   }).catch(()=>{ /* The folded green blade is visible as soon as the pond is built. */ });
   return {
-    ready, dispose() { disposed=true; texture?.dispose(); },
+    ready, finish, disturb, update,
+    dispose() {
+      disposed=true; texture?.dispose();
+      for (const batch of planting.children) if (batch instanceof THREE.InstancedMesh) batch.dispose();
+      planting.removeFromParent();
+    },
     plant(x: number, z: number, side: number, heading: number, scale: number) {
       colony=new THREE.Group(); colony.name='Lotus colony';
       colony.position.set(x,.24*(1-scale),z); colony.rotation.y=heading; colony.scale.setScalar(scale);
-      parent.add(colony);
+      colony.updateMatrix();
       const patches = [[-.33,-.64,.225,.278],[.09,-.53,.245,.52],[.35,-.29,.17,.302],
         [-.29,-.08,.285,.412],[.17,.09,.245,.282],[-.34,.40,.208,.277],[.08,.57,.274,.36],[.38,.73,.18,.275]];
       patches.forEach(([dx,dz,r,h],j)=>{

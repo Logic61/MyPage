@@ -11,6 +11,7 @@ import * as pointerLock from '../src/scripts/mountain-world/pointer-lock.ts';
 import * as firstPerson from '../src/scripts/mountain-world/first-person.ts';
 import * as aerialMotion from '../src/scripts/mountain-world/aerial-motion.ts';
 import * as hallTerrace from '../src/scripts/mountain-world/hall-terrace.ts';
+import * as waterCourt from '../src/scripts/mountain-world/water-court.ts';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 
 // Execute the real entry point and real CPU picking against small DOM/WebGL stubs.
@@ -27,12 +28,12 @@ function deferred() {
 
 async function world({ coarse = false, legacy = false, unavailable = false, bench = false, reduced = false,
   assetsReady = Promise.resolve(), backdropReady = Promise.resolve(), compileReady = Promise.resolve(),
-  expectReady = true, expectFailure = false, hash = '', session = {},
+  expectReady = true, expectFailure = false, hash = '', session = {}, furnished = true,
   canWalk = () => true, nearest = point => point, hasFloor = () => true, findVault = () => null } = {}) {
   let now = 100, nextId = 0, readerOpen = false, actions, camera, exitRequests = 0;
   const frames = new Map(), timers = new Map(), requests = [], activated = [], errors = [], toasts = [];
   const motionPreference = { matches: reduced };
-  const lifecycle = { compiles: 0, renders: 0, ready: 0, backdropUpdates: 0, landscapeTime: 0, environmentUpdates: [], disposed: {} };
+  const lifecycle = { compiles: 0, renders: 0, ready: 0, backdropUpdates: 0, landscapeTime: 0, environmentUpdates: [], waterContacts: [], disposed: {} };
   const disposed = name => { lifecycle.disposed[name] = (lifecycle.disposed[name] || 0) + 1; };
   const rect = { left: 80, top: 40, width: 1200, height: 800 };
   class Element {
@@ -85,7 +86,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   const storage = (initial = {}) => { const data = new Map(Object.entries(initial)); return { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }; };
   const sessionStore = storage(session);
   const items = [], meshes = new THREE.Group();
-  for (const [id, x] of [['centre', 0], ['side', .75]]) {
+  for (const [id, x] of furnished ? [['centre', 0], ['side', .75]] : []) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(.25, .6, .1), new THREE.MeshStandardMaterial());
     meshes.add(mesh);
     items.push({ id, kind: bench && id === 'centre' ? 'bench' : 'lantern', position: mesh.position, approach: new THREE.Vector3(),
@@ -110,7 +111,9 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
       return { root, ready: backdropReady, update(time) { lifecycle.backdropUpdates++; lifecycle.landscapeTime = time; }, dispose() { disposed('backdrop'); root.removeFromParent(); } };
     } },
     './materials': { createSurfaceLibrary: () => ({ dispose() { disposed('surfaces'); } }) },
-    './environment': { createEnvironment(scene) { const root = new THREE.Group(); scene.add(root); return { root, walkAreas: [], colliders: [], update(_time, _delta, indoor) { lifecycle.environmentUpdates.push(indoor); }, dispose() { disposed('environment'); } }; } },
+    './environment': { createEnvironment(scene) { const root = new THREE.Group(); scene.add(root); return { root, walkAreas: [], colliders: [],
+      disturbWater(x,z,strength) { lifecycle.waterContacts.push({x,z,strength}); },
+      update(_time, _delta, indoor) { lifecycle.environmentUpdates.push(indoor); }, dispose() { disposed('environment'); } }; } },
     './furnishings': { createFurnishings(scene) { scene.add(meshes); return { root: meshes, interactions: items, colliders: [], assetsReady, update() {}, dispose() { disposed('furnishings'); } }; } },
     './lighting': { createStudyLighting: () => ({ sun: { shadow: {} }, dispose() { disposed('lighting'); } }) },
     './rendering': { createStudyRenderer(_renderer, _scene, value) {
@@ -126,6 +129,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
       findPath: (_start, end) => [{ x: end.x, z: end.z }],
       move: (point, dx, dz) => ({ x: point.x + dx, z: point.z + dz }) }) },
     './hall-terrace': hallTerrace,
+    './water-court': waterCourt,
     './ui': { createWorldUI(_root, _config, value) { actions = value; return ui; } },
   };
   const context = vm.createContext({
@@ -557,7 +561,7 @@ test('an unsafe entrance uses only a validated neighbour or fails without an unc
 test('roofed courtyard wings and outdoor spaces use their matching location and ambience', async () => {
   for (const [x, z, name, indoor] of [
     [0, -7, '云庭书斋', true], [-4, -2, '藏书小阁', true], [4, -2, '临庭观物', true],
-    [0, -2, '天光水庭', false], [0, 6, '天光水庭', false], [7, -4, '临云长廊', false],
+    [0, -2, '天光水庭', false], [0, 6, '天光水庭', false], [0, 4, '庭中荷池', false], [7, -4, '临云长廊', false],
     [10, 5, '松间露台', false], [1.3, 11, '云山石径', false],
   ]) {
     const h = await world({ session: { [courtyardStateKey]: JSON.stringify({ x, z }) } });
@@ -729,6 +733,33 @@ test('the touch jump button works under the second finger while the walking stic
   h.step(); assert.ok(h.camera.position.y > start.y);
 });
 
+test('a visitor can walk over the coping, jump from the submerged bed and climb the far bank', async () => {
+  const h = await world({ session: { [courtyardStateKey]: JSON.stringify({ x: 0, z: 6.62, yaw: 0, pitch: 0 }) } });
+  const eye = firstPerson.EYE_HEIGHT, shore = firstPerson.FLOOR_HEIGHT + eye;
+  assert.equal(h.camera.position.y, shore);
+  h.emit(h.window, 'keydown', { code: 'KeyW' });
+  const heights = [];
+  while (h.camera.position.z > 4.3 && heights.length < 150) {
+    h.step(); heights.push(h.camera.position.y);
+  }
+  h.emit(h.window, 'keyup', { code: 'KeyW' });
+  for (let i=0;i<25;i++) h.step();
+  assert.ok(Math.max(...heights) > shore + .15, 'The feet clear the coping');
+  assert.ok(heights.every((y,i)=>i===0 || Math.abs(y-heights[i-1]) < .05),'The eye follows one continuous step');
+  const bed = waterCourt.POOL_BED_Y + eye;
+  assert.equal(h.camera.position.y, bed);
+  assert.ok(waterCourt.poolDepthAt(0,4,waterCourt.POOL_BED_Y) > .09);
+  h.key('Space');
+  for (let i=0;i<12;i++) h.step();
+  assert.ok(waterCourt.poolDepthAt(0,4,h.camera.position.y-eye) === 0,'The feet leave the water during the jump');
+  for (let i=0;i<60;i++) h.step();
+  assert.equal(h.camera.position.y,bed);
+  h.emit(h.window,'keydown',{code:'KeyW'});
+  for (let i=0;i<150 && h.camera.position.z>1.24;i++) h.step();
+  assert.equal(h.camera.position.y,shore);
+  assert.equal(h.root.dataset.mode,'exploring');
+});
+
 test('an airborne cliff crossing integrates the transition frame only once even at a low frame rate', async () => {
   const h = await world({ hasFloor: (_x,z) => z >= 33.96 });
   h.step();
@@ -770,4 +801,46 @@ test('a higher stair can catch the feet during ascent and a paused crossing resu
   assert.equal(h.camera.position.z,32); assert.ok(Math.abs(h.camera.position.y-1.98)<.00001);
   h.actions.onReset();
   assert.equal(h.camera.position.z,34);
+});
+
+test('wading emits spaced footsteps and a stronger landing, then settles at rest', async () => {
+  const h = await world({ session: { [courtyardStateKey]: JSON.stringify({x:0,z:6.8,yaw:0}) } });
+  h.step(1000);
+  h.emit(h.window,'keydown',{code:'KeyW'});
+  for (let i=0;i<104;i++) h.step();
+  h.emit(h.window,'keyup',{code:'KeyW'});
+  for (let i=0;i<60;i++) h.step();
+  const steps = h.lifecycle.waterContacts;
+  assert.ok(steps.length >= 4 && steps.length < 9);
+  assert.ok(steps.every(p => p.z < waterCourt.COURTYARD_POOL.z1));
+  for (let i=1;i<steps.length;i++) assert.ok(steps[i-1].z - steps[i].z > .48);
+  const atRest = steps.length;
+  for (let i=0;i<120;i++) h.step();
+  assert.equal(steps.length,atRest);
+  h.key('Space');
+  for (let i=0;i<80;i++) h.step();
+  assert.deepEqual(steps.slice(atRest).map(p=>p.strength),[.52,1]);
+});
+
+test('E stirs where the visitor looks and a tap stirs where the finger lands', async () => {
+  const options = { furnished:false, session:{ [courtyardStateKey]:JSON.stringify({x:0,z:6.85,yaw:0,pitch:-.93}) } };
+  const desktop = await world(options);
+  desktop.enter(); await desktop.lock(); desktop.step(90);
+  assert.equal(desktop.ui.interaction?.id,'water');
+  desktop.key('KeyE');
+  assert.equal(desktop.lifecycle.waterContacts.length,1);
+  assert.ok(Math.abs(desktop.lifecycle.waterContacts[0].x) < 1e-6);
+  const byLamp = await world({...options, furnished:true});
+  byLamp.enter(); await byLamp.lock(); byLamp.step(90);
+  byLamp.key('KeyE');
+  assert.deepEqual(byLamp.activated,['centre']);
+  assert.equal(byLamp.lifecycle.waterContacts.length,0,'An object in front of the water keeps its interaction');
+  const phone = await world({...options, coarse:true});
+  const contact = { pointerType:'touch', clientX:830, clientY:480 };
+  phone.pointer('pointerdown',contact); phone.pointer('pointerup',contact);
+  assert.equal(phone.lifecycle.waterContacts.length,1);
+  assert.ok(phone.lifecycle.waterContacts[0].x > .2);
+  phone.pointer('pointerdown',contact);
+  phone.pointer('pointermove',{...contact,clientX:856}); phone.pointer('pointerup',{...contact,clientX:856});
+  assert.equal(phone.lifecycle.waterContacts.length,1,'Looking around does not stir the water');
 });

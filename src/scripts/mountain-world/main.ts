@@ -11,6 +11,7 @@ import { createLandscapeBackdrop } from './landscape-backdrop';
 import { createStudyRenderer, type RenderQuality } from './rendering';
 import { createInteractionPicker, movementDirection, FLOOR_HEIGHT, EYE_HEIGHT, SEATED_EYE_HEIGHT } from './first-person';
 import { walkRiseAt } from './hall-terrace';
+import { COURTYARD_POOL, poolDepthAt, poolFloorAt, POOL_WATER_Y } from './water-court';
 import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from './look-controls';
 import { createCourtyardMouseLock } from './pointer-lock';
 import type { Interaction, WorldConfig } from './types';
@@ -26,6 +27,9 @@ function edgeTurn(position: number) {
 
 /** Floor-level regions of the U-shaped courtyard; open galleries retain outdoor sound. */
 function describePlace(x: number, z: number) {
+  const poolFloor = poolFloorAt(x, z);
+  if (poolFloor !== null && poolFloor < POOL_WATER_Y)
+    return { name: '庭中荷池', nameEn: 'Lotus Pond', indoor: false };
   if (z >= 30 && Math.hypot(x, z - 34) <= 4.2)
     return { name: '候云台', nameEn: 'Cloudwatch Landing', indoor: false };
   if (z > 15.75 && Math.abs(x) <= 1.65)
@@ -158,6 +162,14 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     const pipeline = createStudyRenderer(renderer, scene, camera, coarse); resources.unshift(() => pipeline.dispose());
     const navigation = createNavigation(environment.walkAreas, [...environment.colliders, ...furniture.colliders], .32, environment.outline, environment.overheads);
     const picker = createInteractionPicker([environment.root, furniture.root], furniture.interactions);
+    const pondRay = new THREE.Raycaster(), surfacePoint = new THREE.Vector3();
+    const waterPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -POOL_WATER_Y);
+    const pondBounds = new THREE.Box3(
+      new THREE.Vector3(COURTYARD_POOL.x0, POOL_WATER_Y - .04, COURTYARD_POOL.z0),
+      new THREE.Vector3(COURTYARD_POOL.x1, 1, COURTYARD_POOL.z1),
+    );
+    const waterPrompt = { id: 'water', label: '拨水', labelEn: 'Stir the water' };
+    const lotusPrompt = { id: 'lotus', label: '轻拨花叶', labelEn: 'Brush the lotus' };
     const entrance = { x: 0, z: 34 };
     const arrivalPitch = .085;
     const spawn = navigation.canWalk(entrance.x, entrance.z) ? entrance : navigation.nearest(entrance, 3);
@@ -179,6 +191,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     let route: Point[] = [], destination: Interaction | null = null;
     let navigateOnLanding: string | null = null;
     let aimed: Interaction | null = null, seatedAt: Interaction | null = null;
+    let pondAim: ReturnType<typeof findPondContact> = null, lastPondPick = -Infinity, wadingStride = 0;
     let seatReturn: THREE.Vector3 | null = null;
     let restoreWalkingLock = false, lastSeatUnlock = -Infinity, relockOnTap = false;
     let selectedId: string | null = null, selectedUntil = 0;
@@ -246,6 +259,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     }, { signal });
 
     function clearAim() {
+      pondAim = null; lastPondPick = -Infinity;
       aimed = null; ui.setInteraction(null); root.dataset.aimed = 'false'; aimDirty = true;
     }
     function setInputMode(value: InputMode) {
@@ -351,7 +365,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       setMode('exploring');
       requestLock();
     }
-    function floorAt(p: Point) { return FLOOR_HEIGHT + walkRiseAt(p.x, p.z); }
+    function floorAt(p: Point) { return poolFloorAt(p.x, p.z) ?? (FLOOR_HEIGHT + walkRiseAt(p.x, p.z)); }
     function tryJumpOrVault() {
       if (mode !== 'exploring' || seatedAt || ui.isOpen() || air.kind !== 'grounded') return;
       save(); cancelRoute(); look.cancelTurn(); clearAim();
@@ -359,7 +373,11 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       if (opening) {
         air.vault(position, floorAt(position), opening, floorAt(opening.landing));
         velocity.set(0, 0);
-      } else air.jump(floorAt(position));
+      } else {
+        const floor = floorAt(position);
+        if (poolDepthAt(position.x, position.z, floor) > 0) environment.disturbWater(position.x, position.z, .52);
+        air.jump(floor);
+      }
       delete root.dataset.canVault;
     }
     function eyePosition() {
@@ -406,12 +424,41 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       scene.updateMatrixWorld();
       return picker.pick(camera, point);
     }
+    function findPondContact(point: THREE.Vector2) {
+      const reach = 2.9;
+      if (pondBounds.distanceToPoint(camera.position) > reach) return null;
+      pondRay.setFromCamera(point, camera);
+      const ray = pondRay.ray;
+      if (!ray.intersectBox(pondBounds, surfacePoint) || ray.origin.distanceTo(surfacePoint) > reach) return null;
+      const onWater = ray.intersectPlane(waterPlane, surfacePoint) !== null && pondBounds.containsPoint(surfacePoint)
+        && ray.origin.distanceTo(surfacePoint) <= reach;
+      // A petal can be within reach above the surface. The coping and lamps can also block the hand.
+      const hit = picker.firstSurface(ray, onWater ? ray.origin.distanceTo(surfacePoint) : reach);
+      if (hit) {
+        for (let part: THREE.Object3D | null = hit.object; part; part = part.parent) {
+          if (part.userData.pondPlant) return { x: hit.point.x, z: hit.point.z, prompt: lotusPrompt };
+        }
+        return null;
+      }
+      return onWater ? { x: surfacePoint.x, z: surfacePoint.z, prompt: waterPrompt } : null;
+    }
+    function stirAt(point: THREE.Vector2) {
+      const contact = findPondContact(point);
+      if (!contact) return false;
+      environment.disturbWater(contact.x, contact.z, .86);
+      return true;
+    }
     function showInteraction() {
       aimDirty = false; lastPick = elapsed; aimed = findAimed();
       const rect = inputMode === 'pointer' ? root.getBoundingClientRect() : null;
       const screen = rect ? { x: pointerClient.x - rect.left, y: pointerClient.y - rect.top } : undefined;
-      ui.setInteraction(aimed, screen);
-      root.dataset.aimed = String(Boolean(aimed));
+      const point = aimPoint();
+      if (aimed || !point) pondAim = null;
+      else if (elapsed - lastPondPick >= .08) {
+        pondAim = findPondContact(point); lastPondPick = elapsed;
+      }
+      ui.setInteraction(aimed ?? pondAim?.prompt ?? null, screen);
+      root.dataset.aimed = String(Boolean(aimed || pondAim));
     }
     function activate(item: Interaction) {
       cancelRoute(); clearMovement(); selectedId = item.id; selectedUntil = elapsed + 1.35;
@@ -439,10 +486,11 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       save();
     }
     interactionAction = () => {
-      if (!aimPoint()) return;
+      const point = aimPoint();
+      if (!point) return;
       const item = findAimed();
       if (item) activate(item);
-      else if (inputMode === 'locked') ui.useCentredWaymark();
+      else if (!stirAt(point) && inputMode === 'locked') ui.useCentredWaymark();
     };
     readingAction = open => {
       if (inFall()) return;
@@ -463,7 +511,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       const approach = item?.approach ?? (id === 'sunwheel' ? { x: 25.2, z: 5 } : null);
       if (!approach) return;
       standUp(); cancelRoute();
-      const path = navigation.findPath(position, approach);
+      const path = navigation.findPath(position, approach, (x,z) => poolFloorAt(x,z) === null);
       if (!path.length) {
         setMode('paused'); ui.showToast(en ? 'There is no clear path from here. Return to Cloudwatch Landing and try again.' : '这里暂时没有通路，可以先回到候云台。'); return;
       }
@@ -586,10 +634,19 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       clearDrag();
       if (!tap) return;
       showInteraction();
-      if (mouse && typeof canvas.requestPointerLock === 'function' && (relockOnTap || seatedAt || !aimed)) {
+      if (!mouse) {
+        const touch = pointerToNDC(event.clientX, event.clientY, canvas.getBoundingClientRect());
+        if (aimPoint() && touch && stirAt(pointerNDC.set(touch.x, touch.y))) return;
+        if (aimed) activate(aimed);
+        return;
+      }
+      if (typeof canvas.requestPointerLock === 'function' && (relockOnTap || seatedAt)) {
         requestLock(); return;
       }
-      interactionAction();
+      if (aimed) { activate(aimed); return; }
+      const point = aimPoint();
+      if (point && stirAt(point)) return;
+      if (typeof canvas.requestPointerLock === 'function') requestLock();
     }, { signal });
     const endDrag = (event: PointerEvent) => { if (event.pointerId === press?.id) clearDrag(); };
     canvas.addEventListener('pointercancel', endDrag, { signal });
@@ -762,12 +819,25 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
           const next = navigation.move(position, velocity.x * delta, velocity.y * delta, !guided, jumping ? air.feet + STANDING_HEAD : -Infinity);
           const distance = Math.hypot(next.x - position.x, next.z - position.z);
           const lastFloor = floorAt(position);
+          const wasWet = poolDepthAt(position.x, position.z, jumping ? air.feet : lastFloor) > 0;
           position.x = next.x; position.z = next.z;
           const supported = navigation.hasFloor(next.x, next.z);
           const dropping = jumping
             ? air.advanceJump(delta, supported ? floorAt(next) : null, navigation.ceilingAt(next.x, next.z))
             : !supported;
           if (!jumping) { speed = distance / delta; walked += distance; }
+          const wet = poolDepthAt(next.x, next.z, air.kind === 'jump' ? air.feet : floorAt(next)) > 0;
+          if (!wet) wadingStride = 0;
+          else if (!wasWet) {
+            environment.disturbWater(next.x, next.z, jumping ? 1 : .68);
+            wadingStride = 0;
+          } else if (!jumping) {
+            wadingStride += distance;
+            if (wadingStride >= .52) {
+              environment.disturbWater(next.x, next.z, Math.min(.84, .43 + speed * .11));
+              wadingStride %= .52;
+            }
+          }
           if (dropping) {
             fallFeet = jumping ? air.feet : lastFloor;
             fallVerticalSpeed = jumping ? air.verticalSpeed : 0;
@@ -797,7 +867,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       // Clouds keep the same pace across frame rates. A preference change freezes the current view.
       const landscapeDelta = motionPreference.matches || mode === 'reading' ? 0 : Math.min(.25, Math.max(0, rawDelta));
       landscapeTime += landscapeDelta;
-      environment.update(landscapeTime, landscapeDelta, indoor);
+      environment.update(landscapeTime, landscapeDelta, indoor, motionPreference.matches);
       backdrop.update(landscapeTime);
       const highlighted = elapsed < selectedUntil ? selectedId : mode === 'exploring' ? aimed?.id ?? null : null;
       furniture.update(elapsed, delta, highlighted);

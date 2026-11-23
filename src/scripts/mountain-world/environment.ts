@@ -232,7 +232,8 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   }));
   return {
     root, colliders, overheads: architecture.overheads, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready,graniteReady]).then(() => {}),
-    update(time, delta, _indoor) {
+    disturbWater: architecture.disturbWater,
+    update(time, delta, _indoor, reducedMotion) {
       birds.forEach(({bird,wings,phase,radius,height,beat})=>{
         const a=time*.091+phase;
         bird.position.set(Math.sin(a)*radius,height+.45*Math.sin(2*a+beat),-Math.cos(a)*radius);
@@ -240,7 +241,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
         const flap=.16+.48*Math.sin(time*5+beat)*Math.max(0,Math.sin(time*.68+beat*.9));
         wings[0].rotation.z=-flap; wings[1].rotation.z=flap;
       });
-      architecture.update(time);
+      architecture.update(time, delta, reducedMotion);
       windTime.value = time;
       fall.time.value = time;
       for (const cloud of clouds) {

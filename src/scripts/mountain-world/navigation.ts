@@ -107,29 +107,33 @@ export function createNavigation(areas: WalkArea[], obstacles: Collider[], radiu
     }
     return best;
   }
-  function nearestId(p: Point) {
+  function nearestId(p: Point, visible: (a: Point, b: Point) => boolean) {
     let best = -1, distance = Infinity;
     for (let id = 0; id < allowed.length; id++) {
       if (!allowed[id]) continue;
       const q = point(id), d = (q.x - p.x) ** 2 + (q.z - p.z) ** 2;
-      if (d < distance && clearLine(p, q)) { best = id; distance = d; }
+      if (d < distance && visible(p, q)) { best = id; distance = d; }
     }
     return best;
   }
-  function clearLine(a: Point, b: Point) {
+  function clearLine(a: Point, b: Point, allowedAt = canWalk) {
     const count = Math.max(1, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 0.14));
     for (let i = 0; i <= count; i++) {
       const t = i / count;
-      if (!canWalk(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t)) return false;
+      if (!allowedAt(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t)) return false;
     }
     return true;
   }
-  function findPath(start: Point, destination: Point): Point[] {
+  function findPath(start: Point, destination: Point, preferGround?: (x: number, z: number) => boolean): Point[] {
     const end = nearest(destination);
     if (!end) return [];
-    if (clearLine(start, end)) return [end];
-    const first = nearestId(start), last = nearestId(end);
-    if (first < 0 || last < 0) return [];
+    // A guide starting and ending on the paving keeps to it. A wading visitor can still get home.
+    const dry = preferGround && preferGround(start.x,start.z) && preferGround(end.x,end.z);
+    const onPath = dry ? (x: number, z: number) => preferGround(x,z) && canWalk(x,z) : canWalk;
+    const visible = (a: Point, b: Point) => clearLine(a,b,onPath);
+    if (visible(start, end)) return [end];
+    const first = nearestId(start,visible), last = nearestId(end,visible);
+    if (first < 0 || last < 0) return dry ? findPath(start,end) : [];
     const previous = new Int32Array(allowed.length).fill(-1);
     const cost = new Float32Array(allowed.length).fill(Infinity);
     const closed = new Uint8Array(allowed.length);
@@ -147,12 +151,12 @@ export function createNavigation(areas: WalkArea[], obstacles: Collider[], radiu
       for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
         if ((!dx && !dz) || x + dx < 0 || x + dx >= width || z + dz < 0 || z + dz >= height) continue;
         const id = current + dx + dz * width;
-        if (!allowed[id] || closed[id] || !clearLine(point(current), point(id))) continue;
+        if (!allowed[id] || closed[id] || !visible(point(current), point(id))) continue;
         const next = cost[current] + Math.hypot(dx, dz);
         if (next < cost[id]) { previous[id] = current; cost[id] = next; open.add(id); }
       }
     }
-    if (!reached) return [];
+    if (!reached) return dry ? findPath(start,end) : [];
     const path: Point[] = [end];
     let current = last;
     while (current !== first && current >= 0) { path.push(point(current)); current = previous[current]; }
@@ -161,7 +165,7 @@ export function createNavigation(areas: WalkArea[], obstacles: Collider[], radiu
     let anchor = start, index = 0;
     while (index < path.length) {
       let furthest = index;
-      while (furthest + 1 < path.length && clearLine(anchor, path[furthest + 1])) furthest++;
+      while (furthest + 1 < path.length && visible(anchor, path[furthest + 1])) furthest++;
       smooth.push(path[furthest]); anchor = path[furthest]; index = furthest + 1;
     }
     return smooth;

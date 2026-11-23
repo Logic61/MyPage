@@ -30,9 +30,9 @@ const roof = loadModule('tiled-roof',{three,'./environment-geometry':shapes});
 const stoneRail = loadModule('stone-balustrade',{three});
 const goSetting = loadModule('go-pavilion',{three,'./environment-geometry':shapes});
 const halls = loadModule('timber-halls',{three,'./tiled-roof':roof,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./go-pavilion':goSetting});
-const lotus = loadModule('lotus-pond',{three,'./environment-geometry':shapes});
-const paving = loadModule('courtyard-paving',{three,'./environment-geometry':shapes});
 const waterCourt = loadModule('water-court',{});
+const lotus = loadModule('lotus-pond',{three,'./environment-geometry':shapes,'./water-court':waterCourt});
+const paving = loadModule('courtyard-paving',{three,'./environment-geometry':shapes});
 const gallery=loadModule('cloud-gallery',{three,'./environment-geometry':shapes,'three/addons/objects/MarchingCubes.js':{MarchingCubes}});
 const { createStudyArchitecture } = loadModule('environment-design',{three,'./reed-shades':loadModule('reed-shades',{three}),'./environment-geometry':shapes,'./timber-halls':halls,'./lotus-pond':lotus,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./courtyard-paving':paving,'./water-court':waterCourt,'./cloud-gallery':gallery});
 const origin = {x:0,z:34};
@@ -243,8 +243,15 @@ test('entrance, hall and mirror-paired roofs share the built courtyard axis',asy
     const nav=createNavigation(site.walkAreas,site.colliders);
     for(let z=origin.z;z>=6.7;z-=.125) assert.ok(nav.canWalk(0,z),'Open bridge and gate at '+z);
     assert.equal(root.getObjectsByProperty('name','Open reflecting pool').length,1);
-    assert.equal(nav.canWalk(0,3.6),false,'The central reflecting pond is water');
-    assert.equal(nav.clearLine({x:0,z:7.15},{x:0,z:.4}),false,'The axial view runs across the open water');
+    const middle = {x:0,z:3.75}, northBank = {x:0,z:.7}, southBank = {x:0,z:7.15};
+    for (const bank of [northBank,southBank,{x:-3.6,z:3.75},{x:3.6,z:3.75}]) {
+      assert.ok(nav.clearLine(bank,middle) && nav.clearLine(middle,bank), 'Every bank joins the shallow pond bed');
+    }
+    const onPaving = (x,z) => waterCourt.poolFloorAt(x,z) === null;
+    const bypass = nav.findPath(southBank,northBank,onPaving);
+    assert.ok(bypass.length >= 2 && bypass.every((p,i)=>nav.clearLine(i ? bypass[i-1] : southBank,p,onPaving)),
+      'Map guidance still takes the stone paths between dry destinations');
+    assert.deepEqual(nav.findPath(middle,northBank,onPaving),[northBank], 'Guidance can lead a wading visitor out');
     assert.equal(nav.hasFloor(1.7,24), false, 'Open chasm beside the south bridge');
     assert.equal(nav.hasFloor(3.8,37.8), false, 'Landing edge follows the circular stone platform');
     assert.equal(nav.hasFloor(18,6), false, 'Air beside the east bridge');
@@ -271,5 +278,42 @@ test('entrance, hall and mirror-paired roofs share the built courtyard axis',asy
   } finally {
     site.dispose(); site.geometries.forEach(g=>g.dispose()); site.materials.forEach(m=>m.dispose());
     root.traverse(node=>{if(node.isInstancedMesh)node.dispose()});
+  }
+});
+
+test('a local ripple bends connected lotus shoots, leaves distant flowers still and settles exactly', async () => {
+  const parent = new THREE.Group(), geometries = new Set(), materials = new Set();
+  const bed = lotus.createLotusPlanting(parent,geometries,materials);
+  try {
+    bed.plant(0,3,1,0,1);
+    bed.plant(2,5,-1,.3,.9);
+    bed.finish(); await bed.ready;
+    const planting = parent.children[0], batches = planting.children;
+    assert.ok(planting.userData.pondPlant && planting.userData.dynamic);
+    assert.ok(batches.length <= 12 && batches.every(b => b.isInstancedMesh));
+    const matrix = (batch,i) => { const m = new THREE.Matrix4(); batch.getMatrixAt(i,m); return m; };
+    const difference = (a,b) => Math.max(...a.elements.map((n,i) => Math.abs(n-b.elements[i])));
+    const stalks = batches.find(b => b.geometry.type === 'CylinderGeometry');
+    const petals = batches.find(b => b.material.name === 'Porcelain pink lotus petals' && b.geometry.type === 'BufferGeometry');
+    const leaves = batches.find(b => b.material.name === 'Waxy lotus blade');
+    const base = new THREE.Vector3(0,-.5,0), restStalk = matrix(stalks,8);
+    const inner = matrix(petals,0), outer = matrix(petals,15), distant = matrix(petals,24);
+    const relative = inner.clone().invert().multiply(outer), restLeaf = matrix(leaves,0);
+    bed.disturb(.25,2.52,1);
+    bed.update(.15);
+    assert.ok(difference(matrix(petals,0),inner) > .025);
+    assert.ok(difference(matrix(leaves,0),restLeaf) < 1e-6, 'wave has yet to travel to the first leaf');
+    assert.ok(base.clone().applyMatrix4(matrix(stalks,8)).distanceTo(base.clone().applyMatrix4(restStalk)) < 1e-6);
+    assert.ok(difference(matrix(petals,0).invert().multiply(matrix(petals,15)),relative) < 1e-5);
+    bed.update(.42);
+    assert.ok(difference(matrix(leaves,0),restLeaf) > .008);
+    assert.ok(difference(matrix(petals,24),distant) < 1e-6, 'distant colony remains still');
+    for (let i=0;i<100;i++) bed.update(.04);
+    assert.ok(difference(matrix(petals,0),inner) < 1e-6 && difference(matrix(leaves,0),restLeaf) < 1e-6);
+    bed.disturb(.25,2.52,1); bed.update(.12); bed.update(0,true);
+    assert.ok(difference(matrix(petals,0),inner) < 1e-6);
+    bed.update(.5); assert.ok(difference(matrix(leaves,0),restLeaf) < 1e-6);
+  } finally {
+    bed.dispose(); geometries.forEach(g=>g.dispose()); materials.forEach(m=>m.dispose());
   }
 });

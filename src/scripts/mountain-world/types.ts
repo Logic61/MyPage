@@ -33,7 +33,8 @@ export interface Environment {
   walkAreas: WalkArea[];
   roofOccluders: THREE.Object3D[];
   assetsReady: Promise<void>;
-  update: (time: number, delta: number, indoor: boolean) => void;
+  disturbWater: (x: number, z: number, strength: number) => void;
+  update: (time: number, delta: number, indoor: boolean, reducedMotion: boolean) => void;
   dispose: () => void;
 }
 export interface Furnishings {
@@ -57,7 +58,7 @@ export interface WorldUI {
   setReady: () => void;
   setFailed: (reason: string) => void;
   setLocation: (name: string, nameEn: string) => void;
-  setInteraction: (interaction: Interaction | null, screen?: { x: number; y: number }) => void;
+  setInteraction: (interaction: Pick<Interaction, 'id' | 'label' | 'labelEn'> | null, screen?: { x: number; y: number }) => void;
   showToast: (text: string) => void;
   openContent: (kind: InteractionKind, catalogue?: boolean) => void;
   isOpen: () => boolean;

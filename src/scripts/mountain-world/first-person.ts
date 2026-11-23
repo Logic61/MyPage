@@ -169,5 +169,20 @@ export function createInteractionPicker(roots: THREE.Object3D[], interactions: I
     }
     return item;
   }
-  return { pick };
+  function firstSurface(ray: THREE.Ray, reach: number) {
+    raycaster.ray.copy(ray);
+    raycaster.far = reach;
+    let nearest: THREE.Intersection | null = null;
+    for (const mesh of objects) {
+      intersect(mesh);
+      for (const hit of hits) {
+        if (solidHit(hit) && (!nearest || hit.distance < nearest.distance)) {
+          nearest = hit;
+          raycaster.far = hit.distance;
+        }
+      }
+    }
+    return nearest;
+  }
+  return { pick, firstSurface };
 }
