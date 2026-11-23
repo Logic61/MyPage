@@ -1,7 +1,16 @@
 import type * as THREE from 'three';
 
-export interface Collider { x: number; z: number; halfX: number; halfZ: number; }
+export interface Collider {
+  x: number; z: number; halfX: number; halfZ: number;
+  window?: {
+    axis: 'x' | 'z';
+    from: number; to: number;
+    sillTop: number;
+    seat?: Collider;
+  };
+}
 export interface WalkArea { x: number; z: number; halfX: number; halfZ: number; shape?: 'ellipse'; }
+export interface Overhead { x: number; z: number; halfX: number; halfZ: number; bottom: number; }
 export type InteractionKind = 'books' | 'projects' | 'about' | 'lantern' | 'bench';
 export interface Interaction {
   id: string;
@@ -20,6 +29,7 @@ export interface Environment {
   outline: number[][];
   root: THREE.Group;
   colliders: Collider[];
+  overheads: Overhead[];
   walkAreas: WalkArea[];
   roofOccluders: THREE.Object3D[];
   assetsReady: Promise<void>;

@@ -8,6 +8,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 import * as shapes from '../src/scripts/mountain-world/environment-geometry.ts';
 import { createNavigation } from '../src/scripts/mountain-world/navigation.ts';
+import { AerialMotion, STANDING_HEAD } from '../src/scripts/mountain-world/aerial-motion.ts';
 import { createInteractionPicker } from '../src/scripts/mountain-world/first-person.ts';
 import * as terrace from '../src/scripts/mountain-world/hall-terrace.ts';
 
@@ -54,14 +55,67 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     assert.equal(terrace.hallRiseAt(cabinet.min.x,cabinet.min.z),0);
     assert.ok(cabinet.min.x > -6.1 + .14 && cabinet.max.z < .6 - .14, 'Cabinet clears the inner plaster faces');
     const nav = createNavigation(site.walkAreas,[...site.colliders,...furnishings.colliders]);
+    const crossingNav = createNavigation(site.walkAreas,[...site.colliders,...furnishings.colliders],.32,
+      [[-8,-11],[8,-11],[8,2],[-8,2]],site.overheads);
+    for (const [x,z,yaw,normal,plane] of [
+      [4.65,1.27,0,'z',.6], [6.77,-1.05,Math.PI/2,'x',6.1],
+      [4.54,-8.02,-Math.PI/2,'x',6.1], [-4.54,-8.02,Math.PI/2,'x',-6.1],
+    ]) {
+      const p = { x,z };
+      for (const facing of [yaw, yaw + Math.PI]) {
+        assert.equal(crossingNav.canWalk(p.x,p.z),true);
+        const pass = crossingNav.findVault(p,facing);
+        assert.ok(pass,`Window at ${x},${z} works in direction ${facing}`);
+        assert.equal(crossingNav.clearLine(p,pass.landing),false,'Walking alone cannot cross a window');
+        const motion = new AerialMotion();
+        motion.vault(p,.3+terrace.walkRiseAt(p.x,p.z),pass,.3+terrace.walkRiseAt(pass.landing.x,pass.landing.z));
+        while (motion.kind === 'vault') {
+          motion.advanceVault(p,1/120);
+          if (Math.abs(p[normal]-plane) < .21) {
+            assert.ok(motion.feet >= pass.sillTop,'Feet clear the sill during the crossing');
+            assert.ok(motion.feet+STANDING_HEAD-motion.eyeLowering < crossingNav.ceilingAt(p.x,p.z),'Head clears the lintel');
+          }
+        }
+        assert.deepEqual(p, pass.landing);
+      }
+    }
+    assert.equal(crossingNav.findVault({x:6.77,z:-2.8},Math.PI/2),null,'The instrument table blocks the east-window landing');
+    assert.equal(crossingNav.findVault({x:-5.45,z:-1.65},Math.PI/2),null,'The archive wall is solid');
+    assert.equal(crossingNav.findVault({x:4.65,z:1.27},Math.PI),null,'Looking away cannot trigger a vault');
+    for (const doorX of [-6.1,6.1]) {
+      const doorZ = -4.65, floor = .3+terrace.walkRiseAt(doorX,doorZ);
+      const ceiling = crossingNav.ceilingAt(doorX,doorZ);
+      assert.ok(ceiling < 2.89 && ceiling > floor+STANDING_HEAD);
+      const airborne = new AerialMotion();
+      airborne.jump(floor);
+      for (let i=0;i<40;i++) {
+        airborne.advanceJump(1/120,floor,ceiling);
+        assert.ok(airborne.feet+STANDING_HEAD <= ceiling+.00001);
+      }
+      const near = {x:doorX-Math.sign(doorX)*.8,z:doorZ};
+      const blocked = crossingNav.move(near, Math.sign(doorX)*1.6,0,true,ceiling+.03);
+      assert.ok((blocked.x-doorX)*Math.sign(doorX) < 0,'A jump alongside the doorway cannot enter the lintel sideways');
+    }
     assert.equal(nav.canWalk(books.meshes[0].position.x, books.meshes[0].position.z),false);
     const plasters = scene.getObjectsByProperty('name','Solid lime-plaster wall with depth');
-    for (const [x,z,dx,dz] of [[-5.25,-4.9,-1,0],[-5.25,-1.1,-1,0],[-4.8,-.36,0,1]]) {
+    for (const [x,z,dx,dz] of [[-5.25,-3.72,-1,0],[-5.25,-1.1,-1,0],[-4.8,-.36,0,1]]) {
       for (const y of [.63,1.85,2.62]) {
         const ray = new THREE.Raycaster(new THREE.Vector3(x,y,z),new THREE.Vector3(dx,0,dz),0,1.16);
-        assert.ok(ray.intersectObjects(plasters,false).length, 'Continuous visible masonry at the old window or door');
+        assert.ok(ray.intersectObjects(plasters,false).length, 'Solid masonry remains beside the door and behind the cabinet');
       }
       assert.equal(nav.clearLine({x,z},{x:x+dx*1.3,z:z+dz*1.3}),false);
+    }
+    const thresholds = scene.getObjectsByProperty('name','Flush door threshold');
+    for (const side of [-1,1]) {
+      const threshold = thresholds.find(mesh=>Math.abs(mesh.position.x-side*6.1)<.001);
+      assert.ok(threshold && Math.abs(threshold.position.z+4.88)<.001, 'Paired thresholds align across the courtyard');
+      for (const z of [-5.08,-4.88,-4.63]) {
+        const inside={x:side*5.25,z}, outside={x:side*7.35,z};
+        assert.ok(nav.clearLine(inside,outside) && nav.clearLine(outside,inside), 'The side gallery door fits the player from either side');
+        const eye=1.98+terrace.walkRiseAt(side*6.1,z);
+        const ray=new THREE.Raycaster(new THREE.Vector3(inside.x,eye,z),new THREE.Vector3(side,0,0),0,2.1);
+        assert.equal(ray.intersectObject(scene,true).length,0,'No panelling or furnishing bridges the doorway at eye height');
+      }
     }
     const route = nav.findPath(origin,books.approach);
     assert.ok(route.length && Math.hypot(route.at(-1).x-books.approach.x,route.at(-1).z-books.approach.z)<.02);

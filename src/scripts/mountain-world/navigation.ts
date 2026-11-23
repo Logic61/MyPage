@@ -1,9 +1,11 @@
-import type { Collider, WalkArea } from './types';
+import type { Collider, Overhead, WalkArea } from './types';
 
 export interface Point { x: number; z: number; }
+export interface Vault { landing: Point; sillTop: number; }
 
 /** Small static floor navigation. The rendered world remains fully three-dimensional. */
-export function createNavigation(areas: WalkArea[], obstacles: Collider[], radius = 0.32, outline: number[][] = []) {
+export function createNavigation(areas: WalkArea[], obstacles: Collider[], radius = 0.32, outline: number[][] = [], overheads: Overhead[] = []) {
+  const windows = obstacles.filter(sill => sill.window);
   function inside(x: number, z: number) {
     if (areas.some(a => {
       const dx = Math.abs(x - a.x), dz = Math.abs(z - a.z);
@@ -32,8 +34,49 @@ export function createNavigation(areas: WalkArea[], obstacles: Collider[], radiu
       return dx * dx + dz * dz < radius * radius;
     });
   }
-  function move(p: Point, dx: number, dz: number, allowDrop = false): Point {
-    const permitted = allowDrop ? clearOfSolids : canWalk;
+  /** Test a straight, body-width crossing through the open centre of the visible joinery. */
+  function findVault(start: Point, yaw: number): Vault | null {
+    for (const sill of windows) {
+      const opening = sill.window!, along = opening.axis;
+      if (start[along] < opening.from + radius || start[along] > opening.to - radius) continue;
+      const normal = along === 'x' ? 'z' : 'x';
+      const half = normal === 'x' ? 'halfX' : 'halfZ';
+      const side = Math.sign(start[normal] - sill[normal]);
+      const facing = normal === 'x' ? -Math.sin(yaw) : -Math.cos(yaw);
+      if (side * facing > -.60) continue;
+      let low = sill[normal] - sill[half], high = sill[normal] + sill[half];
+      if (opening.seat) {
+        low = Math.min(low, opening.seat[normal] - opening.seat[half]);
+        high = Math.max(high, opening.seat[normal] + opening.seat[half]);
+      }
+      const gap = side > 0 ? start[normal] - high : low - start[normal];
+      if (gap < radius - .001 || gap > radius + .55) continue;
+      const end = side > 0 ? low - radius - .19 : high + radius + .19;
+      const target = { x: start.x, z: start.z };
+      target[normal] = end;
+      if (!canWalk(target.x, target.z)) continue;
+      const near = Math.min(start[normal], end), far = Math.max(start[normal], end);
+      const blocked = obstacles.some(o => {
+        if (o === sill || o === opening.seat) return false;
+        const across = Math.max(0, Math.abs(start[along] - o[along]) - o[along === 'x' ? 'halfX' : 'halfZ']);
+        const forward = Math.max(0, near - (o[normal] + o[half]), o[normal] - o[half] - far);
+        return across * across + forward * forward < radius * radius;
+      });
+      if (!blocked) return { landing: target, sillTop: opening.sillTop };
+    }
+    return null;
+  }
+  function ceilingAt(x: number, z: number) {
+    let ceiling = Infinity;
+    for (const beam of overheads) {
+      if (Math.abs(x - beam.x) < beam.halfX + .16 && Math.abs(z - beam.z) < beam.halfZ + .16)
+        ceiling = Math.min(ceiling, beam.bottom);
+    }
+    return ceiling;
+  }
+  function move(p: Point, dx: number, dz: number, allowDrop = false, crown = -Infinity): Point {
+    const onPlan = allowDrop ? clearOfSolids : canWalk;
+    const permitted = (x: number, z: number) => onPlan(x,z) && (crown === -Infinity || crown <= ceilingAt(x,z) + .0001);
     const count = Math.max(1, Math.ceil(Math.hypot(dx, dz) / 0.12));
     let x = p.x, z = p.z;
     for (let i = 0; i < count; i++) {
@@ -123,5 +166,5 @@ export function createNavigation(areas: WalkArea[], obstacles: Collider[], radiu
     }
     return smooth;
   }
-  return { hasFloor: inside, canWalk, move, nearest, findPath, clearLine };
+  return { hasFloor: inside, canWalk, move, nearest, findPath, clearLine, findVault, ceilingAt };
 }

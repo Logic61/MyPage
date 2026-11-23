@@ -8,13 +8,13 @@ import { buildReedShades } from './reed-shades';
 import { HALL_STEPS, NORTH_HALL_RISE } from './hall-terrace';
 import { architecturalBlock, gridSurface } from './environment-geometry';
 import type { SurfaceLibrary } from './materials';
-import type { Collider, WalkArea } from './types';
+import type { Collider, Overhead, WalkArea } from './types';
 
 export const FORECOURT_PLANTER = { x0: -6.09, x1: -5.02, z0: 2.05, z1: 5.35 } as const;
 
 type Rect = { x0: number; x1: number; z0: number; z1: number };
 const mirrorRect = (rect: Rect): Rect => ({ ...rect, x0: -rect.x1, x1: -rect.x0 });
-type Opening = { from: number; to: number; bottom: number; top: number; lattice?: boolean };
+type Opening = { from: number; to: number; bottom: number; top: number; lattice?: boolean; clearInset?: number; seat?: Collider };
 
 /** Three inhabited wings surround an open court, rather than furnishing one undivided room. */
 export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibrary, en: boolean) {
@@ -64,7 +64,11 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     if (!geometry) { geometry = keep(architecturalBlock(w, h, d, bevel)); blocks.set(key, geometry); }
     return add(geometry, material, name, x, y, z);
   }
-  function obstacle(x: number, z: number, halfX: number, halfZ: number) { colliders.push({ x, z, halfX, halfZ }); }
+  function obstacle(x: number, z: number, halfX: number, halfZ: number) {
+    const collider: Collider = { x, z, halfX, halfZ };
+    colliders.push(collider);
+    return collider;
+  }
   function beam(a: THREE.Vector3, b: THREE.Vector3, width: number, depth: number, name: string, material: THREE.Material = joinery) {
     const delta = b.clone().sub(a), result = add(unitCube, material, name);
     result.position.copy(a).add(b).multiplyScalar(.5); result.scale.set(width, delta.length(), depth);
@@ -84,17 +88,24 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     const x = axis === 'x' ? (lo + hi) / 2 : fixed, z = axis === 'x' ? fixed : (lo + hi) / 2;
     const w = axis === 'x' ? hi - lo : thickness, d = axis === 'z' ? hi - lo : thickness;
     box(w, top - bottom, d, x, (top + bottom) / 2, z, finish, 'Solid lime-plaster wall with depth', .012);
-    if (bottom < 2.28 && top > .35) obstacle(x, z, w / 2 + .012, d / 2 + .012);
     if (bottom < .4) box(w + .012, .14, d + .012, x, .37, z, limestone, 'Continuous pale stone wall plinth', .006);
+    if (bottom < 2.28 && top > .35) return obstacle(x, z, w / 2 + .012, d / 2 + .012);
   }
   /** Window and door voids are actual missing wall volumes, including their reveals. */
-  function wall(axis: 'x' | 'z', fixed: number, lo: number, hi: number, top: number, openings: Opening[] = [], thickness = .28) {
+  function wall(axis: 'x' | 'z', fixed: number, lo: number, hi: number, top: number, openings: Opening[] = [], finish = plaster) {
+    const thickness = .28;
     const ordered = [...openings].sort((a, b) => a.from - b.from); let start = lo;
     for (const opening of ordered) {
-      wallPanel(axis, fixed, start, opening.from, .3, top, thickness);
-      wallPanel(axis, fixed, opening.from, opening.to, .3, opening.bottom, thickness);
-      wallPanel(axis, fixed, opening.from, opening.to, opening.top, top, thickness);
+      wallPanel(axis, fixed, start, opening.from, .3, top, thickness, finish);
+      const sill = wallPanel(axis, fixed, opening.from, opening.to, .3, opening.bottom, thickness, finish);
+      wallPanel(axis, fixed, opening.from, opening.to, opening.top, top, thickness, finish);
       const isDoor = opening.bottom <= .31, length = opening.to - opening.from;
+      if (sill && !isDoor) {
+        const latticeInset = opening.lattice ? .15 + Math.min(.37, length * .16) : .07;
+        const inset = Math.max(latticeInset, opening.clearInset ?? 0);
+        sill.window = { axis, from: opening.from + inset, to: opening.to - inset,
+          sillTop: opening.bottom + .021 + assembly.position.y, seat: opening.seat };
+      }
       for (const p of [opening.from + .035, opening.to - .035]) {
         const x = axis === 'x' ? p : fixed, z = axis === 'x' ? fixed : p;
         box(axis === 'x' ? .07 : thickness + .045, opening.top - opening.bottom, axis === 'z' ? .07 : thickness + .045,
@@ -120,7 +131,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
       }
       start = opening.to;
     }
-    wallPanel(axis, fixed, start, hi, .3, top, thickness);
+    wallPanel(axis, fixed, start, hi, .3, top, thickness, finish);
     horizontal(lo - .035, hi + .035, top + .025, fixed, axis, roofRoll, 'Thin dark wall coping', .06, thickness + .09);
   }
   function subtract(rect: Rect, hole?: Rect): Rect[] {
@@ -276,30 +287,39 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
 
   assembly = hallInterior;
   wall('x', -10, -6.1, 6.1, 4.18);
-  for (const x of [-6.1, 6.1]) wall('z', x, -10, -5.8, 3.79, [{ from: -9.18, to: -6.35, bottom: 1.02, top: 3.29, lattice: true }]);
+  for (const side of [-1,1]) {
+    box(.85,.34,2.55,side*5.48,.47,-8.02,plaster,'Study window seat',.018);
+    box(.91,.085,2.63,side*5.47,.6825,-8.02,paleWood,'Timber window-seat cap',.012);
+    box(.66,.055,1.96,side*5.43,.7525,-8.02,carpet,'Window-seat cushion',.021);
+    const seat = obstacle(side*5.47,-8.02,.475,1.335);
+    wall('z', side*6.1, -10, -5.8, 3.79, [{ from: -9.18, to: -6.35, bottom: 1.02, top: 3.29, lattice: true, seat }]);
+  }
   assembly = group;
   const archivePlaster = own(library.material('plaster', { color: '#f4e5ce', worldScale: .78, roughness: .94, normalScale: .21 }));
   const archiveElm = own(library.material('paleWood', { color: '#bc886a', worldScale: .92, roughness: .76, normalScale: .28 }));
-  // These two enclosing walls also carry the dado. The full length of the east face opens onto the court.
-  function archiveWall(axis: 'x' | 'z', fixed: number, lo: number, hi: number, top: number) {
+  const wingDoor = { from: -5.62, to: -4.14, bottom: .3, top: 2.89 };
+  function archiveWall(axis: 'x' | 'z', fixed: number, lo: number, hi: number, top: number, door?: Opening) {
     const inward = axis === 'z' ? 1 : -1, face = fixed + inward * .14;
-    wallPanel(axis, fixed, lo, hi, .3, top, .28, archivePlaster);
-    const panels = Math.ceil((hi - lo) / .60), width = (hi - lo) / panels;
-    for (let i = 0; i < panels; i++) {
-      horizontal(lo + i * width + .004, lo + (i + 1) * width - .004, .57, face + inward * .015, axis, archiveElm, 'Elm dado panel', .50, .027);
-      horizontal(lo + i * width, lo + i * width + .034, .57, face + inward * .031, axis, archiveElm, 'Dado muntin', .49, .025);
+    wall(axis, fixed, lo, hi, top, door ? [door] : [], archivePlaster);
+    for (const [start, end] of door ? [[lo, door.from], [door.to, hi]] : [[lo, hi]]) {
+      const panels = Math.ceil((end - start) / .60), width = (end - start) / panels;
+      for (let i = 0; i < panels; i++) {
+        horizontal(start + i * width + .004, start + (i + 1) * width - .004, .57, face + inward * .015, axis, archiveElm, 'Elm dado panel', .50, .027);
+        horizontal(start + i * width, start + i * width + .034, .57, face + inward * .031, axis, archiveElm, 'Dado muntin', .49, .025);
+      }
+      horizontal(start, end, .835, face + inward * .028, axis, archiveElm, 'Beaded rail over the wall panelling', .073, .076);
+      horizontal(start, end, .365, face + inward * .031, axis, archiveElm, 'Skirting at the foot of the archive wall', .093, .079);
     }
-    horizontal(lo, hi, .835, face + inward * .028, axis, archiveElm, 'Beaded rail over the wall panelling', .073, .076);
-    horizontal(lo, hi, .365, face + inward * .031, axis, archiveElm, 'Skirting at the foot of the archive wall', .093, .079);
     horizontal(lo, hi, top - .09, face + inward * .035, axis, archiveElm, 'Timber wall plate under the archive eaves', .18, .082);
   }
-  archiveWall('z',-6.1,-5.8,.6,3.47);
+  archiveWall('z',-6.1,-5.8,.6,3.47,wingDoor);
   archiveWall('x',.6,-6.1,-3.2,3.16);
   wall('z',6.1,-5.8,.6,3.47,[
-    {from:-5.62,to:-4.14,bottom:.3,top:2.89}, {from:-3.12,to:.20,bottom:1.07,top:2.96,lattice:true},
+    wingDoor, {from:-3.12,to:.20,bottom:1.07,top:2.96,lattice:true},
   ]);
   for (const sign of [-1, 1]) {
-    if (sign > 0) wall('x', .6, 3.2, 6.1, 3.16, [{ from: 3.63, to: 5.67, bottom: 1.02, top: 2.82, lattice: true }]);
+    // The additional timber cheeks at this opening leave .62 m clear on each side of its centre.
+    if (sign > 0) wall('x', .6, 3.2, 6.1, 3.16, [{ from: 3.63, to: 5.67, bottom: 1.02, top: 2.82, lattice: true, clearInset: .40 }]);
     for (const z of [-4.22, .52]) post(sign * 3.2, z, 3.08, .17);
     box(.20, .17, 6.5, sign * 3.2, 3.07, -2.6, joinery, 'Continuous open-gallery bearing beam');
     for (const z of [-5.73, -4.22, .52]) beam(new THREE.Vector3(sign * 3.2, 3.07, z), new THREE.Vector3(sign * 6.02, 3.39, z), .13, .15, 'Visible gallery cross beam');
@@ -307,12 +327,6 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   assembly = hallInterior;
   for (const z of [-9.75, -7.9]) {
     box(12.20,.20,.22,0,4.12,z,joinery,'Crossbeam beneath north hall');
-  }
-  for (const side of [-1,1]) {
-    box(.85,.34,2.55,side*5.48,.47,-8.02,plaster,'Study window seat',.018);
-    box(.91,.085,2.63,side*5.47,.6825,-8.02,paleWood,'Timber window-seat cap',.012);
-    box(.66,.055,1.96,side*5.43,.7525,-8.02,carpet,'Window-seat cushion',.021);
-    obstacle(side*5.47,-8.02,.475,1.335);
   }
   box(4.76, .010, 3.30, 0, .310, -7.59, carpet, 'Bound north-study carpet', .002).castShadow = false;
   for (const x of [-2.30, 2.30]) box(.024, .002, 3.14, x, .3165, -7.59, binding, 'Fine carpet binding', .0003).castShadow = false;
@@ -331,6 +345,21 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   const halls = buildTimberHalls(group, { timber: joinery, stone: limestone, sideStone: sidePaving, plaster, archivePlaster, soffit }, obstacle, en);
   const galleryStone = buildCloudGallery(group,library,geometries,materials,colliders);
   buildReedShades(group,library,geometries,materials);
+  // Capture the undersides before scenery is batched. Jumping never raycasts the roof tiles.
+  const headPieces = new Set(['Recessed opening head', 'Painted lintel frame', 'Recessed central lintel',
+    'Continuous open-gallery bearing beam', 'Visible gallery cross beam', 'Covered walk cross beam',
+    'Inner gallery plate', 'Outer gallery plate', 'Weighted roll at the foot of a bamboo blind']);
+  const overheads: Overhead[] = [];
+  const bounds = new THREE.Box3();
+  group.traverse(object => {
+    if (!headPieces.has(object.name)) return;
+    object.updateWorldMatrix(true, false);
+    bounds.setFromObject(object);
+    const {min, max} = bounds;
+    if (min.y > 3.5) return;
+    overheads.push({x:(min.x+max.x)/2, z:(min.z+max.z)/2, halfX:(max.x-min.x)/2,
+      halfZ:(max.z-min.z)/2, bottom:min.y});
+  });
   halls.group.traverse(object => {
     if (object instanceof THREE.Mesh) {
       geometries.add(object.geometry); materials.add(object.material);
@@ -356,7 +385,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     { x: 10.15, z: .10, halfX: 2.81, halfZ: 8.1 },
   ];
   return {
-    geometries, materials, colliders, walkAreas, floors, galleryStone, ready: Promise.all([halls.ready,lotus.ready,floors.ready]).then(()=>{}),
+    geometries, materials, colliders, overheads, walkAreas, floors, galleryStone, ready: Promise.all([halls.ready,lotus.ready,floors.ready]).then(()=>{}),
     dispose() { halls.dispose(); lotus.dispose(); floors.dispose(); },
     update(time: number) {
       const { position, normal } = waterGeometry.attributes;

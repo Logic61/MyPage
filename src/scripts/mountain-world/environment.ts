@@ -231,7 +231,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     return {bird, wings, phase: phase+i*.044, radius: radius+i*.85, height: height+i*.22, beat: i+flightIndex*2};
   }));
   return {
-    root, colliders, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready,graniteReady]).then(() => {}),
+    root, colliders, overheads: architecture.overheads, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready,graniteReady]).then(() => {}),
     update(time, delta, _indoor) {
       birds.forEach(({bird,wings,phase,radius,height,beat})=>{
         const a=time*.091+phase;

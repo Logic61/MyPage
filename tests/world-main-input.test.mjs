@@ -9,6 +9,7 @@ import * as lookControls from '../src/scripts/mountain-world/look-controls.ts';
 import * as music from '../src/scripts/mountain-world/music.ts';
 import * as pointerLock from '../src/scripts/mountain-world/pointer-lock.ts';
 import * as firstPerson from '../src/scripts/mountain-world/first-person.ts';
+import * as aerialMotion from '../src/scripts/mountain-world/aerial-motion.ts';
 import * as hallTerrace from '../src/scripts/mountain-world/hall-terrace.ts';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 
@@ -27,7 +28,7 @@ function deferred() {
 async function world({ coarse = false, legacy = false, unavailable = false, bench = false, reduced = false,
   assetsReady = Promise.resolve(), backdropReady = Promise.resolve(), compileReady = Promise.resolve(),
   expectReady = true, expectFailure = false, hash = '', session = {},
-  canWalk = () => true, nearest = point => point } = {}) {
+  canWalk = () => true, nearest = point => point, hasFloor = () => true, findVault = () => null } = {}) {
   let now = 100, nextId = 0, readerOpen = false, actions, camera, exitRequests = 0;
   const frames = new Map(), timers = new Map(), requests = [], activated = [], errors = [], toasts = [];
   const motionPreference = { matches: reduced };
@@ -66,7 +67,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   document.getElementById = () => ({ textContent: JSON.stringify({ isEn: true, prefix: '', base: '/', posts: [] }) });
   document.exitPointerLock = () => { exitRequests++; };
   const controls = {};
-  for (const name of ['arrival', 'track', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
+  for (const name of ['arrival', 'track', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'jump', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
     controls[name] = name === 'quality' ? new Select() : ['sensitivity', 'bob'].includes(name) ? new Input() : new Element();
     root.children.set(`[data-world-${name}]`, controls[name]);
   }
@@ -103,6 +104,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   const modules = {
     three: { ...THREE, WebGLRenderer: class { debug = {}; compileAsync() { lifecycle.compiles++; return compileReady; } dispose() { disposed('renderer'); } } },
     './music': music, './look-controls': lookControls, './pointer-lock': pointerLock, './first-person': firstPerson,
+    './aerial-motion': aerialMotion,
     './landscape-backdrop': { createLandscapeBackdrop(scene) {
       const root = new THREE.Group(); root.name = 'test-backdrop'; root.userData.ignoreAmbientOcclusion = true; scene.add(root);
       return { root, ready: backdropReady, update(time) { lifecycle.backdropUpdates++; lifecycle.landscapeTime = time; }, dispose() { disposed('backdrop'); root.removeFromParent(); } };
@@ -120,7 +122,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
         easeResolution() { lifecycle.resolutionAdjustments++; return true; },
         resize(width, height) { camera.aspect = width / height; camera.updateProjectionMatrix(); } };
     } },
-    './navigation': { createNavigation: () => ({ nearest, canWalk, hasFloor: () => true,
+    './navigation': { createNavigation: () => ({ nearest, canWalk, hasFloor, findVault, ceilingAt: () => Infinity,
       findPath: (_start, end) => [{ x: end.x, z: end.z }],
       move: (point, dx, dz) => ({ x: point.x + dx, z: point.z + dz }) }) },
     './hall-terrace': hallTerrace,
@@ -688,4 +690,84 @@ test('the entrance guide follows the opening and disappears five seconds later',
   assert.equal(h.controls.hint.hidden, false);
   h.step(1);
   assert.equal(h.controls.hint.hidden, true);
+});
+
+test('Space jumps once per press and leaves focused controls to the browser', async () => {
+  const h = await world();
+  h.step(1000);
+  const grounded = h.camera.position.y;
+  h.emit(h.window, 'keydown', { code: 'Space', target: h.controls.pause });
+  h.step();
+  assert.equal(h.camera.position.y, grounded);
+  h.emit(h.window, 'keydown', { code: 'Space', target: h.canvas });
+  for (let i = 0; i < 8; i++) h.step();
+  assert.ok(h.camera.position.y > grounded + .2);
+  for (let i = 0; i < 100; i++) {
+    h.emit(h.window, 'keydown', { code: 'Space', repeat: true, target: h.canvas });
+    h.step();
+  }
+  assert.ok(Math.abs(h.camera.position.y - grounded) < .001);
+  h.key('Space'); h.step();
+  assert.ok(h.camera.position.y > grounded);
+});
+
+test('the touch jump button works under the second finger while the walking stick stays held', async () => {
+  const h = await world({ coarse: true });
+  h.step(1000);
+  const start = h.camera.position.clone();
+  h.emit(h.controls.stick, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientX: 680, clientY: 400 });
+  h.emit(h.controls.jump, 'pointerdown', { pointerId: 2, pointerType: 'touch', isPrimary: false });
+  for (let i = 0; i < 10; i++) h.step();
+  assert.ok(h.camera.position.y > start.y + .2);
+  assert.ok(h.camera.position.z < start.z - .1);
+  assert.equal(h.controls.stick.hasPointerCapture(1), true);
+  h.emit(h.controls.stick, 'pointerup', { pointerId: 1, pointerType: 'touch' });
+  for (let i = 0; i < 80; i++) h.step();
+  h.emit(h.controls.jump, 'click', { detail: 1 });
+  h.step(); assert.ok(Math.abs(h.camera.position.y - start.y) < .001);
+  h.emit(h.controls.jump, 'click', { detail: 0 });
+  h.step(); assert.ok(h.camera.position.y > start.y);
+});
+
+test('an airborne cliff crossing integrates the transition frame only once even at a low frame rate', async () => {
+  const h = await world({ hasFloor: (_x,z) => z >= 33.96 });
+  h.step();
+  const origin = h.camera.position.clone();
+  h.key('Space');
+  h.emit(h.window, 'keydown', { code: 'KeyW' });
+  let time = 0;
+  for (let i=0;i<30 && h.root.dataset.mode==='exploring';i++) {
+    h.step(120);
+    time += .04; // Exploration physics caps each of these large frames at 40ms.
+  }
+  assert.equal(h.root.dataset.mode, 'falling');
+  assert.ok(Math.abs(h.camera.position.y - (origin.y + 4.35*time - 7.5*time*time)) < .00001);
+  assert.ok(origin.z - h.camera.position.z < time*2.2);
+  const atEdge=h.camera.position.clone();
+  h.step(120);
+  assert.ok(h.camera.position.z < atEdge.z && h.camera.position.y < atEdge.y);
+  for(let i=0;i<12;i++) h.step(120);
+  assert.equal(h.root.dataset.mode,'fallen');
+});
+
+test('a higher stair can catch the feet during ascent and a paused crossing resumes from its exact pose', async () => {
+  const jump=new aerialMotion.AerialMotion();
+  jump.jump(.3); jump.advanceJump(.01,.45,Infinity);
+  assert.equal(jump.kind,'grounded'); assert.equal(jump.feet,.45);
+  const h=await world({ findVault: p=>p.z>33.9 ? {landing:{x:p.x,z:32},sillTop:1.05} : null });
+  h.step();
+  assert.equal(h.root.dataset.canVault,'true');
+  h.key('Space');
+  for(let i=0;i<18;i++) h.step();
+  assert.ok(h.camera.position.z < 34 && h.camera.position.z > 32);
+  h.key('Escape');
+  const midway=h.camera.position.clone();
+  h.step(900);
+  assert.deepEqual(h.camera.position,midway);
+  assert.equal(JSON.parse(h.sessionStore.getItem(courtyardStateKey)).z,34);
+  h.enter();
+  for(let i=0;i<60;i++) h.step();
+  assert.equal(h.camera.position.z,32); assert.ok(Math.abs(h.camera.position.y-1.98)<.00001);
+  h.actions.onReset();
+  assert.equal(h.camera.position.z,34);
 });
