@@ -85,7 +85,7 @@ const marks = [
     <footer class="mw-hud">
       <div class="mw-place"><span class="mw-place-overline">{isEn ? 'YOU ARE HERE' : '此刻所在'}</span><strong data-world-location>{isEn ? 'The cloud mountain path' : '云山石径'}</strong><span class="mw-place-note">{isEn ? 'Take your time.' : '此间无事，随意走走。'}</span></div>
       <div class="mw-hint" data-world-hint>
-        <p class="mw-hint-desktop"><span><kbd>W A S D</kbd> {isEn ? 'walk' : '行走'}</span><span class="mw-look-locked">{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span class="mw-look-pointer">{isEn ? 'Click to lock · drag to look' : '点击锁定 · 拖动环顾'}</span><span class="mw-look-pending">{isEn ? 'Locking the mouse…' : '正在锁定鼠标…'}</span><span><kbd>Shift</kbd> {isEn ? 'run' : '奔跑'}</span><span><kbd>Esc</kbd> {isEn ? 'pause / menu' : '暂停 / 目录'}</span></p>
+        <p class="mw-hint-desktop"><span><kbd>W A S D</kbd> {isEn ? 'walk' : '行走'}</span><span class="mw-look-locked">{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span class="mw-look-pointer">{isEn ? 'Drag or move to the edge to look' : '拖动或靠边环顾'}</span><span class="mw-look-pending">{isEn ? 'Locking the mouse…' : '正在锁定鼠标…'}</span><span><kbd>Shift</kbd> {isEn ? 'run' : '奔跑'}</span><span><kbd>Esc</kbd> {isEn ? 'pause / menu' : '暂停 / 目录'}</span></p>
         <p class="mw-hint-touch">{isEn ? 'Left to walk · drag right to look · tap the object prompt' : '左侧行走 · 右侧环顾 · 轻触物件提示'}</p>
         <button type="button" data-world-action="dismiss-hint" aria-label={isEn ? 'Dismiss movement guide' : '收起操作提示'}>×</button>
       </div>

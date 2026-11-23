@@ -341,10 +341,28 @@ test('clicking the exposed scene after a walking unlock resumes without firing t
   const h = await world(); h.enter(); await h.lock(); h.unlock();
   assert.equal(h.root.dataset.mode, 'paused');
   h.click(h.point('centre')); assert.equal(h.requests.length, 2); assert.deepEqual(h.activated, []);
-  await h.fail(); h.click(h.point('centre'));
+  await h.fail(); h.click({clientX: 100, clientY: 200});
   assert.equal(h.requests.length, 3); assert.deepEqual(h.activated, []);
   await h.lock(); assert.equal(h.root.dataset.inputMode, 'locked');
   h.click(h.point('centre')); assert.deepEqual(h.activated, ['centre']);
+});
+
+test('a browser that denies capture still turns at the edge and stops when the cursor leaves', async () => {
+  const h = await world(); h.enter(); await h.fail();
+  h.pointer('pointermove', h.point('centre'));
+  const start = h.camera.rotation.y;
+  for (let i = 0; i < 15; i++) h.step();
+  assert.equal(h.camera.rotation.y, start);
+  const rect = h.canvas.getBoundingClientRect();
+  h.pointer('pointermove', {clientX:rect.left + rect.width - 1, clientY:rect.top + rect.height / 2});
+  for (let i = 0; i < 30; i++) h.step();
+  assert.ok(h.camera.rotation.y < start - .4);
+  h.pointer('pointerleave');
+  for (let i = 0; i < 60; i++) h.step();
+  const stopped = h.camera.rotation.y;
+  for (let i = 0; i < 10; i++) h.step();
+  assert.ok(Math.abs(h.camera.rotation.y - stopped) < .0001);
+  assert.equal(h.root.dataset.pointerLocked, 'false');
 });
 
 test('a seated visitor can pause, resume, and use the stand control without pointing at a mesh', async () => {

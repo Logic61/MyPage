@@ -15,6 +15,12 @@ import type { Interaction, WorldConfig } from './types';
 type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition';
 type InputMode = 'none' | 'pending' | 'locked' | 'pointer' | 'drag' | 'touch';
 
+// A free cursor can turn the camera inside the outer 15% of each edge.
+function edgeTurn(position: number) {
+  const amount = Math.max(0, (Math.abs(position) - .7) / .3);
+  return Math.sign(position) * amount * amount;
+}
+
 /** Floor-level regions of the U-shaped courtyard; open galleries retain outdoor sound. */
 function describePlace(x: number, z: number) {
   if (x >= -6.1 && x <= 6.1 && z >= -10 && z <= -5.8)
@@ -192,9 +198,9 @@ async function initializeWorld(root: HTMLElement) {
       isActive: () => alive && mode === 'exploring' && !ui.isOpen(),
       onFallback: () => {
         if (document.pointerLockElement === canvas) return;
-        dragLook = true;
+        dragLook = true; relockOnTap = false;
         syncInputMode();
-        ui.showToast(en ? 'Drag to look around. Click the scene to retry the mouse lock.' : '按住拖动可以环顾，点击画面可重试锁定鼠标。');
+        ui.showToast(en ? 'Move the pointer to an edge or drag to look around. Click open ground to retry mouse lock.' : '鼠标靠近画面边缘或按住拖动都能环顾。点击空处可重试锁定。');
       },
     });
 
@@ -575,6 +581,13 @@ async function initializeWorld(root: HTMLElement) {
       if (mode !== 'reading') elapsed += delta;
       let speed = 0;
       if (mode === 'exploring') {
+        if (inputMode === 'pointer' && pointerInside && !press) {
+          const pan = edgeTurn(pointerNDC.x), tilt = edgeTurn(pointerNDC.y);
+          if (pan || tilt) {
+            look.rotate(-pan * delta * 1.8 * sensitivity, tilt * delta * 1.15 * sensitivity);
+            cancelRoute();
+          }
+        }
         look.rotate((Number(keys.has('ArrowLeft')) - Number(keys.has('ArrowRight'))) * delta * 1.45,
           (Number(keys.has('ArrowUp')) - Number(keys.has('ArrowDown'))) * delta * 1.05);
         let forward = Number(keys.has('KeyW')) - Number(keys.has('KeyS')) + joystick.y;
