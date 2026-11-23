@@ -1,4 +1,13 @@
 import * as THREE from 'three';
+
+/** Keep a photographic material's shader variant ready while its image is loading. */
+export function neutralSurfaceMap(channel: 'map' | 'normalMap' | 'roughnessMap') {
+  const rgba = channel === 'normalMap' ? [128, 128, 255, 255] : [255, 255, 255, 255];
+  const texture = new THREE.DataTexture(new Uint8Array(rgba), 1, 1);
+  texture.colorSpace = channel === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+  texture.needsUpdate = true;
+  return texture;
+}
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 export function seeded(seed: number) {

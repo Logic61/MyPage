@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { gridSurface } from './environment-geometry';
+import { gridSurface, neutralSurfaceMap } from './environment-geometry';
 import { POOL_BED_Y, POOL_WATER_Y, POOL_RIPPLE_START, POOL_RIPPLE_SPEED } from './water-court';
 
 interface Shoot {
@@ -209,17 +209,19 @@ export function createLotusPlanting(parent: THREE.Group, geometries: Set<THREE.B
     for (const mesh of dirty) mesh.instanceMatrix.needsUpdate = true;
     dirty.clear();
   }
-  let disposed = false, texture: THREE.Texture | undefined;
+  let disposed = false;
+  let texture: THREE.Texture = neutralSurfaceMap('map');
+  blade.map = texture;
   const url = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/,'')+'/world/lotus-leaf.webp';
   const ready = new THREE.TextureLoader().loadAsync(url).then(map=>{
     if (disposed) { map.dispose(); return; }
-    texture=map; map.colorSpace=THREE.SRGBColorSpace; map.anisotropy=4;
-    blade.color.set('#f1f5e7'); blade.map=map; blade.needsUpdate=true;
+    texture.dispose(); texture=map; map.colorSpace=THREE.SRGBColorSpace; map.anisotropy=4;
+    blade.color.set('#f1f5e7'); blade.map=map;
   }).catch(()=>{ /* The folded green blade is visible as soon as the pond is built. */ });
   return {
     ready, finish, disturb, update,
     dispose() {
-      disposed=true; texture?.dispose();
+      disposed=true; texture.dispose();
       for (const batch of planting.children) if (batch instanceof THREE.InstancedMesh) batch.dispose();
       planting.removeFromParent();
     },

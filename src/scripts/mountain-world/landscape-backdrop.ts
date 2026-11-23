@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import mountainPreviewUrl from '../../assets/mountain-panorama-preview.webp?inline';
+import { decodePainting, type EntryArt } from './entry-art';
 
 const artworkBase = `${(import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/, '')}/world`;
 export const LANDSCAPE_PANORAMA_URL = `${artworkBase}/immortal-mountains-panorama.webp`;
@@ -6,6 +8,7 @@ export const SKY_CANOPY_URL = `${artworkBase}/cloud-court-sky.webp`;
 export const LANDSCAPE_FOG_COLOR = '#c7dfe6';
 
 export interface LandscapeBackdropOptions {
+  artwork?: Pick<EntryArt, 'panorama' | 'sky'>;
   /** Metres from the island centre, bounded for the default 230m camera far plane. */
   radius?: number;
   /** Rotation about world Y. The default places the high ridge behind the north hall. */
@@ -17,6 +20,8 @@ export interface LandscapeBackdropOptions {
 
 export interface LandscapeBackdrop {
   readonly root: THREE.Group;
+  /** Either resolution of the painted ridgeline is sufficient for the first visible frame. */
+  readonly firstPaint: Promise<void>;
   /** All geometry and a visible fallback exist immediately; the two local paintings load independently. */
   readonly ready: Promise<void>;
   update(time: number, delta?: number): void;
@@ -144,6 +149,10 @@ function skyCanopyGeometry(radius: number) {
  * and a closed sky sphere behind it. The landscape never follows camera rotation.
  */
 export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBackdropOptions = {}): LandscapeBackdrop {
+  const panoramaImage = options.artwork?.panorama ?? decodePainting(LANDSCAPE_PANORAMA_URL, 'high');
+  const skyImage = options.artwork?.sky ?? decodePainting(SKY_CANOPY_URL);
+  // This small copy travels inside the lazy 3D module, so it also works offline if the full painting stalls.
+  const previewImage = decodePainting(mountainPreviewUrl);
   const root = new THREE.Group(); root.name = 'generated-immortal-mountain-backdrop';
   root.userData.ignoreInteractionRay = true;
   root.userData.ignoreAmbientOcclusion = true;
@@ -225,23 +234,36 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
     layer.position.y = index ? -17 : -11; layer.rotation.y = index * .42;
   }
 
-  const loader = new THREE.TextureLoader();
-  async function loadPainting(url: string, name: string, material: THREE.MeshBasicMaterial) {
-    try {
-      const texture = await loader.loadAsync(url);
-      if (disposed) { texture.dispose(); return; }
-      material.map = keepTexture(configureArtwork(texture, name));
-      material.visible = true; material.needsUpdate = true;
-      material.userData.artworkSource = 'generated-local-artwork';
-    } catch { /* The gradient sky and Canvas mountain landscape are available from the first frame. */ }
+  function install(image: HTMLImageElement, name: string, material: THREE.MeshBasicMaterial) {
+    const old = material.map;
+    material.map = keepTexture(configureArtwork(new THREE.Texture(image), name));
+    material.visible = true;
+    // Swapping like-for-like sRGB paintings preserves the shader warmed for the first frame.
+    if (!old) material.needsUpdate = true;
+    if (old && textures.delete(old)) old.dispose();
   }
-  const ready = Promise.all([
-    loadPainting(LANDSCAPE_PANORAMA_URL, 'generated-immortal-mountain-panorama-srgb', panoramaMaterial),
-    loadPainting(SKY_CANOPY_URL, 'cloud-court-zenith-srgb', canopyMaterial),
-  ]).then(() => {});
+  let fullPanoramaInstalled = false;
+  const preview = previewImage.then(image => {
+    if (!disposed && image && !fullPanoramaInstalled) {
+      install(image, 'immortal-mountains-painted-preview', panoramaMaterial);
+      panoramaMaterial.userData.artworkSource = 'painted-preview';
+    }
+  });
+  const panoramaReady = panoramaImage.then(image => {
+    if (!disposed && image) {
+      install(image, 'generated-immortal-mountain-panorama-srgb', panoramaMaterial);
+      fullPanoramaInstalled = true;
+      panoramaMaterial.userData.artworkSource = 'generated-local-artwork';
+    } else return preview;
+  });
+  const skyReady = skyImage.then(image => {
+    if (!disposed && image) install(image, 'cloud-court-zenith-srgb', canopyMaterial);
+  });
+  const firstPaint = Promise.race([preview, panoramaReady]);
+  const ready = Promise.all([panoramaReady, skyReady]).then(() => {});
 
   return {
-    root, ready,
+    root, firstPaint, ready,
     update(time) {
       if (disposed) return;
       // The far bank moves more slowly. Both textures wrap continuously while their perimeter stays feathered.

@@ -23,6 +23,7 @@ export function createStudyRenderer(renderer: THREE.WebGLRenderer, scene: THREE.
 
   const target = new THREE.WebGLRenderTarget(1, 1, {
     type: THREE.HalfFloatType,
+    depthTexture: new THREE.DepthTexture(1, 1, THREE.UnsignedIntType),
     samples: coarse ? 0 : Math.min(2, renderer.capabilities.maxSamples),
   });
   const composer = new EffectComposer(renderer, target);
@@ -39,23 +40,13 @@ export function createStudyRenderer(renderer: THREE.WebGLRenderer, scene: THREE.
   const output = new OutputPass();
   composer.addPass(beauty); composer.addPass(ao); composer.addPass(bloom); composer.addPass(output);
 
-  // Scenery and translucent details must not become opaque normal-pass silhouettes.
-  // Own point/line visibility too: GTAOPass only restores its cache on success.
-  const transparent: THREE.Object3D[] = [];
-  scene.traverse(object => {
-    if (object.userData.ignoreAmbientOcclusion === true) { transparent.push(object); return; }
-    if (object instanceof THREE.Sprite || object instanceof THREE.Points || object instanceof THREE.Line
-      || ('isLine2' in object && object.isLine2 === true)) { transparent.push(object); return; }
-    if (!(object instanceof THREE.Mesh)) return;
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-    if (materials.every(material => material.transparent && material.opacity < 0.7)) transparent.push(object);
-  });
+  // The colour pass already draws the opaque courtyard, including alpha-tested pine
+  // needles. Reconstruct normals from its resolved depth instead of drawing it twice.
+  // Sky, mist and water already leave this depth untouched in their own materials.
   const renderAO = ao.render.bind(ao);
   ao.render = (r, write, read, delta, mask) => {
-    const hidden = transparent.filter(object => object.visible);
-    hidden.forEach(object => { object.visible = false; });
-    try { renderAO(r, write, read, delta, mask); }
-    finally { hidden.forEach(object => { object.visible = true; }); }
+    if (ao.depthTexture !== read.depthTexture) ao.setGBuffer(read.depthTexture!);
+    renderAO(r, write, read, delta, mask);
   };
 
   let quality: RenderQuality = coarse ? 'smooth' : 'detail';
@@ -81,6 +72,29 @@ export function createStudyRenderer(renderer: THREE.WebGLRenderer, scene: THREE.
   }
 
   return {
+    compile() {
+      // Three includes the target colour space and tone mapping in each program key.
+      // Prepare the HDR beauty variants, including objects outside the initial view.
+      const previousTarget = renderer.getRenderTarget();
+      try {
+        renderer.setRenderTarget(composer.readBuffer);
+        const gl = renderer.getContext();
+        if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) {
+          throw new Error('The HDR framebuffer is incomplete.');
+        }
+      } catch (error) {
+        renderer.setRenderTarget(previousTarget);
+        postprocessing = false;
+        console.warn('Mountain study HDR unavailable; preparing the direct scene.', error);
+        return renderer.compileAsync(scene, camera);
+      }
+      try {
+        return renderer.compileAsync(scene, camera);
+      } finally {
+        // compileAsync submits the programs synchronously, then polls their readiness.
+        renderer.setRenderTarget(previousTarget);
+      }
+    },
     render(delta: number) {
       if (!postprocessing) { renderer.render(scene, camera); return; }
       // Optional passes may throw before restoring their temporary scene state.

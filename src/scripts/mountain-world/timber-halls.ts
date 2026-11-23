@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { neutralSurfaceMap } from './environment-geometry';
 import { stoneBalustrade } from './stone-balustrade';
 import { hexagonalRing, rectangularRing, tiledRoof } from './tiled-roof';
 import { NORTH_HALL_RISE } from './hall-terrace';
@@ -109,12 +110,18 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     image.onerror = () => resolve(); image.src = assetRoot+'cloud-crane-frieze.webp';
   });
   async function surfaceMap(name: string, targets: THREE.MeshStandardMaterial[], channel: 'map' | 'normalMap' | 'roughnessMap' = 'map') {
+    const empty = targets.filter(material => !material[channel]);
+    if (empty.length) {
+      const neutral = neutralSurfaceMap(channel);
+      textures.push(neutral);
+      for (const material of empty) material[channel] = neutral;
+    }
     try {
       const tex = await new THREE.TextureLoader().loadAsync(assetRoot+name);
       if (disposed) { tex.dispose(); return; }
       tex.colorSpace = channel === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 4;
       textures.push(tex);
-      for (const mat of targets) { mat[channel] = tex; mat.needsUpdate = true; }
+      for (const material of targets) material[channel] = tex;
     } catch { /* The authored base colour and relief remain usable. */ }
   }
   lacquer.normalScale.setScalar(.22);
@@ -152,7 +159,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     ctx.lineWidth = 1.7; ctx.strokeRect(18, 17, 732, 190);
     for (const cx of [30, 738]) for (const cy of [29, 195]) { ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.stroke(); }
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#efcf8b';
-    ctx.font = en ? '68px Georgia, serif' : '132px KaiTi, STKaiti, "Noto Serif SC", serif';
+    ctx.font = en ? '68px Georgia, serif' : '132px KaiTi, STKaiti, "Courtyard Lettering", "Noto Serif SC", serif';
     ctx.fillText(en ? english : zh, 384, en ? 119 : 117, 666);
     const face = new THREE.MeshStandardMaterial({ map: plate.texture, roughness: .7 });
     part(new THREE.PlaneGeometry(w, h), face, 'Hall name tablet', x, y, z + .061);

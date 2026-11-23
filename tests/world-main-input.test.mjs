@@ -108,7 +108,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     './aerial-motion': aerialMotion,
     './landscape-backdrop': { createLandscapeBackdrop(scene) {
       const root = new THREE.Group(); root.name = 'test-backdrop'; root.userData.ignoreAmbientOcclusion = true; scene.add(root);
-      return { root, ready: backdropReady, update(time) { lifecycle.backdropUpdates++; lifecycle.landscapeTime = time; }, dispose() { disposed('backdrop'); root.removeFromParent(); } };
+      return { root, firstPaint: backdropReady, ready: backdropReady, update(time) { lifecycle.backdropUpdates++; lifecycle.landscapeTime = time; }, dispose() { disposed('backdrop'); root.removeFromParent(); } };
     } },
     './materials': { createSurfaceLibrary: () => ({ dispose() { disposed('surfaces'); } }) },
     './environment': { createEnvironment(scene) { const root = new THREE.Group(); scene.add(root); return { root, walkAreas: [], colliders: [],
@@ -118,10 +118,10 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     './lighting': { createStudyLighting: () => ({ sun: { shadow: {} }, dispose() { disposed('lighting'); } }) },
     './rendering': { createStudyRenderer(_renderer, _scene, value) {
       assert.equal(_scene.getObjectByName('test-backdrop')?.userData.ignoreAmbientOcclusion, true,
-        'The backdrop must exist before the rendering pipeline collects AO exclusions.');
+        'The backdrop must be part of the scene when the rendering pipeline is created.');
       camera = value;
       lifecycle.resolutionAdjustments = 0;
-      return { dispose() { disposed('pipeline'); }, setQuality() {}, render() { lifecycle.renders++; },
+      return { dispose() { disposed('pipeline'); }, compile: () => _renderer.compileAsync(_scene, value), setQuality() {}, render() { lifecycle.renders++; },
         easeResolution() { lifecycle.resolutionAdjustments++; return true; },
         resize(width, height) { camera.aspect = width / height; camera.updateProjectionMatrix(); } };
     } },
@@ -450,16 +450,14 @@ function assertReleasedOnce(h) {
   for (const resource of graphicsResources) assert.equal(h.lifecycle.disposed[resource], 1, resource);
 }
 
-test('painting and backdrop share one deadline and both settle before early compilation', async () => {
+test('shaders compile while mountains decode; distant furniture artwork never blocks the first frame', async () => {
   const artwork = deferred(), backdrop = deferred();
   const h = await world({ assetsReady: artwork.promise, backdropReady: backdrop.promise, expectReady: false });
-  assert.equal(h.lifecycle.compiles, 0); assert.equal(h.lifecycle.ready, 0);
-  assert.equal(h.pendingTimers(), 1);
-  artwork.resolve(); await nextTurn();
-  assert.equal(h.lifecycle.compiles, 0, 'A ready painting must not bypass the still-loading backdrop.');
+  assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 0);
   assert.equal(h.pendingTimers(), 1);
   backdrop.resolve(); await nextTurn();
   assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 1);
+  artwork.resolve(); await nextTurn();
   assert.equal(h.pendingTimers(), 1, 'Only the opening guide timer remains');
   assert.deepEqual(h.lifecycle.disposed, {});
 });
@@ -468,7 +466,7 @@ test('stalled decorative assets allow entry after one 1500ms deadline; late imag
   const artwork = deferred(), backdrop = deferred();
   const h = await world({ assetsReady: artwork.promise, backdropReady: backdrop.promise, expectReady: false });
   h.step(1499); await nextTurn();
-  assert.equal(h.lifecycle.compiles, 0); assert.equal(h.lifecycle.ready, 0);
+  assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 0);
   h.step(1); await nextTurn();
   assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 1);
   assert.equal(h.pendingTimers(), 1, 'Only the opening guide timer remains');
@@ -479,16 +477,16 @@ test('stalled decorative assets allow entry after one 1500ms deadline; late imag
   assert.deepEqual(h.lifecycle.disposed, {}, 'Timing out never disposes the still-usable artwork or scene.');
 });
 
-test('leaving during asset loading cancels the deadline and disposes before any late compiler or ready callback', async () => {
+test('leaving during asset loading cancels its deadline and ignores late artwork', async () => {
   const artwork = deferred(), backdrop = deferred();
   const h = await world({ assetsReady: artwork.promise, backdropReady: backdrop.promise, expectReady: false });
   h.emit(h.window, 'pagehide', { persisted: false });
   assert.equal(h.pendingTimers(), 0); assert.equal(h.pendingFrames(), 0);
   assertReleasedOnce(h);
   await nextTurn();
-  assert.equal(h.lifecycle.compiles, 0);
+  assert.equal(h.lifecycle.compiles, 1);
   artwork.resolve(); backdrop.resolve(); await nextTurn(); h.step(2000);
-  assert.equal(h.lifecycle.compiles, 0); assert.equal(h.lifecycle.ready, 0); assert.equal(h.lifecycle.renders, 0);
+  assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 0); assert.equal(h.lifecycle.renders, 0);
   h.emit(h.window, 'pagehide', { persisted: false });
   assertReleasedOnce(h); assert.deepEqual(h.errors, []);
 });
@@ -512,16 +510,16 @@ test('context loss during the shared asset wait cannot later reopen the failed s
   assert.equal(h.root.dataset.state, 'failed'); assert.equal(h.pendingTimers(), 0);
   assertReleasedOnce(h);
   artwork.resolve(); backdrop.resolve(); await nextTurn();
-  assert.equal(h.lifecycle.compiles, 0); assert.equal(h.lifecycle.ready, 0);
+  assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 0);
   h.emit(h.window, 'pagehide', { persisted: false });
   assertReleasedOnce(h);
 });
 
-test('an optional backdrop failure preserves the painting wait and allows the fallback scene', async () => {
+test('a failed backdrop shows its fallback even when furniture artwork is still pending', async () => {
   const artwork = deferred(), backdrop = deferred();
   const h = await world({ assetsReady: artwork.promise, backdropReady: backdrop.promise, expectReady: false });
   backdrop.reject(new Error('Decorative panorama unavailable')); await nextTurn();
-  assert.equal(h.lifecycle.compiles, 0); assert.equal(h.pendingTimers(), 1);
+  assert.equal(h.lifecycle.ready, 1); assert.equal(h.pendingTimers(), 1);
   artwork.resolve(); await nextTurn();
   assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 1);
   assert.equal(h.pendingTimers(), 1, 'Only the opening guide timer remains'); assert.deepEqual(h.errors, []);
@@ -573,9 +571,9 @@ test('roofed courtyard wings and outdoor spaces use their matching location and 
   }
 });
 
-test('AO failure restores scene state and whole-background/particle visibility before direct rendering', () => {
-  // Run the application pipeline with the installed GTAOPass's real override
-  // methods. Only GPU calls and the unrelated full-screen passes are stubbed.
+test('AO reuses each colour buffer depth and recovers the scene on a failed fullscreen pass', () => {
+  // Run the installed GTAOPass with its real input selection and render order.
+  // Only its fullscreen GPU draw and the unrelated passes are stubbed.
   const source = ts.transpileModule(fs.readFileSync(new URL('../src/scripts/mountain-world/rendering.ts', import.meta.url), 'utf8'), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
   }).outputText;
@@ -587,45 +585,48 @@ test('AO failure restores scene state and whole-background/particle visibility b
   const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial());
   const alreadyHidden = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial()); alreadyHidden.visible = false;
   scene.add(points, line, alreadyHidden);
-  let ao, throwInAO = false, normalRenders = 0;
+  let ao, throwInAO = false, redraws = 0, incomplete = false;
   const direct = [], warnings = [];
   const clearColor = new THREE.Color('#123456'); let clearAlpha = .42, target = null;
   const renderer = {
     shadowMap: {}, capabilities: { maxSamples: 2 }, autoClear: true,
     getClearColor(out) { return out.copy(clearColor); }, getClearAlpha() { return clearAlpha; },
+    getRenderTarget() { return target; },
+    getContext() { return { FRAMEBUFFER: 0x8d40, FRAMEBUFFER_COMPLETE: 0x8cd5, checkFramebufferStatus: () => incomplete ? 0x8cd6 : 0x8cd5 }; },
+    compileAsync() {
+      assert.equal(target, incomplete ? null : composer.readBuffer, 'Compile the same shader variants the first scene draw will use');
+      return Promise.resolve();
+    },
     setClearColor(value, alpha) { clearColor.set(value); if (alpha !== undefined) clearAlpha = alpha; },
     setClearAlpha(value) { clearAlpha = value; }, setRenderTarget(value) { target = value; }, clear() {},
     render(value) {
-      if (value.overrideMaterial === ao.normalMaterial) {
-        normalRenders++;
-        assert.equal(background.visible, false); assert.equal(sky.visible, true);
-        assert.equal(points.visible, false); assert.equal(line.visible, false); assert.equal(alreadyHidden.visible, false);
-        if (throwInAO) throw new Error('Deliberate failure inside the normal pass');
-      } else direct.push({ material: value.overrideMaterial, autoClear: this.autoClear,
+      direct.push({ material: value.overrideMaterial, autoClear: this.autoClear,
         color: clearColor.getHexString(), alpha: clearAlpha, target, background: background.visible,
         points: points.visible, line: line.visible, hidden: alreadyHidden.visible });
     },
   };
   class Pass { enabled = true; setSize() {} dispose() {} }
-  class AO extends Pass {
+  class AO extends GTAOPass {
     constructor(scene, camera) {
-      super(); this.scene = scene; this.camera = camera; this._visibilityCache = [];
-      this._originalClearColor = new THREE.Color(); this.normalMaterial = new THREE.MeshNormalMaterial(); ao = this;
+      super(scene, camera, 8, 8); ao = this;
     }
-    updateGtaoMaterial() {} updatePdMaterial() {}
-    render(renderer) {
-      GTAOPass.prototype._overrideVisibility.call(this);
-      GTAOPass.prototype._renderOverride.call(this, renderer, this.normalMaterial, {}, 0x7777ff, 1);
-      GTAOPass.prototype._restoreVisibility.call(this);
+    _renderOverride() { assert.fail('AO must not redraw the courtyard to get its normals'); }
+    _renderPass() {
+      redraws++;
+      if (throwInAO) {
+        renderer.autoClear = false; renderer.setClearColor(0, 0); renderer.setRenderTarget({});
+        throw new Error('Deliberate AO framebuffer failure');
+      }
     }
-    dispose() { this.normalMaterial.dispose(); }
   }
+  let composer;
   class Composer {
     passes = [];
-    constructor(_renderer, target) { this.renderTarget1 = target; }
+    constructor(_renderer, target) { this.renderTarget1 = target; this.read = target; this.write = target.clone(); composer = this; }
+    get readBuffer() { return this.read; }
     setPixelRatio() {} addPass(pass) { this.passes.push(pass); } setSize() {}
-    render(delta) { this.passes.forEach(pass => { if (pass.enabled) pass.render?.(renderer, null, null, delta, false); }); }
-    dispose() { this.renderTarget1.dispose(); }
+    render(delta) { this.passes.forEach(pass => { if (pass.enabled) pass.render?.(renderer, this.write, this.read, delta, false); }); }
+    dispose() { this.read.dispose(); this.write.dispose(); }
   }
   const modules = {
     three: { ...THREE, PMREMGenerator: class { fromEquirectangular() { return { texture: new THREE.Texture(), dispose() {} }; } dispose() {} } },
@@ -640,19 +641,32 @@ test('AO failure restores scene state and whole-background/particle visibility b
     window: { devicePixelRatio: 1 }, console: { warn: message => warnings.push(message) } });
   vm.runInContext(source, context);
   const pipeline = context.exports.createStudyRenderer(renderer, scene, camera, false);
+  pipeline.compile();
+  assert.equal(target, null, 'Shader polling must not leave the HDR target bound');
   pipeline.render(0);
+  assert.ok(redraws > 0);
+  assert.equal(ao.depthTexture, composer.read.depthTexture);
+  assert.equal(ao.gtaoMaterial.defines.NORMAL_VECTOR_TYPE, 0);
+  [composer.read, composer.write] = [composer.write, composer.read];
   assert.equal(background.visible, true); assert.equal(points.visible, true); assert.equal(line.visible, true);
   assert.equal(alreadyHidden.visible, false); assert.equal(warnings.length, 0);
   const originalOverride = new THREE.MeshBasicMaterial(); scene.overrideMaterial = originalOverride;
   throwInAO = true; pipeline.render(.016);
-  assert.equal(warnings.length, 1); assert.equal(normalRenders, 2); assert.equal(ao._visibilityCache.length, 0);
+  assert.equal(warnings.length, 1); assert.equal(ao.depthTexture, composer.read.depthTexture);
   assert.equal(direct.length, 1);
   assert.deepEqual(direct[0], { material: originalOverride, autoClear: true, color: '123456', alpha: .42,
     target: null, background: true, points: true, line: true, hidden: false });
+  const drawsAfterFailure = redraws;
   pipeline.render(.016);
-  assert.equal(normalRenders, 2, 'Subsequent frames use the recovered direct scene.');
+  assert.equal(redraws, drawsAfterFailure, 'Subsequent frames use the recovered direct scene.');
   assert.deepEqual(direct[1], direct[0]);
-  pipeline.dispose(); originalOverride.dispose();
+  pipeline.dispose();
+  incomplete = true;
+  const fallback = context.exports.createStudyRenderer(renderer, scene, camera, false);
+  fallback.compile(); fallback.render(0);
+  assert.equal(warnings.length, 2);
+  assert.equal(direct.length, 3, 'An incomplete HDR target can still open the direct scene');
+  fallback.dispose(); originalOverride.dispose();
   scene.traverse(object => { if (object.geometry) object.geometry.dispose(); if (object.material) object.material.dispose(); });
 });
 
@@ -665,6 +679,15 @@ test('the cloud clock freezes in place while reading or when the live motion pre
   h.step(120); assert.equal(h.lifecycle.landscapeTime, first);
   h.reader(true); h.motionPreference.matches = false;
   h.step(120); assert.equal(h.lifecycle.landscapeTime, first);
+  const renders = h.lifecycle.renders, updates = h.lifecycle.backdropUpdates;
+  assert.equal(h.pendingFrames(), 0);
+  h.step(30_000);
+  assert.equal(h.lifecycle.renders, renders);
+  assert.equal(h.lifecycle.backdropUpdates, updates);
+  h.emit(h.controls.quality, 'change');
+  h.step(16);
+  assert.equal(h.lifecycle.renders, renders + 1, 'Changing the framebuffer repaints the frozen scene once');
+  assert.equal(h.pendingFrames(), 0);
   h.reader(false); h.step(120);
   assert.ok(Math.abs(h.lifecycle.landscapeTime - first - .12) < 1e-6);
 });

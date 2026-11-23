@@ -1,3 +1,10 @@
+/* Noto Serif SC Regular, subset to the characters painted on the scene's signs and books. */
+@font-face {
+  font-family: "Courtyard Lettering";
+  src: url("../assets/courtyard-lettering.woff") format("woff");
+  font-weight: 400 500;
+  font-display: swap;
+}
 html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) body { margin: 0; overflow: hidden; height: 100%; background: #18292d; }
 .mountain-world { --mw-paper: #f2eddf; --mw-ink: #272c29; --mw-muted: #7b7e70; --mw-gold: #ddbf83; --mw-rule: rgba(240,235,216,.23); position: fixed; inset: 0; overflow: hidden; color: #f2eedf; font-family: var(--font-serif, Georgia, serif); isolation: isolate; background: #18292d; }
 .mountain-world *, .mountain-world *::before, .mountain-world *::after { box-sizing: border-box; }

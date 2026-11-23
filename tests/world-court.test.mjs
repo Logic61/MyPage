@@ -29,7 +29,7 @@ const three = {...THREE,TextureLoader:class { async loadAsync(){return new THREE
 const roof = loadModule('tiled-roof',{three,'./environment-geometry':shapes});
 const stoneRail = loadModule('stone-balustrade',{three});
 const goSetting = loadModule('go-pavilion',{three,'./environment-geometry':shapes});
-const halls = loadModule('timber-halls',{three,'./tiled-roof':roof,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./go-pavilion':goSetting});
+const halls = loadModule('timber-halls',{three,'./environment-geometry':shapes,'./tiled-roof':roof,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./go-pavilion':goSetting});
 const waterCourt = loadModule('water-court',{});
 const lotus = loadModule('lotus-pond',{three,'./environment-geometry':shapes,'./water-court':waterCourt});
 const paving = loadModule('courtyard-paving',{three,'./environment-geometry':shapes});
@@ -45,7 +45,13 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
   const scene = new THREE.Scene(), library = { material:()=>new THREE.MeshStandardMaterial() };
   const site = createStudyArchitecture(scene,library,false), furnishings = createFurnishings(scene,false,library);
   try {
+    const cedar = scene.getObjectByName('Lacquered timber pillar').material;
+    const maps = [cedar.map, cedar.normalMap, cedar.roughnessMap], version = cedar.version;
+    assert.deepEqual(maps.map(tex => [...tex.image.data]), [[255,255,255,255],[128,128,255,255],[255,255,255,255]]);
+    assert.deepEqual(maps.map(tex => tex.colorSpace), [THREE.SRGBColorSpace, THREE.NoColorSpace, THREE.NoColorSpace]);
     await Promise.all([site.ready,furnishings.assetsReady]);
+    assert.equal(cedar.version, version, 'Photographs must keep the precompiled colour, normal and roughness variant');
+    assert.notEqual(cedar.map, maps[0]); assert.notEqual(cedar.normalMap, maps[1]); assert.notEqual(cedar.roughnessMap, maps[2]);
     scene.updateMatrixWorld(true);
     const books = furnishings.interactions.find(item=>item.id==='books');
     const cabinet = new THREE.Box3().setFromObject(books.meshes[0],true);
@@ -287,7 +293,15 @@ test('a local ripple bends connected lotus shoots, leaves distant flowers still 
   try {
     bed.plant(0,3,1,0,1);
     bed.plant(2,5,-1,.3,.9);
-    bed.finish(); await bed.ready;
+    bed.finish();
+    const blade = [...materials].find(material => material.name === 'Waxy lotus blade');
+    const neutral = blade.map, shaderVersion = blade.version;
+    assert.equal(neutral.image.width, 1);
+    let released = false; neutral.addEventListener('dispose', () => { released = true; });
+    await bed.ready;
+    assert.equal(released, true);
+    assert.notEqual(blade.map, neutral);
+    assert.equal(blade.version, shaderVersion, 'Replacing the neutral leaf image keeps the compiled shader');
     const planting = parent.children[0], batches = planting.children;
     assert.ok(planting.userData.pondPlant && planting.userData.dynamic);
     assert.ok(batches.length <= 12 && batches.every(b => b.isInstancedMesh));

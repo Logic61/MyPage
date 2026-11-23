@@ -3,11 +3,13 @@ import type { createAmbience } from './music';
 import { createEnvironment } from './environment';
 import { createFurnishings } from './furnishings';
 import { createSurfaceLibrary } from './materials';
+import type { PreparedSurfaces } from './surface-pixels';
 import { createNavigation, type Point } from './navigation';
 import { AerialMotion, STANDING_HEAD } from './aerial-motion';
 import { createWorldUI } from './ui';
 import { createStudyLighting } from './lighting';
 import { createLandscapeBackdrop } from './landscape-backdrop';
+import type { EntryArt } from './entry-art';
 import { createStudyRenderer, type RenderQuality } from './rendering';
 import { createInteractionPicker, movementDirection, FLOOR_HEIGHT, EYE_HEIGHT, SEATED_EYE_HEIGHT } from './first-person';
 import { walkRiseAt } from './hall-terrace';
@@ -53,7 +55,8 @@ function describePlace(x: number, z: number) {
   return { name: '云山石径', nameEn: 'The cloud mountain path', indoor: false };
 }
 
-export async function initializeWorld(root: HTMLElement, ambience: ReturnType<typeof createAmbience>, entryLock?: ReturnType<typeof createCourtyardMouseLock>) {
+export async function initializeWorld(root: HTMLElement, ambience: ReturnType<typeof createAmbience>,
+  entryLock?: ReturnType<typeof createCourtyardMouseLock>, prepared?: Promise<PreparedSurfaces | undefined>, entryArt?: EntryArt) {
   const canvas = root.querySelector<HTMLCanvasElement>('#mountain-canvas');
   const configElement = document.getElementById('mountain-world-config');
   if (!canvas || !configElement) { entryLock?.dispose(); return; }
@@ -132,17 +135,11 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     });
   }
   try {
-    // Wait for the subset used by the canvas book labels, with a bounded fallback.
     await new Promise<void>(resolve => {
       const finish = () => { cancelInitializationWait = () => {}; resolve(); };
       const initialFrame = requestAnimationFrame(finish);
       cancelInitializationWait = () => { cancelAnimationFrame(initialFrame); finish(); };
     });
-    if (!alive || resourcesDisposed) return;
-    if (document.fonts) await waitForOptionalAsset(
-      document.fonts.load('500 48px "Noto Serif SC"', '藏书简历近作项目山中手记读诗小记数学随笔桃源读书札记自由的代价初中生活残灵光明算法导论计算机系统离散数学编译原理机器学习新年格物札记夜光何德死则又育坐听松风归观物求知致来访者羽'),
-      2200,
-    );
     if (!alive || resourcesDisposed) return;
     const coarse = matchMedia('(pointer: coarse)').matches;
     const motionPreference = matchMedia('(prefers-reduced-motion: reduce)');
@@ -153,8 +150,13 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     scene.fog = new THREE.FogExp2(0xc7dfe6, 0.0035);
     const camera = new THREE.PerspectiveCamera(coarse ? 72 : 67, 1, 0.055, 230);
     camera.rotation.order = 'YXZ';
-    const backdrop = createLandscapeBackdrop(scene); resources.unshift(() => backdrop.dispose());
-    const surfaces = createSurfaceLibrary(); resources.unshift(() => surfaces.dispose());
+    const backdrop = createLandscapeBackdrop(scene, { artwork: entryArt }); resources.unshift(() => backdrop.dispose());
+    const pixels = prepared ? await prepared : undefined;
+    if (!alive || resourcesDisposed) return;
+    // The book labels use a local serif fallback if the font is still slow after engine and surface preparation.
+    if (entryArt?.fonts) await waitForOptionalAsset(entryArt.fonts, 250);
+    if (!alive || resourcesDisposed) return;
+    const surfaces = createSurfaceLibrary(pixels); resources.unshift(() => surfaces.dispose());
     const environment = createEnvironment(scene, surfaces, en); resources.unshift(() => environment.dispose());
     const furniture = createFurnishings(scene, en, surfaces); resources.unshift(() => furniture.dispose());
     const lighting = createStudyLighting(scene, coarse); resources.unshift(() => lighting.dispose());
@@ -198,6 +200,10 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     let elapsed = 0, landscapeTime = 0, walked = 0, interactionTimer = 0;
     let lastVaultCheck = -1;
     let frame = 0, previousFrame = performance.now(), lastRender = 0, lastPick = -1, lastSave = 0;
+    let loopStarted = false;
+    function requestFrame() {
+      if (loopStarted && alive && !frame) frame = requestAnimationFrame(tick);
+    }
     let sampledTime = 0, frameSamples = 0, slowFrames = 0, qualityAdjustments = 0;
     function resetFrameWindow() {
       sampledTime = 0; frameSamples = 0; slowFrames = 0;
@@ -328,6 +334,10 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     }
     function setMode(value: Mode) {
       if (mode !== value) resetFrameWindow();
+      if (mode === 'reading' && value !== mode) {
+        previousFrame = performance.now();
+        requestFrame();
+      }
       mode = value; root.dataset.mode = value;
       entry.hidden = value !== 'paused';
       if (value !== 'exploring' && value !== 'welcome') {
@@ -546,6 +556,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     }
     qualitySelect.addEventListener('change', () => {
       pipeline.setQuality(qualitySelect.value as RenderQuality); qualityAdjustments = 0; resetFrameWindow(); savePreferences();
+      requestFrame();
     }, { signal });
     sensitivityInput.addEventListener('input', () => { sensitivity = Number(sensitivityInput.value); savePreferences(); }, { signal });
     bobInput.addEventListener('change', () => { headBob = bobInput.checked && !reducedMotion; savePreferences(); }, { signal });
@@ -714,6 +725,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     document.addEventListener('visibilitychange', () => {
       clearMovement();
       if (document.hidden) { save(); if (mode === 'exploring') pause(); }
+      else requestFrame();
       previousFrame = performance.now();
     }, { signal });
     suspendAction = () => {
@@ -722,10 +734,12 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     resumeAction = () => {
       clearMovement(); previousFrame = performance.now(); lastRender = 0;
       ambience.setHidden(document.hidden);
+      requestFrame();
     };
 
     function resize() {
       const rect = canvas!.getBoundingClientRect(); pipeline.resize(rect.width, rect.height);
+      requestFrame();
       clearPointer();
     }
     const resizeObserver = new ResizeObserver(resize); resizeObserver.observe(canvas); resize();
@@ -739,11 +753,10 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       save(); window.clearTimeout(interactionTimer); window.clearTimeout(introTimer); window.clearTimeout(hintTimer); cancelAnimationFrame(frame);
       pointerLock.cancel(); look.suspend(); clearMovement(); unlock();
     };
-    // Painting and mountains share one deadline. Their existing fallbacks remain
-    // usable, and their own callbacks may still install late images until disposal.
-    await waitForOptionalAsset(Promise.allSettled([environment.assetsReady, furniture.assetsReady, backdrop.ready]), 1500);
-    if (!alive || resourcesDisposed) return;
-    await renderer.compileAsync(scene, camera);
+    // Start shader preparation immediately. The first frame needs the painted ridgeline;
+    // cabinet artwork, finer surface textures and the full sky can finish independently.
+    void Promise.allSettled([environment.assetsReady, furniture.assetsReady, backdrop.ready]);
+    await Promise.all([pipeline.compile(), waitForOptionalAsset(backdrop.firstPaint, 1500)]);
     if (!alive || resourcesDisposed) return;
     pipeline.render(0);
     if (shaderFailed) throw new Error('A scene material shader could not compile.');
@@ -764,15 +777,22 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     } else { unlock(); }
 
     function tick(now: number) {
+      frame = 0;
       if (!alive) return;
-      frame = requestAnimationFrame(tick);
+      if (mode === 'reading') {
+        // Keep the last courtyard image behind the reader. A resize may repaint
+        // it once, but a long article should not keep the GPU or scene clock busy.
+        if (!document.hidden) pipeline.render(0);
+        return;
+      }
+      requestFrame();
       if (document.hidden) { previousFrame = now; return; }
-      const minimumInterval = mode === 'reading' ? 100 : mode === 'paused' || mode === 'welcome' ? 33 : 0;
+      const minimumInterval = mode === 'paused' || mode === 'welcome' ? 33 : 0;
       if (now - lastRender < minimumInterval) return;
       const rawDelta = (now - previousFrame) / 1000;
       const delta = Math.min(0.04, Math.max(0.001, rawDelta));
       previousFrame = now; lastRender = now;
-      if (mode !== 'reading') elapsed += delta;
+      elapsed += delta;
       const continuingFall = mode === 'falling';
       let speed = 0;
       if (mode === 'exploring') {
@@ -865,7 +885,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       updateCamera(Math.min(0.05, Math.max(0, rawDelta)), speed);
       const place = describePlace(position.x, position.z), indoor = place.indoor;
       // Clouds keep the same pace across frame rates. A preference change freezes the current view.
-      const landscapeDelta = motionPreference.matches || mode === 'reading' ? 0 : Math.min(.25, Math.max(0, rawDelta));
+      const landscapeDelta = motionPreference.matches ? 0 : Math.min(.25, Math.max(0, rawDelta));
       landscapeTime += landscapeDelta;
       environment.update(landscapeTime, landscapeDelta, indoor, motionPreference.matches);
       backdrop.update(landscapeTime);
@@ -890,7 +910,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
         }
       }
     }
-    previousFrame = performance.now(); frame = requestAnimationFrame(tick);
+    previousFrame = performance.now(); loopStarted = true; requestFrame();
   } catch (error) {
     teardown();
     if (alive) {

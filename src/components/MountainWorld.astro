@@ -136,8 +136,10 @@ const marks = [
   </div>
   <noscript><style is:inline>[data-world-load]{display:none!important}</style></noscript>
   <script>
+    import { prepareSurfacePixels } from '../scripts/mountain-world/prepare-surfaces';
     import { createAmbience } from '../scripts/mountain-world/music';
     import { createCourtyardMouseLock } from '../scripts/mountain-world/pointer-lock';
+    import { prepareEntryArt } from '../scripts/mountain-world/entry-art';
     const courtyard = document.querySelector<HTMLElement>('[data-mountain-world]');
     courtyard?.querySelector<HTMLButtonElement>('[data-world-load]')?.addEventListener('click', async event => {
       courtyard.dataset.state = 'loading';
@@ -156,19 +158,25 @@ const marks = [
       if (!matchMedia('(pointer: coarse)').matches && canvas.requestPointerLock) mouseLock.start();
       const releaseLock = () => { if (document.pointerLockElement === canvas) document.exitPointerLock(); };
       const pending = new AbortController();
+      const surfaces = new AbortController();
+      const surfacePixels = prepareSurfacePixels(surfaces.signal);
       document.addEventListener('visibilitychange', () => ambience.setHidden(document.hidden), { signal: pending.signal });
       window.addEventListener('pagehide', event => {
         if (!event.persisted) { pending.abort(); mouseLock.dispose(); ambience.dispose(); releaseLock(); }
       }, { signal: pending.signal });
       try {
-        const { initializeWorld } = await import('../scripts/mountain-world/main');
+        const world = import('../scripts/mountain-world/main');
+        const entryArt = prepareEntryArt(base);
+        const { initializeWorld } = await world;
         if (pending.signal.aborted) return;
         pending.abort();
-        await initializeWorld(courtyard, ambience, mouseLock);
+        await initializeWorld(courtyard, ambience, mouseLock, surfacePixels, entryArt);
       } catch {
         pending.abort(); mouseLock.dispose(); ambience.dispose(); releaseLock();
         courtyard.dataset.state = 'failed';
         courtyard.querySelector<HTMLElement>('[data-world-fallback]')!.hidden = false;
+      } finally {
+        surfaces.abort();
       }
     }, { once: true });
   </script>

@@ -5,7 +5,7 @@ export function createFurnishingInk(isEn: boolean) {
   const textures = new Set<THREE.Texture>();
   const cache = new Map<string, THREE.CanvasTexture>();
   let disposed = false;
-  const font = '"Noto Serif SC", "Songti SC", serif';
+  const font = '"Courtyard Lettering", "Noto Serif SC", "Songti SC", serif';
   const titles = ['读诗小记', '数学随笔', '桃源', '读书札记', '自由的代价', '初中生活', '残灵', '光明',
     '算法导论', '计算机系统', '离散数学', '编译原理', '山中手记', '机器学习', '新年', '格物札记'];
 
@@ -72,7 +72,7 @@ export function createFurnishingInk(isEn: boolean) {
       ctx.font='42px Georgia,serif'; ctx.fillText('Guanyu Chen',390,452);
       ctx.font='27px Georgia,serif'; ctx.fillText('Curriculum vitae',390,515);
     } else {
-      const brush='KaiTi,STKaiti,"Kaiti SC","Noto Serif SC",serif';
+      const brush='KaiTi,STKaiti,"Kaiti SC",'+font;
       ctx.font='169px '+brush;
       [...'简历'].forEach((char,i)=>ctx.fillText(char,490,206+i*195));
       ctx.font='46px '+brush; [...'陈冠宇'].forEach((char,i)=>ctx.fillText(char,306,342+i*57));
