@@ -157,12 +157,13 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
       }
     }
   }
-  pine(-5.08,3.86,5.45,1.18,119,1.03);
-  pine(5.08,3.86,5.25,-1.06,91,1.04);
+  pine(-5.55,4.0,4.35,1.18,119,.91);
+  pine(5.55,4.0,4.25,-1.06,91,.88);
   pine(-13.7,3.4,6.05,1.38,13); pine(-11.75,9,5.1,-1.03,42);
   pine(-10.8,-10.4,6.0,-.92,77); pine(10.7,-10.4,5.4,1.16,31);
   pine(13.65,8.4,5.10,.85,108,.90);
-  pine(5.75,11.25,5.6,.91,86,.87); pine(-5.8,11.4,5.35,-.94,52,1.06);
+  pine(8.1,10.6,4.75,.91,86,.84); pine(-8.35,10.7,5.05,-.94,52,.94);
+  pine(-2.85,35.5,4.8,-.94,67,.94);
   const crowns = new THREE.InstancedMesh(fan,material,transforms.length); crowns.name='Wind-shaped pine boughs';
   transforms.forEach((matrix,i)=>{crowns.setMatrixAt(i,matrix); crowns.setColorAt(i,colors[i]);});
   crowns.castShadow=crowns.receiveShadow=true;

@@ -338,7 +338,7 @@ test('sitting keeps a native lock and the first click after losing it only reacq
   await h.lock(); h.key('KeyE');
   for (let i = 0; i < 28; i++) h.step();
   assert.equal(h.root.dataset.seated, undefined); assert.equal(h.root.dataset.inputMode, 'locked');
-  assert.equal(h.camera.position.z, 17.65);
+  assert.equal(h.camera.position.z, 34);
 });
 
 test('clicking the exposed scene after a walking unlock resumes without firing the aimed object', async () => {
@@ -376,7 +376,7 @@ test('a seated visitor can pause, resume, and use the stand control without poin
   h.reader(true); h.reader(false); h.enter();
   h.emit(h.controls.stand,'click'); h.step(320);
   assert.equal(h.root.dataset.seated,undefined); assert.equal(h.root.dataset.inputMode,'pointer');
-  assert.equal(h.camera.position.z,17.65);
+  assert.equal(h.camera.position.z,34);
 });
 
 test('escaping a seated mouse lock keeps the seat and exposes its controls', async () => {
@@ -479,18 +479,18 @@ test('an optional backdrop failure preserves the painting wait and allows the fa
   h.emit(h.window, 'pagehide', { persisted: false }); assertReleasedOnce(h);
 });
 
-const courtyardStateKey = 'mountain-first-person-v4-pine-court:/';
+const courtyardStateKey = 'mountain-first-person-v5-cloud-pass:/';
 test('the new layout ignores old coordinates, validates study links, and restores its own safe session', async () => {
   const old = JSON.stringify({ x: -5, z: -8, yaw: 1, pitch: .2 });
-  const h = await world({ session: { 'mountain-first-person-v3-cloud-court:/': old } });
-  assert.equal(h.camera.position.x, 0); assert.equal(h.camera.position.z, 17.65);
+  const h = await world({ session: { 'mountain-first-person-v4-pine-court:/': old } });
+  assert.equal(h.camera.position.x, 0); assert.equal(h.camera.position.z, 34);
   h.actions.onReset();
   const saved = JSON.parse(h.sessionStore.getItem(courtyardStateKey));
-  assert.equal(saved.x, 0); assert.equal(saved.z, 17.65);
+  assert.equal(saved.x, 0); assert.equal(saved.z, 34);
   const fromArticle = await world({ hash: '#study' });
   assert.equal(fromArticle.camera.position.x, 0); assert.equal(fromArticle.camera.position.z, -4.6);
   const blockedArticle = await world({ hash: '#study', canWalk: (_x, z) => z !== -4.6 });
-  assert.equal(blockedArticle.camera.position.z, 17.65, 'An unsafe nearest result cannot replace the valid entrance.');
+  assert.equal(blockedArticle.camera.position.z, 34, 'An unsafe nearest result cannot replace the valid entrance.');
   const returning = await world({ hash: '#study', session: { [courtyardStateKey]: JSON.stringify({ x: 7, z: -4, yaw: .3, pitch: .1 }) } });
   assert.equal(returning.camera.position.x, 7); assert.equal(returning.camera.position.z, -4);
   assert.equal(returning.camera.rotation.y, .3); assert.equal(returning.camera.rotation.x, .1);

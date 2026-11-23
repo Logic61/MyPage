@@ -17,11 +17,12 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   group.name = 'Cloud Court timber halls'; parent.add(group);
   const textures: THREE.Texture[] = [];
   let disposed = false;
-  const lacquer = new THREE.MeshStandardMaterial({ name: 'Oxide red lacquer', color: '#8d4636', roughness: .72 });
-  const mineral = new THREE.MeshStandardMaterial({ name: 'Mineral green bracket paint', color: '#495e56', roughness: .86 });
-  const gold = new THREE.MeshStandardMaterial({ name: 'Worn ochre gilding', color: '#cda669', metalness: .34, roughness: .51 });
-  const glazed = new THREE.MeshStandardMaterial({ name: 'Celadon barrel tiles', vertexColors: true, roughness: .88, metalness: .025 });
-  const ridge = new THREE.MeshStandardMaterial({ name: 'Dark glazed ridge clay', color: '#354d4a', roughness: .73 });
+  const lacquer = new THREE.MeshStandardMaterial({ name: 'Cinnabar stained cedar', color: '#b6634b', roughness: .69 });
+  const mineral = new THREE.MeshStandardMaterial({ name: 'Deep teal beam ground', color: '#354a4c', roughness: .80 });
+  const gold = new THREE.MeshStandardMaterial({ name: 'Aged bronze leaf', color: '#d7ad62', metalness: .36, roughness: .46 });
+  const glazed = new THREE.MeshStandardMaterial({ name: 'Ink-blue fired pantiles', color: '#98ade0', vertexColors: true, roughness: .72, metalness: .07 });
+  const ridge = new THREE.MeshStandardMaterial({ name: 'Blue-black glazed ridge clay', color: '#303e4c', roughness: .56 });
+  const windowPaper = new THREE.MeshStandardMaterial({ name: 'Amber mulberry paper', color: '#d1ae70', emissive: '#6a431d', emissiveIntensity: .29, roughness: .98 });
   const silk = new THREE.MeshStandardMaterial({ name: 'Amber lantern silk', color: '#edbb76', emissive: '#bb5b25', emissiveIntensity: .37, roughness: .86 });
   const roofMaterials = { tile: glazed, ridge, soffit: m.soffit, timber: m.timber };
   const cube = new THREE.BoxGeometry(1, 1, 1), disk = new THREE.CylinderGeometry(1, 1, 1, 24);
@@ -50,7 +51,17 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     part(disk, gold, 'Bronze foot band', x, .676, z, radius * 1.02, .029, radius * 1.02);
     obstacle(x, z, foot, foot);
   }
-  // Bearing blocks and interlocking arms reach from the column head to the eaves.
+  // The stepped arm has a flat saddle and two flared shoulders to carry the next course.
+  const armOutline = new THREE.Shape();
+  armOutline.moveTo(-.14,-.07); armOutline.lineTo(.14,-.07);
+  armOutline.quadraticCurveTo(.28,-.07,.33,.06); armOutline.lineTo(.44,.06);
+  armOutline.lineTo(.44,.15); armOutline.lineTo(.28,.15);
+  armOutline.quadraticCurveTo(.19,.065,.10,.065); armOutline.lineTo(-.10,.065);
+  armOutline.quadraticCurveTo(-.19,.065,-.28,.15); armOutline.lineTo(-.44,.15);
+  armOutline.lineTo(-.44,.06); armOutline.lineTo(-.33,.06);
+  armOutline.quadraticCurveTo(-.28,-.07,-.14,-.07); armOutline.closePath();
+  const bracketArm = new THREE.ExtrudeGeometry(armOutline, { depth:.15, bevelEnabled:false, curveSegments:5 });
+  bracketArm.translate(0,0,-.075);
   function brackets(x: number, y: number, z: number, scale: number, yaw = 0) {
     const block = (dx: number, dy: number, dz: number, w: number, h: number, d: number, mat: THREE.Material) => {
       const co = Math.cos(yaw), si = Math.sin(yaw);
@@ -58,11 +69,13 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
         z + (-dx * si + dz * co) * scale, w * scale, h * scale, d * scale).rotation.y = yaw;
     };
     block(0, 0, 0, .38, .18, .37, mineral);
-    block(0, .13, 0, .77, .11, .20, lacquer);
+    part(bracketArm, lacquer, 'Flared carved bracket arm',x,y+.13*scale,z,scale,scale,scale).rotation.y=yaw;
+    const lip = part(bracketArm,gold,'Hammered brass bracket facing',x+Math.sin(yaw)*.084*scale,y+.13*scale,z+Math.cos(yaw)*.084*scale,scale,.73*scale,.10*scale);
+    lip.rotation.y=yaw;
     for (const side of [-1, 1]) {
       block(side * .29, .235, 0, .18, .14, .28, mineral);
       block(side * .29, .34, .09, .25, .09, .54, mineral);
-      block(side * .29, .405, .30, .19, .046, .11, gold);
+      block(side * .29, .405, .30, .21, .065, .13, gold);
     }
     block(0, .445, .09, 1.05, .12, .24, lacquer);
   }
@@ -161,35 +174,114 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
       if (side < 0) obj.rotation.y = Math.PI;
     }
   }
-  // The lower roof surrounds a timber clerestory. The upper roof and ridge run across the hall.
-  const hallZ = -7.96;
-  group.add(tiledRoof({ name:'North hall lower eaves', eave:rectangularRing(0,hallZ,6.94,3.04),
-    ridge:rectangularRing(0,hallZ,4.63,1.32), height:4.10, rise:.85, lift:.46 },roofMaterials));
-  for (const side of [-1, 1]) {
-    const z=hallZ+side*1.27;
-    box(m.plaster,'Upper hall end wall',side*4.54,5.98,hallZ,.17,2.15,2.6);
-    box(lacquer,'Upper hall lower rail',0,5.16,z,9.15,.39,.19);
-    box(m.timber,'Upper hall window sill',0,5.42,z,9.18,.09,.24);
-    box(m.soffit,'Warm window backing',0,5.96,z,9.1,1.10,.08);
-    paintedBeam(0,6.69,z,9.26,.35,.20);
-    for (let j=-3;j<=3;j++) {
-      const centre=j*1.28;
-      box(lacquer,'Upper storey column',centre-.64,6.02,z+side*.09,.093,1.47,.12);
-      const face=z+side*.14;
-      for (const offset of [-.38,0,.38]) {
-        box(mineral,'Window mullion',centre+offset,5.98,face,.035,1.05,.032);
-      }
-      for (const y of [5.58,6.22,6.39]) box(m.timber,'Window transom',centre,y,face,1.22,.032,.04);
+  function sunFinial(y: number, z: number) {
+    const base = y + .26;
+    turned('Lotus seat for the sun',gold,0,y,z,[[.29,0],[.31,.04],[.26,.10],[.15,.15],[.12,.24],[.08,.28]],16);
+    const cy = base + .39;
+    const rim = new THREE.TorusGeometry(.42,.032,8,44);
+    part(rim,gold,'Bronze solar rim',0,cy,z);
+    part(new THREE.SphereGeometry(1,32,14),gold,'Beaten bronze sun',0,cy,z,.31,.31,.085);
+    const ray = new THREE.ConeGeometry(.034,.21,5);
+    for (let i=0;i<9;i++) {
+      const a = (i-4)*Math.PI/8, length = i%2 ? .65 : 1;
+      part(ray,gold,'Tapered solar ray',Math.sin(a)*(.42+.099*length),cy+Math.cos(a)*(.42+.099*length),z,1,length,.78).rotation.z=-a;
     }
-    box(lacquer,'Closing upper storey column',4.48,6.02,z+side*.09,.093,1.47,.12);
+    const cloud = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(.10,.20,0),new THREE.Vector3(.35,.12,0),new THREE.Vector3(.57,.24,0),
+      new THREE.Vector3(.50,.33,0),new THREE.Vector3(.45,.23,0),new THREE.Vector3(.70,.12,0),
+      new THREE.Vector3(.92,.18,0),new THREE.Vector3(1.16,.13,0),
+    ]);
+    const scroll = new THREE.TubeGeometry(cloud,29,.030,6,false);
+    for(const sign of [-1,1]) part(scroll,gold,'Cast cloud scroll',0,y,z).rotation.y=sign<0 ? Math.PI : 0;
   }
-  group.add(tiledRoof({ name:'North hall upper roof', eave:rectangularRing(0,hallZ,5.30,1.98),
-    ridge:rectangularRing(0,hallZ,3.63,.025), height:6.83, rise:1.99, lift:.55 },roofMaterials));
-  ridgeCrest(0,hallZ,8.90,3.68,1.12);
-  paintedBeam(0,3.86,-5.78,12.4,.42,.31);
-  for (const x of [-6.03,-3.2,3.2,6.03]) { post(x,-5.8,3.50,.145); brackets(x,3.47,-5.8,1.0); }
-  plaque('雲 庭 書 齋','Cloud Court Study',0,3.80,-5.53,1.90,.50);
-  for (const x of [-2.66,2.66]) lantern(x,3.70,-5.46,.70);
+  // The principal hall occupies the broad north terrace. Both eaves read against the sky from the bridge.
+  const hallZ = -7.96;
+  group.add(tiledRoof({ name:'North hall lower eaves', eave:rectangularRing(0,hallZ,7.58,3.66),
+    ridge:rectangularRing(0,hallZ,5.10,1.44), height:4.81, rise:1.40, lift:.61, tileWidth:.23 },roofMaterials));
+  const outerPosts = [-6.03,-3.20,3.20,6.03];
+  for (const sign of [-1,1]) {
+    const front = hallZ + sign*2.16, upper = hallZ + sign*1.40;
+    box(mineral,'North hall shadow plate',0,4.38,front,12.24,.43,.26);
+    paintedBeam(0,4.55,front,12.42,.36,.30);
+    // Above the lower eaves, five cedar bays form a compact clerestory lantern.
+    box(lacquer,'Clerestory foot rail',0,6.26,upper,10.24,.22,.18);
+    box(windowPaper,'Recessed clerestory paper',0,6.92,upper,10.06,1.20,.12);
+    box(lacquer,'Clerestory upper plate',0,7.52,upper,10.24,.16,.24);
+    for (let bay=-2;bay<=2;bay++) {
+      const x = bay*2.01, face = upper+sign*.10;
+      for(const dx of [-.74,-.50,-.25,0,.25,.50,.74])
+        box(m.timber,'Clerestory lattice stile',x+dx,6.88,face,.034,1.03,.047);
+      for(const h of [6.51,6.62,7.14,7.25])
+        box(m.timber,'Clerestory lattice rail',x,h,face,1.91,.034,.052);
+    }
+    for(let j=0;j<6;j++){
+      const x = (j-2.5)*2.01;
+      box(lacquer,'Upper timber column',x,6.94,upper+sign*.12,.16,1.42,.21);
+      brackets(x,7.41,upper+sign*.16,.82,sign<0 ? Math.PI : 0);
+    }
+    box(m.plaster,'Gable infill below lower eaves',sign*6.055,4.32,hallZ,.16,.83,4.34);
+    box(m.timber,'Clerestory timber end',sign*5.02,6.90,hallZ,.16,1.45,2.86);
+  }
+  group.add(tiledRoof({ name:'North hall upper roof', eave:rectangularRing(0,hallZ,6.12,2.42),
+    ridge:rectangularRing(0,hallZ,4.24,.025), height:7.78, rise:2.42, lift:.76, tileWidth:.215 },roofMaterials));
+  ridgeCrest(0,hallZ,10.28,4.27,1.34);
+  sunFinial(10.34,hallZ);
+  for (const x of outerPosts) {
+    post(x,-5.8,4.12,.177); brackets(x,4.09,-5.8,1.22);
+    brackets(x,4.09,-9.84,1.08,Math.PI);
+  }
+  // A recessed cedar lining behind the artwork keeps the lit paper and round
+  // screen legible as separate objects inside the deep, south-facing portico.
+  box(m.timber,'Cedar lining of the north hall',0,2.23,-9.833,12.02,3.72,.035);
+  for (let i=-6;i<=6;i++) box(lacquer,'Lining stile',i*.955,2.25,-9.802,.044,3.64,.032);
+  for (const y of [.61,3.78,4.00]) box(lacquer,'Lining rail',0,y,-9.801,12,.06,.035);
+
+  // The stone dado and reed-lattice shutters flank the central door. Keep the
+  // outer aisle in each bay open to the writing desk and the two hanging scrolls.
+  const doorZ=-5.55, gateHalf=1.71, shutterWidth=1.29;
+  for(const side of [-1,1]) {
+    const sx=side*(gateHalf+shutterWidth/2);
+    box(m.sideStone,'Foot of the raised shutter bay',sx,.42,doorZ,shutterWidth+.10,.24,.25);
+    box(m.stone,'Carved stone dado',sx,.65,doorZ,shutterWidth,.24,.21);
+    box(m.sideStone,'Dado drip edge',sx,.79,doorZ,shutterWidth+.06,.08,.24);
+    box(lacquer,'Shutter waist panel',sx,1.18,doorZ,shutterWidth,.70,.12);
+    box(m.timber,'Recessed timber door field',sx,1.18,doorZ+.067,shutterWidth-.19,.44,.038);
+    box(windowPaper,'Amber paper in the shutter',sx,2.28,doorZ,shutterWidth,1.55,.075);
+    for (const edge of [-1,1]) {
+      box(lacquer,'Rebated shutter jamb',sx+edge*(shutterWidth/2-.04),2.21,doorZ+.03,.08,2.83,.16);
+      box(m.timber,'Carved shutter inner border',sx+edge*(shutterWidth/2-.11),2.27,doorZ+.075,.032,1.52,.04);
+    }
+    for (const y of [1.55,2.99,3.12]) box(lacquer,'Shutter rail',sx,y,doorZ+.045,shutterWidth,.09,.14);
+    for(const dx of [-.35,-.17,0,.17,.35])
+      box(m.timber,'Reed lattice vertical',sx+dx,2.27,doorZ+.078,.034,1.35,.041);
+    for(const y of [1.70,1.85,2.66,2.82])
+      box(m.timber,'Reed lattice horizontal',sx,y,doorZ+.078,shutterWidth-.15,.032,.042);
+    box(gold,'Flush bronze door pull',sx-side*.43,1.54,doorZ+.12,.035,.18,.029);
+    obstacle(sx,doorZ,(shutterWidth+.10)/2,.125);
+
+    const parapetX=side*5.42;
+    box(m.sideStone,'Porch terrace footing',parapetX,.45,-5.69,1.26,.30,.51);
+    box(m.stone,'Terrace sill stone',parapetX,.64,-5.69,1.24,.09,.44);
+    for(const dx of [-.51,0,.51])
+      box(m.stone,'Mullion in the terrace rail',parapetX+dx,.84,-5.69,.10,.36,.13);
+    box(m.stone,'Low carved terrace rail',parapetX,1.07,-5.69,1.25,.12,.19);
+    obstacle(parapetX,-5.69,.63,.255);
+  }
+  box(mineral,'Recessed central lintel',0,3.62,doorZ,6.05,.81,.22);
+  for(const x of [-2.83,-2.48,-2.13,-1.78,1.78,2.13,2.48,2.83])
+    box(lacquer,'Deep lintel battens',x,3.62,doorZ+.12,.047,.68,.058);
+  paintedBeam(0,3.19,doorZ,6.13,.20,.30);
+  // Deep raised transoms leave the central opening and its first-person sightline clear.
+  for (const side of [-1,1]) {
+    const x=4.615*side;
+    box(mineral,'Hall side-bay transom',x,3.78,-5.79,2.60,.77,.11);
+    for(const dx of [-1.13,-.76,-.38,0,.38,.76,1.13])
+      box(m.timber,'Hall transom stile',x+dx,3.78,-5.70,.055,.70,.075);
+    for(const y of [3.48,3.94,4.06])
+      box(gold,'Weathered transom fillet',x,y,-5.66,2.62,.022,.038);
+  }
+  plaque('雲 庭 書 齋','Cloud Court Study',0,3.62,doorZ+.16,2.18,.53);
+  for (const x of [-2.66,2.66]) lantern(x,4.05,-5.46,.83);
   for (const sign of [-1,1]) {
     const x = sign * 4.75;
     group.add(tiledRoof({ name:sign<0?'Library roof':'Instrument hall roof', eave:rectangularRing(x,-2.46,1.99,3.81),
@@ -197,50 +289,39 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     paintedBeam(x,3.05,.68,2.85,.22,.22);
     for (const z of [-4.22,.52]) brackets(sign*3.2,2.93,z,.66,Math.PI/2);
   }
-  function gardenWall(left: number, right: number, centre: number) {
-    const top = 2.18, h = 1.43, radius = .58;
-    const wall = new THREE.Shape();
-    wall.moveTo(left,.3); wall.lineTo(right,.3); wall.lineTo(right,top); wall.lineTo(left,top); wall.closePath();
-    const hole = new THREE.Path(), count = 64;
-    const circle = Array.from({ length:count }, (_,i) => {
-      const a = Math.PI/8 - i*2*Math.PI/count;
-      return new THREE.Vector2(centre + radius*Math.cos(a), h+radius*Math.sin(a));
-    });
-    circle.forEach((p,i) => i ? hole.lineTo(p.x,p.y) : hole.moveTo(p.x,p.y));
-    hole.closePath(); wall.holes.push(hole);
-    const skin = new THREE.ExtrudeGeometry(wall,{depth:.29,steps:1,bevelEnabled:true,bevelSegments:1,bevelSize:.012,bevelThickness:.008});
-    part(skin,m.plaster,'Lime wall with pierced garden window',0,0,8.255);
-    for (const z of [8.25,8.55]) {
-      const rim = new THREE.Shape(), voidPath = new THREE.Path();
-      circle.forEach((p,i) => {
-        const x=centre+(p.x-centre)*1.15,y=h+(p.y-h)*1.15;
-        if (i) { rim.lineTo(x,y); voidPath.lineTo(p.x,p.y); } else { rim.moveTo(x,y); voidPath.moveTo(p.x,p.y); }
-      });
-      rim.closePath(); voidPath.closePath(); rim.holes.push(voidPath);
-      part(new THREE.ExtrudeGeometry(rim,{depth:.025,bevelEnabled:false}),m.stone,'Dressed stone window reveal',0,0,z);
-    }
-    const mid=(left+right)/2, half=(right-left)/2;
-    box(m.stone,'Stone wall footing',mid,.43,8.4,right-left,.25,.33);
-    obstacle(mid,8.4,half,.16);
-    group.add(tiledRoof({name:'Glazed garden-wall coping',eave:rectangularRing(mid,8.4,half+.045,.27),
-      ridge:rectangularRing(mid,8.4,half-.025,.01),height:top+.044,rise:.11,lift:.048,tileWidth:.17},roofMaterials));
-  }
-  gardenWall(-6.35,-1.74,-4.20); gardenWall(1.74,6.35,4.20);
+  // The approach opens to the lake through a three-bay timber gate; low stone rails
+  // continue its base without filling the views beneath the two outer bay roofs.
   for (const sign of [-1,1]) {
+    for(const [a,b] of [[1.86,3.40],[3.40,4.88],[4.88,6.35]]) {
+      const middle=sign*(a+b)*.5;
+      box(m.stone,'Low garden rail shoe',middle,.42,8.40,b-a,.22,.33);
+      box(m.stone,'Bevelled garden rail cap',middle,.91,8.40,b-a,.105,.20);
+      box(m.stone,'Garden rail baluster',middle,.65,8.40,.14,.44,.17);
+      box(m.stone,'Garden rail pier',sign*b,.68,8.40,.25,.76,.28);
+      turned('Faceted rail finial',m.stone,sign*b,1.055,8.40,[[.17,0],[.17,.055],[.13,.11],[.09,.17],[0,.22]],8);
+    }
+    obstacle(sign*4.105,8.40,2.245,.17);
     group.add(tiledRoof({name:'Covered hillside gallery',eave:rectangularRing(sign*7.28,.95,1.37,7.03),
       ridge:rectangularRing(sign*7.28,.95,.025,5.93),height:3.10,rise:.59,lift:.21},roofMaterials));
   }
-  // A shallow hipped gate opens a sightline through the water court to the round silk screen.
-  for (const x of [-1.74,1.74]) {
-    for (const z of [8.02,8.78]) { post(x,z,2.82,.155); brackets(x,2.79,z,.88); }
+  for (const x of [-1.86,1.86]) {
+    for (const z of [8.04,8.76]) { post(x,z,2.53,.145); brackets(x,2.51,z,.80,z<8.4 ? Math.PI : 0); }
   }
-  paintedBeam(0,3.06,8.80,4.19,.37,.27);
-  paintedBeam(0,3.06,8.00,4.19,.37,.27);
-  group.add(tiledRoof({ name:'Southern mountain gate', eave:rectangularRing(0,8.40,2.76,1.36),
-    ridge:rectangularRing(0,8.40,1.68,.018),height:3.30,rise:.91,lift:.43,tileWidth:.176 },roofMaterials));
-  ridgeCrest(0,8.4,4.27,1.71,.78);
-  plaque('雲 庭','Cloud Court',0,3.05,9.00,1.17,.41);
-  for (const x of [-1.80,1.80]) lantern(x,3.19,9.30,.68);
+  paintedBeam(0,2.78,8.78,4.25,.30,.25);
+  paintedBeam(0,2.78,8.02,4.25,.30,.25);
+  group.add(tiledRoof({ name:'Southern mountain gate', eave:rectangularRing(0,8.40,2.58,1.02),
+    ridge:rectangularRing(0,8.40,1.72,.018),height:2.96,rise:.64,lift:.38,tileWidth:.17 },roofMaterials));
+  ridgeCrest(0,8.4,3.66,1.74,.61);
+  plaque('雲 庭','Cloud Court',0,2.72,8.96,1.22,.34);
+  for (const side of [-1,1]) {
+    const x = side * 2.67;
+    post(side*3.40,8.40,2.15,.118);
+    brackets(side*3.40,2.13,8.40,.55);
+    paintedBeam(x,2.30,8.40,1.64,.20,.20);
+    group.add(tiledRoof({name:'Gate side canopy',eave:rectangularRing(x,8.4,1.09,.64),
+      ridge:rectangularRing(x,8.4,.57,.012),height:2.43,rise:.35,lift:.22,tileWidth:.18},roofMaterials));
+    lantern(side*1.86,2.79,9.02,.56);
+  }
 
   for (const px of [-10.18,10.18]) {
     const pz = 4.92;
@@ -273,19 +354,9 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     turned('Stone drum stool',m.stone,tx,.30,z,[[.23,0],[.23,.06],[.18,.12],[.21,.26],[.25,.35],[.23,.39],[0,.40]]);
     obstacle(tx,z,.25,.25);
   }
-  // Flush approach bridge, with open stone balustrades receding towards the gateway.
-  box(m.stone,'Stone bridge bed',0,.06,15.75,4.25,.44,8.50);
+  // The gravel forecourt receives the stone span at the mountain gate.
+  box(m.stone,'Gate approach paving',0,.17,13.625,3.3,.24,4.25);
   for (const sign of [-1,1]) {
-    const x=sign*2.05;
-    for (let z=12.2; z<20; z+=1.82) {
-      box(m.stone,'Balustrade pier',x,.73,z,.205,.86,.21);
-      turned('Lotus pier cap',m.stone,x,1.15,z,[[.16,0],[.145,.055],[.087,.089],[.115,.15],[.085,.21],[.019,.25],[0,.27]],12);
-      if (z>17.8) continue;
-      box(m.stone,'Bridge handrail',x,1.025,z+.91,.14,.10,1.84);
-      box(m.stone,'Stone lower rail',x,.51,z+.91,.105,.095,1.84);
-      for (const dz of [.40,.91,1.42]) box(m.stone,'Bridge baluster',x,.76,z+dz,.073,.49,.077);
-    }
-    obstacle(x,15.82,.12,3.72);
     const lx=sign*2.72,lz=10.75;
     box(m.stone,'Stone lantern foot',lx,.39,lz,.54,.18,.54);
     turned('Carved stone lantern pedestal',m.stone,lx,.47,lz,[[.24,0],[.24,.09],[.16,.15],[.105,.22],[.13,.46],[.19,.52],[.24,.56],[.21,.63]],8);

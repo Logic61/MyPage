@@ -8,13 +8,13 @@ export function createStudyLighting(scene: THREE.Scene, coarse = false) {
   const sky = new THREE.HemisphereLight(0xdbe5e2, 0x969581, .73);
   scene.add(sky); lights.push(sky);
 
-  const sun = new THREE.DirectionalLight(0xffebcf, 2.05);
+  const sun = new THREE.DirectionalLight(0xffe7c0, 2.26);
   sun.name = 'Clear morning over the open courtyard';
-  sun.position.set(-12, 13, 8);
-  sun.target.position.set(0, 0, -2);
+  sun.position.set(-24, 31, 29);
+  sun.target.position.set(3, 0, 8);
   sun.castShadow = true;
   sun.shadow.mapSize.set(coarse ? 1024 : 2048, coarse ? 1024 : 2048);
-  Object.assign(sun.shadow.camera, { left: -19, right: 19, top: 18, bottom: -18, near: 1, far: 65 });
+  Object.assign(sun.shadow.camera, { left: -31, right: 31, top: 29, bottom: -29, near: 1, far: 100 });
   sun.shadow.bias = -0.00012;
   sun.shadow.normalBias = 0.035;
   scene.add(sun, sun.target); lights.push(sun);

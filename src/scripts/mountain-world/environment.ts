@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary } from './materials';
-import { branchGeometry, gridSurface, mistTexture, naturalRock, roundedBlock, seeded } from './environment-geometry';
+import { branchGeometry, mistTexture, naturalRock, roundedBlock, seeded } from './environment-geometry';
 import { bambooWind, buildBamboo } from './bamboo';
+import { cliffGarden, cragFace, mountainRunoff } from './cliff-garden';
+import { buildCliffCrossings } from './cliff-crossings';
 import { branchWind, buildPines } from './pine-grove';
 import { COURTYARD_POOLS, createStudyArchitecture } from './environment-design';
 import type { Collider, Environment } from './types';
@@ -26,11 +28,10 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   const bark = own(library.material('bark', { repeat: [1.7, 1], normalScale: .85 }));
   const moss = own(library.material('moss', { worldScale: 1.1, normalScale: .4 }));
   const iron = own(new THREE.MeshStandardMaterial({ color: '#4b4c43', metalness: .63, roughness: .72 }));
-  const ropeMaterial = own(new THREE.MeshStandardMaterial({ color: '#b4aa8b', roughness: 1 }));
   const fernMaterial = own(new THREE.MeshStandardMaterial({ color: '#596e4c', roughness: .95, side: THREE.DoubleSide }));
   const block = keep(roundedBlock()), cube = keep(new THREE.BoxGeometry(1, 1, 1));
   const cylinder = keep(new THREE.CylinderGeometry(1, 1, 1, 12));
-  const rocks = [keep(naturalRock(12)), keep(naturalRock(49)), keep(naturalRock(87))];
+  const mossRock = keep(naturalRock(12));
   const smallRock = keep(naturalRock(31, 1));
   const matrix = new THREE.Matrix4(), quat = new THREE.Quaternion(), vector = new THREE.Vector3(), scale = new THREE.Vector3();
 
@@ -57,7 +58,6 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     obstacle((bounds.min.x + bounds.max.x) / 2, (bounds.min.z + bounds.max.z) / 2,
       (bounds.max.x - bounds.min.x) / 2 + padding, (bounds.max.z - bounds.min.z) / 2 + padding);
   }
-  function solid(object: THREE.Mesh) { object.updateMatrix(); boundsCollider(object.geometry, object.matrix); return object; }
   function branch(points: THREE.Vector3[], start: number, end: number, m: THREE.Material = bark) {
     return mesh(keep(branchGeometry(points, start, end, 12, 12)), m);
   }
@@ -68,13 +68,24 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
 
   // The ledge grows into a mountainside below the mist, rather than tapering into a floating toy island.
   const outline = [[-14.5, -11.7], [-7.8, -14.2], [.2, -13.2], [8.7, -12.4], [13.7, -8.4], [15, -1.2], [14.1, 8.3], [10.7, 12], [5.5, 14.4], [3.6, 17.1], [-1.1, 17.9], [-5.1, 15.1], [-11.4, 12], [-14.9, 6.1], [-16, -.8]];
-  const strata = keep(gridSurface(outline.length, 7, (u, v) => {
-    const t = u * outline.length, i = Math.floor(t) % outline.length, j = (i + 1) % outline.length, f = t - Math.floor(t);
-    const x = THREE.MathUtils.lerp(outline[i][0], outline[j][0], f), z = THREE.MathUtils.lerp(outline[i][1], outline[j][1], f);
-    const outward = 1 + Math.pow(1 - v, 1.3) * .55;
-    return new THREE.Vector3(x * outward + Math.sin(v * 23 + i) * (1 - v) * .6, .275 - Math.pow(1 - v, 1.4) * 30, z * outward);
-  }, true));
-  mesh(strata, darkStone).castShadow = false;
+  const granite = own(library.material('stone', { worldScale: .28, normalScale: .63, roughness: .86 }));
+  granite.vertexColors = true;
+  let disposed = false;
+  const assetRoot = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/, '');
+  const graniteReady = new THREE.TextureLoader().loadAsync(assetRoot + '/world/cloud-pass-granite.webp').then(texture => {
+    if (disposed) { texture.dispose(); return; }
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = 4;
+    localTextures.add(texture);
+    for (const face of [granite,darkStone]) { face.map = texture; face.needsUpdate = true; }
+  }).catch(() => { /* The procedural stone is already visible. */ });
+  mesh(keep(cragFace(outline)), granite).castShadow = false;
+  const reeds = own(new THREE.MeshStandardMaterial({vertexColors: true, side: THREE.DoubleSide, roughness: .9}));
+  mesh(keep(cliffGarden()), reeds).castShadow = false;
+  const fall = mountainRunoff();
+  const cascade = mesh(keep(fall.geometry), own(fall.material));
+  cascade.castShadow = cascade.receiveShadow = false;
+  cascade.userData.dynamic = cascade.userData.ignoreInteractionRay = cascade.userData.ignoreAmbientOcclusion = true;
   const groundShape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
   for (const p of COURTYARD_POOLS) {
     const hole = new THREE.Path();
@@ -84,19 +95,6 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   }
   const ground = mesh(keep(new THREE.ShapeGeometry(groundShape)), earth, 0, .284, 0); ground.rotation.x = -Math.PI / 2; ground.castShadow = false;
 
-  // Only the lower island edge remains rock. No mountain mass encloses or overshadows the house.
-  const exterior: Placed[][] = [[], [], []];
-  const outerRocks = [
-    [-9.8, -1.8, -10.8, 2.4, 1.8, 2.6], [-1.5, -2.5, -13.0, 4.0, 2.2, 2.0],
-    [9.0, -2.2, -12.0, 3.0, 2.0, 2.0], [-13.7, -.9, 3.0, 2.4, 1.7, 2.6],
-    [-12.4, -1.0, 9.5, 2.3, 1.9, 2.3], [13.6, -1.2, 10.6, 2.35, 2.1, 2.5],
-    [7.5, -2.0, 15.8, 2.7, 2.5, 2.7],
-  ];
-  outerRocks.forEach((r, i) => exterior[i % 3].push({ x: r[0], y: r[1], z: r[2], sx: r[3], sy: r[4], sz: r[5], ry: rng() * .35 }));
-  exterior.forEach((items, i) => {
-    const object = batch(rocks[i], i === 1 ? darkStone : stone, items, `Low island cliff-foot rocks ${i}`);
-    for (let j = 0; j < object.count; j++) { object.getMatrixAt(j, matrix); boundsCollider(object.geometry, matrix); }
-  });
   // Small fractured stones, moss islands and grass sit at edges, not across the path.
   const rubble: Placed[] = [], growth: Placed[] = [];
   for (const [cx, cz, radius] of [[-13.7, 6.7, 1.4], [-13.6, -.7, 1.0], [-7.2, 10.8, 1.3], [11.9, 10, 1.2], [9.4, -10.2, .9]]) {
@@ -109,7 +107,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
       sx: .25 + rng() * .4, sy: .012, sz: .23 + rng() * .3, ry: rng() * 6 });
   }
   batch(smallRock, cutStone, rubble, 'Small fractured edge stones');
-  batch(rocks[0], moss, growth, 'Low moss islands').castShadow = false;
+  batch(mossRock, moss, growth, 'Low moss islands').castShadow = false;
 
   // Timber veranda: separated, end-grained planks, pegged posts and two slender rails.
   const deckGeometry = keep(roundedBlock()), deckUV = deckGeometry.attributes.uv, deckPosition = deckGeometry.attributes.position;
@@ -143,17 +141,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     }
   }
 
-  // The lower stair is visibly closed by an old rope rail; the fixed-height walk plane stops here.
-  const steps: Placed[] = [];
-  for (let i = 0; i < 16; i++) steps.push({ x: Math.sin(i * .17) * .25, y: .115 - i * .29, z: 20.55 + i * .69,
-    sx: 3.85 - i * .025, sy: .33, sz: .87, ry: Math.sin(i * .17) * .015 });
-  batch(block, cutStone, steps, 'Descending distant mountain stair');
-  for (const x of [-2, 0, 2]) solid(mesh(block, wood, x, .92, 19.91, .13, 1.24, .13));
-  for (const y of [.88, 1.47]) {
-    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(-2, y, 19.91), new THREE.Vector3(-1, y - .16, 19.91), new THREE.Vector3(0, y, 19.91), new THREE.Vector3(1, y - .16, 19.91), new THREE.Vector3(2, y, 19.91)]);
-    mesh(keep(new THREE.TubeGeometry(curve, 42, .018, 6, false)), ropeMaterial);
-  }
-  obstacle(0, 19.92, 2.08, .07);
+  buildCliffCrossings(root, library, { stone, darkStone, moss }, colliders, keep, own);
 
   const windTime = { value: 0 };
   const pines = buildPines(root, bark, colliders, windTime, keep, texture => localTextures.add(texture));
@@ -239,7 +227,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     return {bird, wings, phase: phase+i*.044, radius: radius+i*.85, height: height+i*.22, beat: i+flightIndex*2};
   }));
   return {
-    root, colliders, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready]).then(() => {}),
+    root, colliders, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready,graniteReady]).then(() => {}),
     update(time, delta, _indoor) {
       birds.forEach(({bird,wings,phase,radius,height,beat})=>{
         const a=time*.091+phase;
@@ -250,6 +238,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
       });
       architecture.update(time);
       windTime.value = time;
+      fall.time.value = time;
       for (const cloud of clouds) {
         const drift = Math.sin(time * .148 + cloud.phase), curl = Math.sin(time * .20 + cloud.phase * 2);
         cloud.sprite.position.set(cloud.x + drift * cloud.travel, cloud.y + curl * .54, cloud.z + drift * cloud.travel * .40);
@@ -260,6 +249,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
       dustGeometry.attributes.position.needsUpdate = delta > 0;
     },
     dispose() {
+      disposed = true;
       architecture.dispose(); pines.dispose();
       root.removeFromParent(); root.traverse(o => { if (o instanceof THREE.InstancedMesh) o.dispose(); });
       for (const g of geometries) g.dispose(); for (const m of materials) m.dispose(); for (const t of localTextures) t.dispose();

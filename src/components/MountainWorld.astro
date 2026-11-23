@@ -29,7 +29,7 @@ const marks = [
     </main>
 
     <div class="mw-arrival" data-world-arrival>
-      <img class="mw-cover" src={`${base}/world/courtyard-entrance.webp`} width="1680" height="1000" fetchpriority="high" alt="" />
+      <img class="mw-cover" src={`${base}/world/courtyard-entrance.webp`} width="1560" height="960" fetchpriority="high" alt="" />
       <h1 class="mw-cover-title" lang="en">Shane Lorien's Page</h1>
       <div class="mw-cover-actions">
         <button type="button" class="mw-enter-button" data-world-load>{isEn ? 'Enter the courtyard' : '走进云庭'}</button>
@@ -49,7 +49,7 @@ const marks = [
           <span class="mw-sr-only" data-sound-label>{isEn ? 'Background music' : '背景音乐'}</span>
         </button>
         <button type="button" data-world-settings-open aria-haspopup="dialog"><Icon name="mdi:cog-outline" /><span>{isEn ? 'Settings' : '设置'}</span></button>
-        <button type="button" class="mw-tool-button" data-world-action="reset" aria-label={isEn ? 'Return to the courtyard gate' : '回到庭门'} disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></svg></button>
+        <button type="button" class="mw-tool-button" data-world-action="reset" aria-label={isEn ? 'Return to Cloudwatch Landing' : '回到候云台'} disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></svg></button>
         <button type="button" class="mw-tool-button" data-world-pause aria-label={isEn ? 'Pause exploring' : '暂停探索'} hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg></button>
         <a class="mw-language" href={languageHref} lang={isEn ? 'zh-CN' : 'en'} aria-label={isEn ? '中文版本' : 'English version'}>{isEn ? '中' : 'EN'}</a>
       </nav>
@@ -104,7 +104,7 @@ const marks = [
     </section>
 
     <footer class="mw-hud">
-      <div class="mw-place"><span class="mw-place-overline">{isEn ? 'YOU ARE HERE' : '此刻所在'}</span><strong data-world-location>{isEn ? 'The cloud mountain path' : '云山石径'}</strong><span class="mw-place-note">{isEn ? 'Take your time.' : '此间无事，随意走走。'}</span></div>
+      <div class="mw-place"><span class="mw-place-overline">{isEn ? 'YOU ARE HERE' : '此刻所在'}</span><strong data-world-location>{isEn ? 'Cloudwatch Landing' : '候云台'}</strong><span class="mw-place-note">{isEn ? 'Take your time.' : '此间无事，随意走走。'}</span></div>
       <div class="mw-hint" data-world-hint role="status" hidden>
         <p class="mw-hint-desktop"><span><kbd>WASD</kbd> {isEn ? 'walk' : '行走'}</span><span class="mw-look-locked">{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span class="mw-look-pointer">{isEn ? 'Drag or move to the edge to look' : '拖动或靠边环顾'}</span><span class="mw-look-pending">{isEn ? 'Locking the mouse…' : '正在锁定鼠标…'}</span><span><kbd>Shift</kbd> {isEn ? 'run' : '奔跑'}</span><span><kbd>Esc</kbd> {isEn ? 'pause' : '暂停'}</span></p>
         <p class="mw-hint-touch">{isEn ? 'Left to walk · drag right to look · tap the object prompt' : '左侧行走 · 右侧环顾 · 轻触物件提示'}</p>

@@ -6,8 +6,8 @@ import type { SurfaceLibrary } from './materials';
 import type { Collider, WalkArea } from './types';
 
 /** These openings also cut the island's soil; water must not float on an uncut ground plane. */
-export const COURTYARD_POOL = { x0: -3.97, x1: -2.65, z0: 3.80, z1: 5.86 } as const;
-export const FORECOURT_PLANTER = { x0: -5.88, x1: -4.12, z0: 2.05, z1: 5.35 } as const;
+export const COURTYARD_POOL = { x0: -4.79, x1: -2.43, z0: 1.15, z1: 6.08 } as const;
+export const FORECOURT_PLANTER = { x0: -6.09, x1: -5.02, z0: 2.05, z1: 5.35 } as const;
 
 type Rect = { x0: number; x1: number; z0: number; z1: number };
 const mirrorRect = (rect: Rect): Rect => ({ ...rect, x0: -rect.x1, x1: -rect.x0 });
@@ -169,7 +169,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     timberFloor(side({x0:-7.36,x1:-6.1,z0:-6,z1:7.85}));
   }
   paving({x0:-1.85,x1:1.85,z0:.6,z1:8.4},1.85,.975);
-  paving({x0:-1.85,x1:1.85,z0:8.4,z1:19.97},1.85,.89);
+  paving({x0:-1.85,x1:1.85,z0:8.4,z1:15.75},1.85,.89);
   for (const x of [-3.2, 3.2]) box(.095, .018, 6.4, x, .294, -2.6, joinery, 'Flush inner-gallery edge board', .002).castShadow = false;
   box(12.2, .018, .095, 0, .294, -5.8, joinery, 'North study open threshold', .002).castShadow = false;
 
@@ -194,7 +194,10 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     obstacle(x,z,waterW/2,waterD/2);
     const water=add(waterGeometry,waterMaterial,'Open reflecting pool',x,0,z);
     water.castShadow=false; water.userData.dynamic=true; water.userData.ignoreInteractionRay=true;
-    lotus.plant(x,z,i ? 1 : -1);
+    const bank = i ? 1 : -1;
+    box(.65,.18,.66,bank*4.06,.21,4.55,limestone,'Stone lantern footing in the reflecting pool',.028);
+    lotus.plant(x+bank*.23,z-1.12,bank);
+    lotus.plant(x-bank*.31,z+1.12,-bank);
   }
   for (const planter of [FORECOURT_PLANTER,mirrorRect(FORECOURT_PLANTER)]) {
     const x=(planter.x0+planter.x1)/2,z=(planter.z0+planter.z1)/2,w=planter.x1-planter.x0,d=planter.z1-planter.z0;
@@ -257,7 +260,11 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     { x: 0, z: 4.5, halfX: 6.35, halfZ: 3.9 },
     { x: 0, z: 8.4, halfX: 1.8, halfZ: .55 },
     { x: 0, z: 11.00, halfX: 3.65, halfZ: 2.72 },
-    { x: 0, z: 16.45, halfX: 2.13, halfZ: 3.53 },
+    { x: 0, z: 14.25, halfX: 1.8, halfZ: 1.5 },
+    { x: 0, z: 23.875, halfX: 1.65, halfZ: 8.125 },
+    { x: 0, z: 34, halfX: 4.2, halfZ: 4.2, shape: 'ellipse' },
+    { x: 18.75, z: 5, halfX: 5.25, halfZ: .95 },
+    { x: 26, z: 5, halfX: 4.3, halfZ: 4.3, shape: 'ellipse' },
     { x: -7.25, z: .925, halfX: 1.15, halfZ: 6.925 },
     { x: -10.15, z: .10, halfX: 2.81, halfZ: 8.1 },
     { x: 7.25, z: .925, halfX: 1.15, halfZ: 6.925 },

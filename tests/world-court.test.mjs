@@ -25,7 +25,7 @@ const roof = loadModule('tiled-roof',{three,'./environment-geometry':shapes});
 const halls = loadModule('timber-halls',{three,'./tiled-roof':roof});
 const lotus = loadModule('lotus-pond',{three,'./environment-geometry':shapes});
 const { createStudyArchitecture } = loadModule('environment-design',{three,'./environment-geometry':shapes,'./timber-halls':halls,'./lotus-pond':lotus});
-const origin = {x:0,z:17.65};
+const origin = {x:0,z:34};
 
 test('entrance, hall and mirror-paired roofs share the built courtyard axis',async () => {
   const root=new THREE.Group(), site=createStudyArchitecture(root,{material:()=>new THREE.MeshStandardMaterial()},false);
@@ -72,6 +72,11 @@ test('entrance, hall and mirror-paired roofs share the built courtyard axis',asy
     }
     const nav=createNavigation(site.walkAreas,site.colliders);
     for(let z=origin.z;z>=-5.75;z-=.125) assert.ok(nav.canWalk(0,z),'Open axis at '+z);
+    assert.equal(nav.hasFloor(1.7,24), false, 'Open chasm beside the south bridge');
+    assert.equal(nav.hasFloor(3.8,37.8), false, 'Landing edge follows the circular stone platform');
+    assert.equal(nav.hasFloor(18,6), false, 'Air beside the east bridge');
+    assert.equal(nav.hasFloor(30,9), false, 'The terrace has no invisible square corners');
+    assert.ok(nav.clearLine({x:14,z:5},{x:25.2,z:5}), 'East bridge joins the sunwheel terrace');
     for(const side of [-1,1]) {
       assert.equal(nav.canWalk(side*3.3,4.8),false,'The water in the pine court blocks walking');
       for (const offset of [.7,1.35,2.05]) {

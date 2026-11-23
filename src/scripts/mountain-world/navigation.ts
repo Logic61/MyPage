@@ -5,7 +5,11 @@ export interface Point { x: number; z: number; }
 /** Small static floor navigation. The rendered world remains fully three-dimensional. */
 export function createNavigation(areas: WalkArea[], obstacles: Collider[], radius = 0.32, outline: number[][] = []) {
   function inside(x: number, z: number) {
-    if (areas.some(a => Math.abs(x-a.x) <= a.halfX && Math.abs(z-a.z) <= a.halfZ)) return true;
+    if (areas.some(a => {
+      const dx = Math.abs(x - a.x), dz = Math.abs(z - a.z);
+      if (dx > a.halfX || dz > a.halfZ) return false;
+      return a.shape !== 'ellipse' || (dx / a.halfX) ** 2 + (dz / a.halfZ) ** 2 <= 1;
+    })) return true;
     let enclosed = false;
     for (let i=0, j=outline.length-1; i<outline.length; j=i++) {
       const [ax,az] = outline[i], [bx,bz] = outline[j];

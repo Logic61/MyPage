@@ -1,7 +1,7 @@
 import type * as THREE from 'three';
 
 export interface Collider { x: number; z: number; halfX: number; halfZ: number; }
-export interface WalkArea { x: number; z: number; halfX: number; halfZ: number; }
+export interface WalkArea { x: number; z: number; halfX: number; halfZ: number; shape?: 'ellipse'; }
 export type InteractionKind = 'books' | 'projects' | 'about' | 'lantern' | 'bench';
 export interface Interaction {
   id: string;

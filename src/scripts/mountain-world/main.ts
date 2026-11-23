@@ -24,6 +24,14 @@ function edgeTurn(position: number) {
 
 /** Floor-level regions of the U-shaped courtyard; open galleries retain outdoor sound. */
 function describePlace(x: number, z: number) {
+  if (z >= 30 && Math.hypot(x, z - 34) <= 4.2)
+    return { name: '候云台', nameEn: 'Cloudwatch Landing', indoor: false };
+  if (z > 15.75 && Math.abs(x) <= 1.65)
+    return { name: '渡云桥', nameEn: 'Cloud Crossing', indoor: false };
+  if (Math.hypot(x - 26, z - 5) <= 4.3)
+    return { name: '日轮台', nameEn: 'Sunwheel Terrace', indoor: false };
+  if (x > 14 && x < 24 && Math.abs(z - 5) <= .95)
+    return { name: '东云栈', nameEn: 'East Skywalk', indoor: false };
   if (x >= -6.1 && x <= 6.1 && z >= -10 && z <= -5.8)
     return { name: '云庭书斋', nameEn: 'Cloud Court Study', indoor: true };
   if (x >= -6.1 && x <= -3.2 && z > -5.8 && z <= .6)
@@ -146,7 +154,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     const pipeline = createStudyRenderer(renderer, scene, camera, coarse); resources.unshift(() => pipeline.dispose());
     const navigation = createNavigation(environment.walkAreas, [...environment.colliders, ...furniture.colliders], .32, environment.outline);
     const picker = createInteractionPicker([environment.root, furniture.root], furniture.interactions);
-    const entrance = { x: 0, z: 17.65 };
+    const entrance = { x: 0, z: 34 };
     const arrivalPitch = .085;
     const spawn = navigation.canWalk(entrance.x, entrance.z) ? entrance : navigation.nearest(entrance, 3);
     if (!spawn || !navigation.canWalk(spawn.x, spawn.z)) throw new Error('The courtyard entrance has no safe walking position.');
@@ -156,7 +164,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     const joystick = new THREE.Vector2();
     // Layout changes invalidate old world coordinates, while language switches
     // still share the same safe place within this courtyard.
-    const stateKey = `mountain-first-person-v4-pine-court:${config.base}`;
+    const stateKey = `mountain-first-person-v5-cloud-pass:${config.base}`;
     const look = new LookController(0, arrivalPitch);
     visitorPose = () => ({ x: position.x, z: position.z, yaw: look.yaw });
     const stance = new StanceTransition(.3);
@@ -411,14 +419,16 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     };
     navigateAction = id => {
       const item = furniture.interactions.find(item => item.id === id || item.kind === id);
-      if (!item) return;
+      const approach = item?.approach ?? (id === 'sunwheel' ? { x: 25.2, z: 5 } : null);
+      if (!approach) return;
       standUp(); cancelRoute();
-      const path = navigation.findPath(position, item.approach);
+      const path = navigation.findPath(position, approach);
       if (!path.length) {
-        setMode('paused'); ui.showToast(en ? 'There is no clear path from here. Return to the courtyard gate and try again.' : '这里暂时没有通路，可以先回到庭门。'); return;
+        setMode('paused'); ui.showToast(en ? 'There is no clear path from here. Return to Cloudwatch Landing and try again.' : '这里暂时没有通路，可以先回到候云台。'); return;
       }
-      route = path; destination = item; root.dataset.guided = 'true';
-      enter(); ui.showToast(en ? `Walking to ${item.labelEn.toLowerCase()}. Look around or move to take control.` : `向${item.label}走去。转动视线或自行走动即可接管。`);
+      route = path; destination = item ?? null; root.dataset.guided = 'true';
+      const label = en ? (item?.labelEn.toLowerCase() ?? 'Sunwheel Terrace') : (item?.label ?? '日轮台');
+      enter(); ui.showToast(en ? `Walking to ${label}. Look around or move to take control.` : `向${label}走去。转动视线或自行走动即可接管。`);
     };
     resetAction = () => {
       if (inFall()) return;
@@ -426,7 +436,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       if (mode === 'transition') setMode('paused');
       standUp(); cancelRoute(); clearMovement();
       position.set(spawn.x, FLOOR_HEIGHT, spawn.z); look.snap(0, arrivalPitch); stance.reset();
-      updateCamera(1); save(); ui.showToast(en ? 'Back at the courtyard gate.' : '回到庭门，云庭就在眼前。');
+      updateCamera(1); save(); ui.showToast(en ? 'Back at Cloudwatch Landing.' : '已回到候云台。');
     };
     fallDialog?.addEventListener('cancel', event => event.preventDefault(), {signal});
     respawnButton?.addEventListener('click', () => {
