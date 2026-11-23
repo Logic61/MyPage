@@ -224,24 +224,28 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   feathers.computeVertexNormals();
   const plumage = own(new THREE.MeshBasicMaterial({color:'#46575b',side:THREE.DoubleSide}));
   const breast = keep(new THREE.SphereGeometry(1,8,6));
-  const flock = Array.from({length:6},(_,i)=>{
+  const flights = [
+    { count: 3, phase: -.1, radius: 42, height: 13.5 },
+    { count: 2, phase: 2.0, radius: 46, height: 15 },
+    { count: 3, phase: 4.1, radius: 44, height: 14 },
+  ];
+  const birds = flights.flatMap(({count, phase, radius, height}, flightIndex) => Array.from({length:count}, (_,i) => {
     const bird=new THREE.Group(), body=new THREE.Mesh(breast,plumage);
     body.scale.set(.095,.085,.43); bird.add(body);
     const wings=[-1,1].map(side=>{
       const wing=new THREE.Mesh(feathers,plumage); wing.scale.x=side; bird.add(wing); return wing;
     });
-    bird.scale.setScalar(.76+.09*(i%3)); root.add(bird);
-    return {bird,wings};
-  });
+    bird.scale.setScalar(.49+.045*((i+flightIndex)%3)); root.add(bird);
+    return {bird, wings, phase: phase+i*.044, radius: radius+i*.85, height: height+i*.22, beat: i+flightIndex*2};
+  }));
   return {
     root, colliders, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready]).then(() => {}),
     update(time, delta, _indoor) {
-      // All three roofs remain real geometry. Only leaves, pool and mist move.
-      flock.forEach(({bird,wings},i)=>{
-        const a=time*.091+i*.041-.1, r=33+Math.abs(i-2)*1.25;
-        bird.position.set(Math.sin(a)*r,9+.45*Math.sin(2*a+i)+i*.23,-Math.cos(a)*r);
-        bird.rotation.set(0,Math.PI/2-a,.12*Math.sin(a+i));
-        const flap=.16+.48*Math.sin(time*5+i)*Math.max(0,Math.sin(time*.68+i*.9));
+      birds.forEach(({bird,wings,phase,radius,height,beat})=>{
+        const a=time*.091+phase;
+        bird.position.set(Math.sin(a)*radius,height+.45*Math.sin(2*a+beat),-Math.cos(a)*radius);
+        bird.rotation.set(0,Math.PI/2-a,.12*Math.sin(a+beat));
+        const flap=.16+.48*Math.sin(time*5+beat)*Math.max(0,Math.sin(time*.68+beat*.9));
         wings[0].rotation.z=-flap; wings[1].rotation.z=flap;
       });
       architecture.update(time);
