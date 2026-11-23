@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createLotusPlanting } from './lotus-pond';
 import { buildTimberHalls } from './timber-halls';
 import { architecturalBlock, gridSurface } from './environment-geometry';
 import type { SurfaceLibrary } from './materials';
@@ -38,8 +39,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   const binding = own(new THREE.MeshStandardMaterial({ color: '#a4aa98', roughness: 1 }));
   const soil = own(library.material('ground', { worldScale: 1.5, color: '#a9b4a0', normalScale: .32 }));
   const waterMaterial = own(new THREE.MeshPhysicalMaterial({
-    color: '#729c90', roughness: .22, metalness: .08, transparent: true, opacity: .82,
-    clearcoat: .7, clearcoatRoughness: .20, depthWrite: false, side: THREE.DoubleSide,
+    color: '#629186', roughness: .27, metalness: .04, transparent: true, opacity: .60,
+    clearcoat: .54, clearcoatRoughness: .24, depthWrite: false, side: THREE.DoubleSide,
   }));
   const blocks = new Map<string, THREE.BufferGeometry>(), unitCube = keep(new THREE.BoxGeometry(1, 1, 1));
   const vUp = new THREE.Vector3(0, 1, 0);
@@ -173,18 +174,18 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   box(12.2, .018, .095, 0, .294, -5.8, joinery, 'North study open threshold', .002).castShadow = false;
 
   const waterW = COURTYARD_POOL.x1 - COURTYARD_POOL.x0, waterD = COURTYARD_POOL.z1 - COURTYARD_POOL.z0;
-  const waterGeometry = keep(gridSurface(14,24,(u,v) => new THREE.Vector3((u-.5)*waterW,.257,(v-.5)*waterD),true));
-  const leafColor = own(new THREE.MeshStandardMaterial({name:'Celadon lotus leaves',color:'#72855a',roughness:.66,side:THREE.DoubleSide,vertexColors:true}));
-  const petalColor = own(new THREE.MeshStandardMaterial({name:'Lotus petal silk',color:'#fff2dd',roughness:.71,vertexColors:true,side:THREE.DoubleSide}));
-  const lotusLeaf = keep(gridSurface(3,32,(u,v) => {
-    const a=.12+v*(Math.PI*2-.24),r=u*(1+.045*Math.cos(a*7)); return new THREE.Vector3(r*Math.cos(a),.04*u+.065*u*u*Math.sin(a*4),r*Math.sin(a));
-  },false,(u,v)=>new THREE.Color().setScalar(.74+.18*u+.075*Math.cos(v*Math.PI*26))));
-  const petal = keep(gridSurface(5,8,(u,v) => new THREE.Vector3((u-.5)*Math.sin(Math.PI*v)*.135,.16*v*v+.024*Math.sin(u*Math.PI),.18*v),
-    false,(_u,v)=>new THREE.Color('#dfaba2').lerp(new THREE.Color('#fff3d9'),1-Math.pow(v,2))));
-  const heart=own(new THREE.MeshStandardMaterial({color:'#b5934a',roughness:.84}));
+  const waterGeometry = keep(gridSurface(26,40,(u,v) => new THREE.Vector3((u-.5)*waterW,.257,(v-.5)*waterD),true));
+  const bedStone = own(library.material('darkStone',{color:'#b2bda8',worldScale:.45,roughness:.88,normalScale:.44}));
+  const pebble = keep(new THREE.IcosahedronGeometry(1,1));
+  const lotus = createLotusPlanting(group,geometries,materials);
   for (const [i,p] of COURTYARD_POOLS.entries()) {
     const x=(p.x0+p.x1)/2,z=(p.z0+p.z1)/2;
-    box(waterW,.06,waterD,x,.13,z,joints,'Recessed pool bed',.005).castShadow=false;
+    box(waterW,.06,waterD,x,.13,z,bedStone,'Recessed pool bed',.005).castShadow=false;
+    for (let k=0;k<14;k++) {
+      const sign=k%2 ? 1 : -1, px=x+sign*(.38+.14*Math.sin(k*2.43)), pz=z+.78*Math.sin(k*1.47+.3);
+      const stone=add(pebble,bedStone,'Submerged river stone',px,.164,pz);
+      stone.scale.set(.034+.013*(k%3),.014+.004*(k%2),.027+.012*(k%4)); stone.rotation.y=k*2.4;
+    }
     for (const side of [-1,1]) {
       box(.12,.15,waterD+.24,x+side*(waterW/2+.06),.227,z,limestone,'Stone pool coping',.009);
       box(waterW,.15,.12,x,.227,z+side*(waterD/2+.06),limestone,'Stone pool coping',.009);
@@ -193,17 +194,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     obstacle(x,z,waterW/2,waterD/2);
     const water=add(waterGeometry,waterMaterial,'Open reflecting pool',x,0,z);
     water.castShadow=false; water.userData.dynamic=true; water.userData.ignoreInteractionRay=true;
-    for (let j=0;j<9;j++) {
-      const px=x+Math.sin(j*2.5+i*.8)*(waterW*.32), pz=z+Math.cos(j*1.76+i)*(waterD*.34), r=.10+(j%4)*.036;
-      const leaf=add(lotusLeaf,leafColor,'Notched lotus pad',px,.274+(j%3)*.005,pz);
-      leaf.scale.set(r,.4,r); leaf.rotation.y=j*2.39;
-      if (j!==1 && j!==6) continue;
-      for (let k=0;k<13;k++) {
-        const bloom=add(petal,petalColor,'Cupped lotus petal',px,.30,pz);
-        bloom.rotation.set(k<8?-.12:-.50,k*2.39,0,'YXZ'); bloom.scale.setScalar(k<8?.72:.48);
-      }
-      add(keep(new THREE.SphereGeometry(.027,10,6)),heart,'Lotus seed head',px,.355,pz);
-    }
+    lotus.plant(x,z,i ? 1 : -1);
   }
   for (const planter of [FORECOURT_PLANTER,mirrorRect(FORECOURT_PLANTER)]) {
     const x=(planter.x0+planter.x1)/2,z=(planter.z0+planter.z1)/2,w=planter.x1-planter.x0,d=planter.z1-planter.z0;
@@ -273,14 +264,18 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     { x: 10.15, z: .10, halfX: 2.81, halfZ: 8.1 },
   ];
   return {
-    geometries, materials, colliders, walkAreas, ready: halls.ready, dispose: halls.dispose,
+    geometries, materials, colliders, walkAreas, ready: Promise.all([halls.ready,lotus.ready]).then(()=>{}),
+    dispose() { halls.dispose(); lotus.dispose(); },
     update(time: number) {
       const { position, normal } = waterGeometry.attributes;
       for (let i = 0; i < position.count; i++) {
         const x = position.getX(i), z = position.getZ(i);
         const a=x*6.4+z*4.8+time*.85,b=z*8.1-time*.55;
-        position.setY(i,.257+.0045*Math.sin(a)+.002*Math.cos(b));
-        normal.setXYZ(i,-.029*Math.cos(a),1,-.022*Math.cos(a)+.016*Math.sin(b));
+        const dx=x+.36,dz=z-.35,r=Math.sqrt(dx*dx+dz*dz+.001);
+        const ripple=r*22-time*2.6, falloff=1/(1+4*r*r);
+        const radialSlope=.0036*falloff*(22*Math.cos(ripple)-8*r*falloff*Math.sin(ripple));
+        position.setY(i,.257+.0045*Math.sin(a)+.002*Math.cos(b)+.0036*falloff*Math.sin(ripple));
+        normal.setXYZ(i,-.029*Math.cos(a)-radialSlope*dx/r,1,-.022*Math.cos(a)+.016*Math.sin(b)-radialSlope*dz/r);
       }
       position.needsUpdate = normal.needsUpdate = true;
     },

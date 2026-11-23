@@ -110,3 +110,37 @@ export function createBenchCushionGeometry(width: number, depth: number, height:
   geometry.computeVertexNormals();
   return geometry;
 }
+
+/** Carved slate. A continuous top slopes from the grinding bed into an off-centre ink well. */
+export function createInkstoneGeometry() {
+  const profile = [
+    [.002,.002,.001,0], [.145,.090,.001,0], [.152,.095,.007,0],
+    [.154,.097,.024,0], [.150,.094,.033,0], [.139,.084,.036,0],
+    [.102,.070,.032,.022], [.064,.055,.030,.056], [.056,.047,.023,.059],
+    [.051,.041,.012,.060], [.002,.002,.010,.060],
+  ];
+  const vertices: number[]=[], uv: number[]=[], indices: number[]=[];
+  const count=64;
+  for (const [i,[rx,rz,y,shift]] of profile.entries()) for(let j=0;j<count;j++) {
+    const a=j*2*Math.PI/count, c=Math.cos(a), t=Math.sin(a);
+    const exponent=i<7?.70:.92;
+    const x=shift+rx*Math.sign(c)*Math.abs(c)**exponent;
+    const z=rz*Math.sign(t)*Math.abs(t)**exponent*(1+.07*c);
+    vertices.push(x,y,z); uv.push(.5+x*3,.5-z*4.5);
+    if(i===0)continue;
+    const p=(i-1)*count+j,n=(i-1)*count+(j+1)%count;
+    indices.push(p,p+count,n,n,p+count,n+count);
+  }
+  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));
+  g.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));g.setIndex(indices);g.computeVertexNormals();return g;
+}
+
+export function createBrushRestGeometry() {
+  const ridge=new THREE.Shape();
+  ridge.moveTo(-.073,0);ridge.quadraticCurveTo(-.079,.016,-.059,.038);
+  ridge.quadraticCurveTo(-.046,.071,-.035,.030);ridge.quadraticCurveTo(-.026,.015,-.014,.041);
+  ridge.quadraticCurveTo(.003,.095,.018,.045);ridge.quadraticCurveTo(.027,.018,.039,.036);
+  ridge.quadraticCurveTo(.052,.068,.062,.033);ridge.quadraticCurveTo(.082,.014,.073,0);ridge.closePath();
+  const g=new THREE.ExtrudeGeometry(ridge,{depth:.032,bevelEnabled:true,bevelThickness:.004,bevelSize:.003,bevelSegments:3,curveSegments:10});
+  g.translate(0,.004,-.016);return g;
+}

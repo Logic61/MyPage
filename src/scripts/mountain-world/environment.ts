@@ -181,19 +181,22 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
 
   // The distant mountains belong to the generated landscape backdrop, not opaque polygon rings.
   const mistMap = mistTexture(); localTextures.add(mistMap);
-  const clouds = Array.from({ length: 15 }, (_, i) => {
-    const angle = i / 15 * Math.PI * 2, high = i % 3 === 0;
-    const x = Math.cos(angle) * (22 + rng() * 6), z = Math.sin(angle) * (22 + rng() * 5);
-    const y = high ? -.7 - rng() * 1.25 : -3.6 - rng() * 4.2;
-    const width = (high ? 17 : 23) + rng() * 8, height = (high ? 3.6 : 5.8) + rng() * 1.8;
-    const opacity = high ? .39 : .34;
+  const clouds = Array.from({ length: 20 }, (_, i) => {
+    // Five isolated wisps pass in front of the distant ridges at a standing visitor's eye line.
+    const distant = i >= 15, high = i % 3 === 0 || distant;
+    const angle = distant ? (i-15)*Math.PI*.4 + .22*Math.sin(i) : i/15*Math.PI*2;
+    const radius = distant ? 53 : 22;
+    const x = Math.cos(angle) * (radius + rng()*6), z = Math.sin(angle) * (radius + rng()*5);
+    const y = distant ? 6 + rng()*4.2 : high ? -.7 - rng()*1.25 : -3.6 - rng()*4.2;
+    const width = (distant ? 22 : high ? 17 : 23) + rng()*8, height = (high ? 3.6 : 5.8) + rng()*1.8;
+    const opacity = distant ? .40 : high ? .47 : .41;
     const material = own(new THREE.SpriteMaterial({ map: mistMap, color: high ? '#fffcf3' : '#dbe9ed',
       opacity, transparent: true, depthWrite: false, fog: true }));
     const sprite = new THREE.Sprite(material);
     sprite.name = high ? 'High cliff wisp' : 'Low valley mist'; sprite.userData.ignoreInteractionRay = true;
     sprite.userData.ignoreAmbientOcclusion = true;
     sprite.position.set(x, y, z); sprite.scale.set(width, height, 1); root.add(sprite);
-    return { sprite, x, y, z, width, height, opacity, phase: rng() * Math.PI * 2 };
+    return { sprite, x, y, z, width, height, opacity, travel: distant ? 9 : 4.5, phase: rng() * Math.PI * 2 };
   });
   const dustGeometry = keep(new THREE.BufferGeometry()), dust = new Float32Array(38 * 3), origins: number[] = [];
   for (let i = 0; i < 38; i++) { const x = (rng() - .5) * 5.7, y = .7 + rng() * 3.5, z = -5.5 + rng() * 6.5; dust.set([x, y, z], i * 3); origins.push(x, y, z, rng() * 6); }
@@ -213,8 +216,8 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
       architecture.update(time);
       windTime.value = time;
       for (const cloud of clouds) {
-        const drift = Math.sin(time * .105 + cloud.phase), curl = Math.sin(time * .16 + cloud.phase * 2);
-        cloud.sprite.position.set(cloud.x + drift * 3.8, cloud.y + curl * .46, cloud.z + drift * 1.45);
+        const drift = Math.sin(time * .148 + cloud.phase), curl = Math.sin(time * .20 + cloud.phase * 2);
+        cloud.sprite.position.set(cloud.x + drift * cloud.travel, cloud.y + curl * .54, cloud.z + drift * cloud.travel * .40);
         cloud.sprite.scale.set(cloud.width * (1 + .08 * curl), cloud.height * (1 - .12 * curl), 1);
         cloud.sprite.material.opacity = cloud.opacity * (.84 + .16 * Math.cos(time * .14 + cloud.phase));
       }

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary, type SurfaceKind, type SurfaceOptions } from './materials';
 import { createFurnishingInk } from './furnishing-ink';
-import { createBenchCushionGeometry, createScreenArtwork } from './furnishing-design';
+import { createBenchCushionGeometry, createBrushRestGeometry, createInkstoneGeometry, createScreenArtwork } from './furnishing-design';
 import type { Collider, Furnishings, Interaction } from './types';
 
 /** Human-scale furnishings: all dimensions are metres; the common floor is y=.3. */
@@ -273,7 +273,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
   mountScroll('North wall poetic inscription',-3.68,written('scroll'));
   const hostMount=mountScroll('North wall host biography scroll',3.68,hostPaper);
-  interactions.push({ id:'about', kind:'about', label:'展读自序', labelEn:'Read the preface',
+  interactions.push({ id:'about', kind:'about', label:'展读简历', labelEn:'Read the CV',
     position:new THREE.Vector3(3.68,2.22,-9.73), approach:new THREE.Vector3(3.68,.3,-7.46), radius:2.75, meshes:[hostMount] });
   const assetsReady=Promise.all([screenReady,lettering.portraitReady]).then(()=>{});
 
@@ -485,35 +485,54 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
   const deskLight = new THREE.PointLight('#ffe0bb', .75, 2.5, 2);
   deskLight.position.set(.10,.40,.01); deskLamp.add(deskLight);
-  // Hollow ceramic forms have real rims, feet, and interiors at first-person distance.
-  lathe(desk, ceramic, 'brush-pot-profile', [[.045,0],[.054,.008],[.057,.136],[.055,.145],[.050,.145],[.050,.012],[0,.012]], .48, tableY, -.35);
-  for (let i = 0; i < 3; i++) {
-    const brush = new THREE.Group(); brush.position.set(.47 + i * .014, tableY + .18, -.35 + i * .008);
-    brush.rotation.z = -.18 + i * .14; brush.rotation.x = .10 + i * .07; desk.add(brush);
-    cylinder(brush, woodEdge, .0037, .0044, .24, 0, 0, 0, 10);
-    cylinder(brush, brassDark, .0045, .0045, .015, 0, -.12, 0, 10);
-    cylinder(brush, ink, .0043, .0008, .045, 0, -.149, 0, 10);
-    for (const yy of [-.07, .035]) cylinder(brush, woodDark, .0047, .0047, .002, 0, yy, 0, 10);
+  const porcelain = material({ map:lettering.brushGlaze,roughness:.28,metalness:.015 });
+  const porcelainLip = material({color:'#e6e4cc',roughness:.24});
+  const cobalt = material({color:'#426378',roughness:.32});
+  const bamboo = material({color:'#aa7842',roughness:.49});
+  const hairs = material({color:'#877454',roughness:.85});
+  lathe(desk,porcelain,'bamboo-painted-brush-pot',[[.06,0],[.061,.009],[.077,.022],[.081,.048],
+    [.077,.114],[.074,.161],[.077,.169],[.071,.173],[.066,.164],[.065,.041],[.047,.024],[0,.024]], .50,tableY,-.33,56);
+  for(const [y,r] of [[.010,.061],[.165,.076]]) torus(desk,cobalt,r,.0025,.50,tableY+y,-.33,48).rotation.x=Math.PI/2;
+  function writingBrush(parent: THREE.Group) {
+    lathe(parent,bamboo,'bamboo-brush-shaft',[[0,0],[.004,0],[.006,.007],[.0058,.055],
+      [.005,.166],[.0064,.213],[.0061,.249],[.005,.254],[0,.254]],0,0,0,16);
+    for(const y of [.022,.180,.237]) cylinder(parent,woodDark,.0062,.0062,.003,0,y,0,16);
+    cylinder(parent,brassDark,.0071,.0068,.014,0,.255,0,18);
+    lathe(parent,hairs,'tapered-brush-hairs',[[.006,.260],[.0085,.268],[.010,.277],[.0094,.288],[.0058,.303],[.0025,.315]],0,0,0,20);
+    lathe(parent,ink,'inked-brush-tip',[[.0026,.314],[.0014,.321],[.00025,.331]],0,0,0,16);
   }
-  bevel(desk, inkstone, .205, .026, .142, .38, tableY + .013, -.05, .013);
-  const inkPool = cylinder(desk, ink, .046, .046, .001, .397, tableY + .0272, -.052, 32);
-  inkPool.scale.z = .83; inkPool.castShadow = false;
-  const wellRim = torus(desk, inkstone, .050, .004, .397, tableY + .027, -.052, 40);
-  wellRim.rotation.x = Math.PI / 2; wellRim.scale.y = .83;
-  bevel(desk, ink, .025, .018, .092, .30, tableY + .033, -.047, .003);
-  // A resting brush spans a small carved rest instead of floating over the table.
-  bevel(desk, ceramic, .075, .018, .025, .46, tableY + .009, .23, .006);
-  const restingBrush = new THREE.Group(); restingBrush.position.set(.44, tableY + .027, .17);
-  restingBrush.rotation.set(Math.PI / 2, 0, -.16); desk.add(restingBrush);
-  cylinder(restingBrush, woodEdge, .0038, .0048, .25, 0, 0, 0, 12);
-  cylinder(restingBrush, brassDark, .0046, .0046, .018, 0, -.125, 0, 10);
-  cylinder(restingBrush, ink, .0045, .0006, .047, 0, -.157, 0, 12);
-  const teaMat = bevel(desk, cloth, .32, .002, .27, -1.03, tableY + .001, .28, .0004); teaMat.rotation.y = -.08;
-  lathe(desk, ceramic, 'tea-saucer-profile', [[0,0],[.045,0],[.087,.008],[.090,.015],[.085,.019],[.046,.009],[0,.007]], -1.03, tableY + .002, .28);
-  lathe(desk, ceramic, 'tea-cup-profile', [[.028,0],[.030,.008],[.047,.021],[.062,.065],[.062,.069],[.058,.070],[.054,.062],[.040,.022],[.025,.014],[0,.014]], -1.03, tableY + .012, .28);
-  const tea = material({ color: '#593b20', roughness: .13, metalness: .12 });
-  cylinder(desk, tea, .052, .052, .0015, -1.03, tableY + .069, .28, 40);
-  torus(desk, ceramic, .061, .0016, -1.03, tableY + .081, .28, 40).rotation.x = Math.PI / 2;
+  for (let j=0;j<4;j++) {
+    const brush=new THREE.Group(), a=j*2.40, tilt=.11+.045*j;
+    brush.position.set(.50+.014*Math.cos(a),tableY+.020,-.33+.014*Math.sin(a));
+    brush.rotation.set(tilt*Math.sin(a),0,-tilt*Math.cos(a));
+    brush.scale.setScalar(.88+.085*j);desk.add(brush);writingBrush(brush);
+  }
+  const slate = mesh(desk,geometry('carved-inkstone',createInkstoneGeometry),inkstone,.37,tableY+.004,-.078);
+  slate.rotation.y=-.12;
+  const inkPool = cylinder(desk,ink,.052,.051,.0016,.430,tableY+.020,-.071,48);
+  inkPool.scale.z=.82; inkPool.rotation.y=-.12; inkPool.castShadow=false;
+  const ingot=bevel(desk,ink,.032,.019,.087,.302,tableY+.049,-.084,.007);
+  ingot.rotation.y=.15;
+  for(let i=0;i<3;i++) bevel(desk,brassDark,.015,.0007,.002,.302+i*.001,tableY+.059,-.074-i*.010,.0003);
+  const rest=mesh(desk,geometry('three-peak-brush-rest',createBrushRestGeometry),ceramic,.50,tableY+.004,.23);
+  rest.rotation.y=-.15;
+  const restingBrush=new THREE.Group();restingBrush.position.set(.512,tableY+.036,.386);
+  restingBrush.rotation.set(-Math.PI/2+.045,.20,0,'YXZ');desk.add(restingBrush);writingBrush(restingBrush);
+
+  const sealStone=surface('stone',{color:'#bf846a',roughness:.40,normalScale:.19,worldScale:7});
+  bevel(desk,woodDark,.105,.008,.095,.72,tableY+.008,-.04,.004);
+  bevel(desk,sealStone,.062,.063,.060,.72,tableY+.043,-.04,.006);
+  const sealLoop=torus(desk,sealStone,.020,.007,.72,tableY+.083,-.04,24);sealLoop.scale.y=.78;
+  tube(desk,red,'seal-silk-cord',[new THREE.Vector3(.719,tableY+.088,-.032),new THREE.Vector3(.754,tableY+.040,-.023),
+    new THREE.Vector3(.775,tableY+.008,.003),new THREE.Vector3(.805,tableY+.005,-.006)],.0024);
+  const teaX=-.88, teaZ=.29;
+  const teaMat=bevel(desk,cloth,.29,.003,.25,teaX,tableY+.002,teaZ,.0005);teaMat.rotation.y=-.08;
+  lathe(desk,porcelainLip,'tea-saucer-profile',[[0,0],[.045,0],[.094,.008],[.098,.016],[.093,.020],[.046,.009],[0,.007]],teaX,tableY+.005,teaZ,48);
+  lathe(desk,porcelain,'painted-tea-bowl',[[.030,0],[.032,.009],[.046,.021],[.060,.047],[.068,.069],
+    [.070,.074],[.066,.076],[.062,.067],[.046,.032],[.027,.016],[0,.016]],teaX,tableY+.015,teaZ,48);
+  for (const [r,y] of [[.095,.022],[.069,.087]]) torus(desk,cobalt,r,.0015,teaX,tableY+y,teaZ,48).rotation.x=Math.PI/2;
+  const tea=material({color:'#754423',roughness:.12,metalness:.025});
+  cylinder(desk,tea,.060,.060,.0012,teaX,tableY+.078,teaZ,48).castShadow=false;
   // Rolled manuscripts show concentric page edges on the cut ends and a real tied loop.
   for (let i = 0; i < 2; i++) {
     const roll = new THREE.Group(); roll.position.set(-1.0, tableY + .029, -.08 - i * .083); roll.rotation.y = -.15 + i * .07; desk.add(roll);
@@ -530,7 +549,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
   batchStatic(desk, [notebook]); batchStatic(notebook, [turningLeaf]);
   colliders.push({ x: 0, z: -7, halfX: 1.49, halfZ: .64 });
-  interactions.push({ id: 'latest', kind: 'latest', label: '翻开手记', labelEn: 'Read the latest notes',
+  interactions.push({ id: 'latest', kind: 'latest', label: '翻阅近作', labelEn: 'Read recent writing',
     position: new THREE.Vector3(-.38, 1.115, -6.92), approach: new THREE.Vector3(-.35, .3, -5.55), radius: 2.1,
     meshes: [notebook], activate: () => { leafElapsed = 0; leafHasTurned = true; } });
 
@@ -591,7 +610,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   batchStatic(armillary,[outerRing,middle,inner]); batchStatic(outerRing); batchStatic(middle); batchStatic(inner);
   colliders.push({ x: 5, z: -2.8, halfX: .565, halfZ: 1.16 });
   let instrumentImpulse = 0;
-  interactions.push({ id:'projects',kind:'projects',label:'拨动浑天仪',labelEn:'Explore the workbench',
+  interactions.push({ id:'projects',kind:'projects',label:'翻阅项目',labelEn:'Explore projects',
     position:new THREE.Vector3(5.03,1.685,-2.95),approach:new THREE.Vector3(3.15,.3,-2.8),radius:2.45,
     meshes:[armillary,instrumentBase,projectCard],activate:()=>{instrumentImpulse=2.7;} });
 

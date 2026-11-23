@@ -87,7 +87,6 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
     if (action) {
       event.preventDefault();
       if (action === 'directory') openContent('books', true);
-      else if (action === 'browse') openContent('books');
       else if (action === 'map') void folio.show('map');
       else if (action === 'close') folio.close();
       else if (action === 'reset') actions.onReset();

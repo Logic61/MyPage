@@ -36,6 +36,12 @@ All background objects are excluded from interaction picking, physics and the am
 
 The centre of the painting maps directly overhead. Angular distance from the zenith sets the sampling radius, which gives every azimuth the same centre texel and blends the lower part of the canopy into the horizon. The high clouds drift gently. Local mist rolls around the cliff below eye level. The cloud layers freeze in place while reading and when reduced motion is enabled.
 
+## Lotus leaf detail
+
+`lotus-leaf.webp` is an original ImageGen diffuse texture generated on 2026-11-23. Its central hub and branching veins follow the radial UVs of the cupped lotus blades. The 1254 px square source is delivered at 640 px in a 58,912-byte WebP. The raised flower stalks, layered petals and conical seed heads are modelled in geometry. [Royal Botanic Gardens, Kew, sacred lotus](https://www.kew.org/plants/sacred-lotus)
+
+The pine geometry takes its spreading boughs from Chinese red pine. The root flare and leader define the trunk width, and each successively finer branch takes its starting radius from its parent at the attachment. [International Dendrology Society, Pinus tabuliformis](https://www.treesandshrubsonline.org/articles/pinus/pinus-tabuliformis/)
+
 ## Courtyard architecture and vegetation
 
 The gate, hall, galleries, paired pavilions and planted courts use original, metre-scale geometry. The architectural reference was the raised central hall, double eaves and red timber seen at Wudang. [Zixiao Palace field photographs](https://wlt.hubei.gov.cn/bmdt/mtjj/202208/t20220810_4255672.shtml)

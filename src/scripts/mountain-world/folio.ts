@@ -133,7 +133,7 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
       if (opts.entry) selected = opts.entry;
       if (recentOnly && rows.indexOf(selected) >= 8) selected = rows[0];
       if (!selected) section = 'map';
-      el('[data-catalogue-title]').textContent = recentOnly ? t('案头手记', 'Recent writing') : t('藏书目录', 'Contents');
+      el('[data-catalogue-title]').textContent = recentOnly ? t('近作', 'Recent writing') : t('藏书目录', 'Contents');
       filter();
     }
     const opening = !dialog.open;
@@ -175,7 +175,7 @@ export function createFolio(dialog: HTMLDialogElement, options: FolioOptions) {
 
     const blog = section === 'blog';
     el('#rubric').textContent = blog ? selected.dataset.category! : section === 'cv' ? t('北厅东壁','North hall') : t('工作案','The workbench');
-    el('#reading-title').textContent = blog ? selected.textContent!.trim() : section === 'cv' ? t('自序','Preface') : t('项目手记','Project folio');
+    el('#reading-title').textContent = blog ? selected.textContent!.trim() : section === 'cv' ? t('简历','CV') : t('项目','Projects');
     el('#byline').textContent = blog ? [selected.dataset.author, selected.dataset.date].filter(Boolean).join('  ·  ') : '';
     if (blog) for (const row of rows) {
       if (row === selected) row.setAttribute('aria-current','page'); else row.removeAttribute('aria-current');

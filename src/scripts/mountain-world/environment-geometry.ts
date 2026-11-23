@@ -96,14 +96,15 @@ export function pavingSlab(seed: number) {
 }
 
 /** A tapered, bent branch with cylindrical UVs and enough silhouette detail for eye-level viewing. */
-export function branchGeometry(points: THREE.Vector3[], startRadius: number, endRadius: number, segments = 14, radial = 12) {
+export function branchGeometry(points: THREE.Vector3[], startRadius: number, endRadius: number, segments = 14, radial = 12,
+  radiusAt?: (fraction: number) => number) {
   const curve = new THREE.CatmullRomCurve3(points);
   const frames = curve.computeFrenetFrames(segments, false);
   const pos: number[] = [], uv: number[] = [], indices: number[] = [];
   const length = curve.getLength();
   for (let i = 0; i <= segments; i++) {
     const t = i / segments, center = curve.getPointAt(t);
-    const radius = THREE.MathUtils.lerp(startRadius, endRadius, Math.pow(t, .74));
+    const radius = radiusAt ? radiusAt(t) : THREE.MathUtils.lerp(startRadius, endRadius, Math.pow(t, .74));
     for (let j = 0; j <= radial; j++) {
       const a = j / radial * Math.PI * 2;
       const rough = 1 + Math.sin(a * 3 + t * 3.1) * .062 + Math.cos(a * 5 - t * 4.5) * .032;

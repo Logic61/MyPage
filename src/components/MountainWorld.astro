@@ -13,9 +13,9 @@ const config = JSON.stringify({ isEn, prefix, base }).replace(/</g, '\\u003c');
 const languageHref = `${base}${isEn ? '' : '/en'}/`;
 const marks = [
   {id:'books', icon:'book-open-page-variant-outline', label:isEn ? 'Writing' : '博客', primary:true},
-  {id:'about', icon:'script-text-outline', label:isEn ? 'Preface' : '自序', primary:true},
-  {id:'projects', icon:'compass-rose', label:isEn ? 'Projects' : '作品', primary:true},
-  {id:'latest', icon:'brush-variant', label:isEn ? 'Journal' : '手记'},
+  {id:'about', icon:'script-text-outline', label:isEn ? 'CV' : '简历', primary:true},
+  {id:'projects', icon:'compass-rose', label:isEn ? 'Projects' : '项目', primary:true},
+  {id:'latest', icon:'brush-variant', label:isEn ? 'Recent writing' : '近作'},
   {id:'lantern', icon:'lamp-outline', label:isEn ? 'Lantern' : '点灯'},
   {id:'bench', icon:'pine-tree', label:isEn ? 'Sit here' : '观山'},
 ];
@@ -24,7 +24,7 @@ const marks = [
 <Layout title={isEn ? 'Cloud Court Study · Shane Lorien' : '云庭书斋 · Shane Lorien'} section="home" spatial>
   <div class="mountain-world" data-mountain-world data-state="loading" data-language={isEn ? 'en' : 'zh'}>
     <main id="main-content" class="mw-stage" tabindex="-1" aria-label={isEn ? 'Explore the cloud courtyard' : '探索云庭书斋'}>
-      <canvas id="mountain-canvas" tabindex="0" aria-label={isEn ? 'First-person cloud courtyard. WASD to walk. When the mouse is locked, aim with the centre dot and press E or click. When unlocked, drag to look and click the object under your pointer. Escape to pause. Touch: left thumbstick to walk, drag on the right to look.' : '第一人称云庭书斋。WASD 行走。鼠标锁定时用中心准心瞄准，按 E 或左键交互；未锁定时按住画面拖动环顾，点击鼠标指向的物件。Esc 暂停。触屏使用左侧摇杆行走、右侧拖动环顾。'}></canvas>
+      <canvas id="mountain-canvas" tabindex="0" aria-label={isEn ? 'First-person cloud courtyard. WASD to walk. Hold Shift to run. When the mouse is locked, aim with the centre dot and press E or click. After unlocking, click the scene to lock the mouse again. Escape to pause. Touch: left thumbstick to walk, drag on the right to look.' : '第一人称云庭书斋。WASD 行走，按住 Shift 奔跑。鼠标锁定时用中心准心瞄准，按 E 或左键交互；脱锁后点击画面即可重新锁定。Esc 暂停。触屏使用左侧摇杆行走、右侧拖动环顾。'}></canvas>
       <div class="mw-vignette" aria-hidden="true"></div>
     </main>
 
@@ -53,8 +53,8 @@ const marks = [
       <div class="mw-entry-card">
         <h1 id="mw-entry-title" data-world-entry-title>{isEn ? 'A quiet courtyard, above the clouds.' : '云庭有光，且坐片刻。'}</h1>
         <p class="mw-entry-copy" data-world-entry-copy>{isEn ? 'Follow the stone path into the courtyard. Find a book, and take in the mountains.' : '循着石径走进云庭，取一卷书，看看山色。'}</p>
-        <div class="mw-entry-actions"><button type="button" class="mw-enter-button" data-world-enter><span class="mw-gate-glyph" aria-hidden="true">⟶</span><span data-world-enter-label>{isEn ? 'Enter the courtyard' : '走进云庭'}</span></button><button type="button" class="mw-read-button" data-world-action="browse">{isEn ? 'Browse the writing' : '先翻翻书'}</button></div>
-        <p class="mw-entry-controls mw-hint-desktop"><span><kbd>W A S D</kbd> {isEn ? 'walk' : '行走'}</span><span>{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span><kbd>E</kbd> {isEn ? 'interact' : '细看'}</span><span><kbd>Esc</kbd> {isEn ? 'pause' : '暂停'}</span></p>
+        <div class="mw-entry-actions"><button type="button" class="mw-enter-button" data-world-enter><span class="mw-gate-glyph" aria-hidden="true">⟶</span><span data-world-enter-label>{isEn ? 'Enter the courtyard' : '走进云庭'}</span></button><a class="mw-read-button" href={`${prefix}/static/`}>{isEn ? 'Static site' : '静态页面'}</a></div>
+        <p class="mw-entry-controls mw-hint-desktop"><span><kbd>W A S D</kbd> {isEn ? 'walk' : '行走'}</span><span>{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span><kbd>Shift</kbd> {isEn ? 'run' : '奔跑'}</span><span><kbd>Esc</kbd> {isEn ? 'pause' : '暂停'}</span></p>
         <p class="mw-entry-controls mw-hint-touch">{isEn ? 'Left thumbstick to walk · drag on the right to look' : '左侧摇杆行走 · 右侧拖动环顾 · 看向物件后轻触提示'}</p>
         <details class="mw-settings"><summary>{isEn ? 'View & comfort' : '画面与操作'}</summary><div class="mw-settings-fields">
           <label><span>{isEn ? 'Picture' : '画面'}</span><select data-world-quality><option value="detail">{isEn ? 'Detailed' : '细致'}</option><option value="smooth">{isEn ? 'Smooth' : '流畅'}</option></select></label>
@@ -78,14 +78,14 @@ const marks = [
         <p class="mw-eyebrow">{isEn ? 'Beyond the clouds' : '云深处，灯尚明'}</p>
         <h1 id="mw-fallback-title">{isEn ? 'Come in. Stay a while.' : '云庭书斋'}</h1>
         <p data-world-failure>{isEn ? 'The 3D scene is unavailable in this browser. The writing is still here.' : '此浏览器暂时无法展开三维场景，仍可直接翻阅这里的文字。'}</p>
-        <nav aria-label={isEn ? 'Read the site' : '直接阅读'}><a href={`${prefix}/blog`}>{isEn ? 'Read the blog' : '翻阅文章'}</a><a href={`${prefix}/projects`}>{isEn ? 'Projects' : '查看项目'}</a><a href={`${prefix}/cv`}>{isEn ? 'About & CV' : '关于我'}</a></nav>
+        <nav aria-label={isEn ? 'Read the site' : '直接阅读'}><a href={`${prefix}/static/`}>{isEn ? 'Static site' : '静态页面'}</a><a href={`${prefix}/blog`}>{isEn ? 'Read the blog' : '翻阅文章'}</a><a href={`${prefix}/projects`}>{isEn ? 'Projects' : '查看项目'}</a><a href={`${prefix}/cv`}>{isEn ? 'About & CV' : '关于我'}</a></nav>
       </div>
     </section>
 
     <footer class="mw-hud">
       <div class="mw-place"><span class="mw-place-overline">{isEn ? 'YOU ARE HERE' : '此刻所在'}</span><strong data-world-location>{isEn ? 'The cloud mountain path' : '云山石径'}</strong><span class="mw-place-note">{isEn ? 'Take your time.' : '此间无事，随意走走。'}</span></div>
       <div class="mw-hint" data-world-hint>
-        <p class="mw-hint-desktop"><span><kbd>W A S D</kbd> {isEn ? 'walk' : '行走'}</span><span class="mw-look-locked">{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span class="mw-look-pointer">{isEn ? 'Drag to look · click an object' : '拖动环顾 · 点击物件'}</span><span class="mw-look-pending">{isEn ? 'Locking the mouse…' : '正在锁定鼠标…'}</span><span><kbd>E</kbd> {isEn ? 'interact' : '细看'}</span><span><kbd>Esc</kbd> {isEn ? 'pause / menu' : '暂停 / 目录'}</span></p>
+        <p class="mw-hint-desktop"><span><kbd>W A S D</kbd> {isEn ? 'walk' : '行走'}</span><span class="mw-look-locked">{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span class="mw-look-pointer">{isEn ? 'Click to lock · drag to look' : '点击锁定 · 拖动环顾'}</span><span class="mw-look-pending">{isEn ? 'Locking the mouse…' : '正在锁定鼠标…'}</span><span><kbd>Shift</kbd> {isEn ? 'run' : '奔跑'}</span><span><kbd>Esc</kbd> {isEn ? 'pause / menu' : '暂停 / 目录'}</span></p>
         <p class="mw-hint-touch">{isEn ? 'Left to walk · drag right to look · tap the object prompt' : '左侧行走 · 右侧环顾 · 轻触物件提示'}</p>
         <button type="button" data-world-action="dismiss-hint" aria-label={isEn ? 'Dismiss movement guide' : '收起操作提示'}>×</button>
       </div>

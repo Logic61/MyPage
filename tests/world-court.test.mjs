@@ -23,7 +23,8 @@ function loadModule(file, imports) {
 const three = {...THREE,TextureLoader:class { async loadAsync(){return new THREE.Texture();} }};
 const roof = loadModule('tiled-roof',{three,'./environment-geometry':shapes});
 const halls = loadModule('timber-halls',{three,'./tiled-roof':roof});
-const { createStudyArchitecture } = loadModule('environment-design',{three,'./environment-geometry':shapes,'./timber-halls':halls});
+const lotus = loadModule('lotus-pond',{three,'./environment-geometry':shapes});
+const { createStudyArchitecture } = loadModule('environment-design',{three,'./environment-geometry':shapes,'./timber-halls':halls,'./lotus-pond':lotus});
 const origin = {x:0,z:17.65};
 
 test('entrance, hall and mirror-paired roofs share the built courtyard axis',async () => {

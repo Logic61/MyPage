@@ -60,7 +60,7 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
   keep: (g: THREE.BufferGeometry) => THREE.BufferGeometry, ownTexture: (t: THREE.Texture) => void) {
   const map = needleBough(); ownTexture(map);
   const material = new THREE.MeshStandardMaterial({ name:'Layered mountain pine needles',map,roughness:.91,
-    side:THREE.DoubleSide,alphaTest:.28,alphaToCoverage:true,emissive:'#415346',emissiveIntensity:.10,emissiveMap:map });
+    side:THREE.DoubleSide,alphaTest:.21,alphaToCoverage:true,emissive:'#415346',emissiveIntensity:.16,emissiveMap:map });
   let disposed = false;
   const assetRoot = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/,'')+'/world/';
   async function photograph(file: string, target: THREE.MeshStandardMaterial, channel: 'map' | 'normalMap' | 'roughnessMap') {
@@ -81,12 +81,12 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
     photograph('pine-bark-normal.webp', bark, 'normalMap'),
     photograph('pine-bark-rough.webp', bark, 'roughnessMap'),
   ]);
-  branchWind(material,clock,'x',.085);
-  const fan = keep(gridSurface(8,4,(u,v) => new THREE.Vector3(u,(v-.105)*.49+.06*Math.sin(Math.PI*u),.12*(v-.105)+.09*u*Math.sin(u*Math.PI))));
+  branchWind(material,clock,'x',.108);
+  const fan = keep(gridSurface(7,3,(u,v) => new THREE.Vector3(u,(v-.105)*.49+.06*Math.sin(Math.PI*u),.12*(v-.105)+.09*u*Math.sin(u*Math.PI))));
   const transforms: THREE.Matrix4[] = [], colors: THREE.Color[] = [];
   const brush = new THREE.Object3D();
-  function limb(path: THREE.Vector3[], start: number, end: number, sides=9) {
-    const geometry=keep(branchGeometry(path,start,end,path.length>3?18:8,sides));
+  function limb(path: THREE.Vector3[], start: number, end: number, sides=9, radiusAt?: (fraction: number) => number) {
+    const geometry=keep(branchGeometry(path,start,end,path.length>3?24:8,sides,radiusAt));
     const mesh=new THREE.Mesh(geometry,bark); mesh.castShadow=mesh.receiveShadow=true; root.add(mesh);
   }
   function pine(x: number,z: number,h: number,lean: number,seed: number, spread=1) {
@@ -96,36 +96,46 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
     const trunkPoints = [[0,0,0],[-.12,.21,.06],[.37,.48,-.09],[.52,.65,.18],[.81,.84,-.04],[1,1,.065]]
       .map(([u,v,w])=>base.clone().add(new THREE.Vector3(u*lean,v*height,w*h*.21)));
     const trunk = new THREE.CatmullRomCurve3(trunkPoints);
-    limb(trunkPoints,h*.042,.012,14);
-    colliders.push({x:x+.10*lean,z,halfX:h*.05+Math.abs(lean)*.13,halfZ:h*.054});
+    // Root flare narrows rapidly at ground level, then the bole tapers steadily to the leader.
+    const baseRadius = height * .053;
+    const trunkRadius = (t: number) => .008 * t + baseRadius * Math.pow(1 - t, .77) * (.78 + .22 * Math.exp(-12 * t));
+    limb(trunkPoints,baseRadius,.008,18,trunkRadius);
+    colliders.push({x:x+.10*lean,z,halfX:baseRadius*.87+Math.abs(lean)*.11,halfZ:baseRadius*.88});
     for (let j=0;j<5;j++) {
       const a=j*2.39+twist, tip=base.clone().add(new THREE.Vector3(.73*Math.cos(a),-.04,.58*Math.sin(a)));
-      limb([base.clone().add(new THREE.Vector3(0,h*.058,0)),base.clone().lerp(tip,.54),tip],h*.020,.015);
+      limb([base.clone().add(new THREE.Vector3(0,h*.058,0)),base.clone().lerp(tip,.54),tip],baseRadius*.41,.011);
     }
     for (let i=0;i<10;i++) {
       const t=.30+i*.071+(rng()-.5)*.026, foot=trunk.getPointAt(t), a=seed*.73+i*2.40+(rng()-.5)*.82;
-      const reach=h*(.40-i*.034)*spread*(.85+.28*rng()), dir=new THREE.Vector3(Math.cos(a),0,Math.sin(a));
-      const elbow=foot.clone().addScaledVector(dir,reach*.53); elbow.y-=h*(.077-.005*i);
-      const end=foot.clone().addScaledVector(dir,reach); end.y+=h*.043;
+      const reach=h*(.39-i*.0285)*spread*(.85+.28*rng()), dir=new THREE.Vector3(Math.cos(a),0,Math.sin(a));
+      const elbow=foot.clone().addScaledVector(dir,reach*.53); elbow.y-=h*(.052-.004*i);
+      const end=foot.clone().addScaledVector(dir,reach); end.y+=h*(.041+.005*i);
       const knuckle=foot.clone().lerp(elbow,.48);
       knuckle.add(new THREE.Vector3(-dir.z,.14,dir.x).multiplyScalar(reach*(rng()-.5)*.21));
       const crotch=[foot,knuckle,elbow,end], bough=new THREE.CatmullRomCurve3(crotch);
-      limb(crotch,h*(.021-i*.0014),.012);
+      const shoulder = trunkRadius(t) * (.33 + rng() * .09), tipRadius = shoulder * .065;
+      const boughRadius = (t: number) => THREE.MathUtils.lerp(shoulder, tipRadius, Math.pow(t,.74));
+      limb(crotch,shoulder,tipRadius,10);
       if (i===1 || i===4) {
         const spur=bough.getPointAt(.43), tip=spur.clone().addScaledVector(dir,.27);
-        tip.y+=.26; limb([spur,spur.clone().lerp(tip,.52),tip],.039,.008,7);
+        tip.y+=.26; limb([spur,spur.clone().lerp(tip,.52),tip],boughRadius(.43)*.36,.0035,7);
       }
       for (let j=0;j<4;j++) {
-        const t0=.40+j*.17, origin=bough.getPointAt(t0), side=j%2?1:-1, angle=a+side*(.49+.42*rng());
+        const t0=.30+j*.185, origin=bough.getPointAt(t0), side=j%2?1:-1, angle=a+side*(.49+.42*rng());
         const length=(.36+.36*rng())*reach+.13, tip=origin.clone().add(new THREE.Vector3(Math.cos(angle)*length,.12+rng()*.1,Math.sin(angle)*length));
-        limb([origin,origin.clone().lerp(tip,.55),tip],.030,.009,6);
-        for (let k=0;k<3;k++) {
-          const start=origin.clone().lerp(tip,.33+k*.29);
-          brush.position.copy(start); brush.rotation.set((k-1)*.76+(rng()-.5)*.34,-angle+(rng()-.5)*.86,(rng()-.38)*.3,'YXZ');
-          const s=(.42+length*.89)*(1.08-k*.11)*(.83+.34*rng()); brush.scale.set(s,s*(.85+.20*rng()),s*(1+.24*rng()));
+        const twigRadius = boughRadius(t0) * (.32 + rng() * .12);
+        const arch = origin.clone().lerp(tip,.54);
+        arch.y -= length * .072;
+        limb([origin,arch,tip],twigRadius,twigRadius*.12,7);
+        for (let k=0;k<4;k++) {
+          const along=.21+k*.24, start=origin.clone().lerp(tip,along);
+          start.y -= Math.sin(Math.PI * along) * length * .066;
+          brush.position.copy(start);
+          brush.rotation.set((k%2 ? .57 : -.43)+(rng()-.5)*.36,-angle+side*(k%2 ? .48 : -.22)+(rng()-.5)*.66,(rng()-.3)*.34,'YXZ');
+          const s=(.43+length*.78)*(1.08-k*.085)*(.83+.34*rng()); brush.scale.set(s,s*(.85+.20*rng()),s*(1+.24*rng()));
           brush.updateMatrix(); transforms.push(brush.matrix.clone());
           const sunward=.5+.5*Math.cos(angle+1.0);
-          colors.push(new THREE.Color('#829585').lerp(new THREE.Color('#c9c4a2'),.16+.33*sunward+.29*rng()));
+          colors.push(new THREE.Color('#94a38e').lerp(new THREE.Color('#c9c4a2'),.16+.33*sunward+.29*rng()));
         }
       }
     }
@@ -135,7 +145,7 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
       const angle = twist + i * 2.4;
       const length = h * (.088 - .012 * i);
       const tip = foot.clone().add(new THREE.Vector3(Math.cos(angle) * length, length * .63, Math.sin(angle) * length));
-      limb([foot, foot.clone().lerp(tip, .51), tip], .022, .004, 6);
+      limb([foot, foot.clone().lerp(tip, .51), tip], trunkRadius(.875 + .030 * i)*.33, .002, 6);
       for (const turn of [-.39, .28]) {
         brush.position.copy(foot).lerp(tip, .60);
         brush.rotation.set(turn, -angle + turn * .55, .39 + .055 * i, 'YXZ');

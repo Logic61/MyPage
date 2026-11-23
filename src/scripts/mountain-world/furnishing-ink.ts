@@ -68,13 +68,13 @@ export function createFurnishingInk(isEn: boolean) {
     ctx.fillStyle='#2c302a'; ctx.textBaseline='middle'; ctx.textAlign='center';
     if (isEn) {
       ctx.font='italic 112px "EB Garamond Variable",Georgia,serif';
-      ctx.fillText('Preface',390,260,640);
+      ctx.fillText('Résumé',390,260,640);
       ctx.font='42px Georgia,serif'; ctx.fillText('Guanyu Chen',390,452);
       ctx.font='27px Georgia,serif'; ctx.fillText('Curriculum vitae',390,515);
     } else {
       const brush='KaiTi,STKaiti,"Kaiti SC","Noto Serif SC",serif';
       ctx.font='169px '+brush;
-      [...'自序'].forEach((char,i)=>ctx.fillText(char,490,206+i*195));
+      [...'简历'].forEach((char,i)=>ctx.fillText(char,490,206+i*195));
       ctx.font='46px '+brush; [...'陈冠宇'].forEach((char,i)=>ctx.fillText(char,306,342+i*57));
       ctx.font='28px '+font; [...'个人履历'].forEach((char,i)=>ctx.fillText(char,221,245+i*39));
     }
@@ -171,7 +171,7 @@ export function createFurnishingInk(isEn: boolean) {
       stamp(ctx, 405, 601, 42);
     } else {
       ctx.font = `500 49px ${font}`;
-      ctx.fillText(kind === 'notes' ? (isEn ? 'Mountain notes' : '山中手记') : (isEn ? 'On reading poetry' : '读诗小记'), 256, 79, 430);
+      ctx.fillText(kind === 'notes' ? (isEn ? 'Recent writing' : '近作') : (isEn ? 'On reading poetry' : '读诗小记'), 256, 79, 430);
       ctx.strokeStyle = 'rgba(120,90,50,.25)';
       ctx.beginPath(); ctx.moveTo(49, 125); ctx.lineTo(463, 125); ctx.stroke();
       ctx.textAlign = 'left';
@@ -193,5 +193,29 @@ export function createFurnishingInk(isEn: boolean) {
     return result;
   }
 
-  return { titles, bookAtlas, pageEdges, page, portraitTexture, portraitReady, dispose: () => { disposed = true; for (const item of textures) item.dispose(); textures.clear(); } };
+  // Underglaze bamboo, painted around a turned vessel before its clear glaze.
+  const porcelain = canvas(768,384);
+  const glaze = porcelain.ctx;
+  glaze.fillStyle='#dddcc7'; glaze.fillRect(0,0,768,384);
+  for (const height of [56,64,294,301]) {
+    glaze.fillStyle='#456873'; glaze.fillRect(0,height,768,height===64||height===301?2:4);
+  }
+  function bambooLeaf(x: number,y: number,dx: number,dy: number) {
+    glaze.beginPath(); glaze.moveTo(x,y);
+    glaze.quadraticCurveTo(x+dx*.33-dy*.14,y+dy*.33+dx*.14,x+dx,y+dy);
+    glaze.quadraticCurveTo(x+dx*.57+dy*.07,y+dy*.57-dx*.07,x,y); glaze.fill();
+  }
+  for (const [x,lean,h] of [[45,44,166],[126,-23,113],[294,51,191],[388,-25,123],[554,45,176],[675,-19,106]]) {
+    glaze.strokeStyle='#385963'; glaze.fillStyle='#3e6571'; glaze.lineWidth=3;
+    for (let j=0;j<5;j++) {
+      const px=x+lean*j/5, py=291-h*j/5, sign=j%2?1:-1;
+      glaze.beginPath(); glaze.moveTo(px,py); glaze.lineTo(px+lean/5,py-h/5+2); glaze.stroke();
+      if (j<1) continue;
+      glaze.beginPath(); glaze.moveTo(px,py); glaze.quadraticCurveTo(px+sign*12,py-17,px+sign*37,py-21); glaze.stroke();
+      bambooLeaf(px+sign*14,py-13,sign*25,-29); bambooLeaf(px+sign*25,py-20,sign*23,14);
+      bambooLeaf(px+sign*33,py-21,sign*31,-9);
+    }
+  }
+  const brushGlaze = texture(porcelain.canvas);
+  return { titles, bookAtlas, pageEdges, page, portraitTexture, portraitReady, brushGlaze, dispose: () => { disposed = true; for (const item of textures) item.dispose(); textures.clear(); } };
 }

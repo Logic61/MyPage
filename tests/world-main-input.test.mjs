@@ -319,22 +319,32 @@ test('a native state change awaiting its notification cannot click with a differ
   h.unlock(); assert.equal(h.root.dataset.inputMode, 'none');
 });
 
-test('sitting releases a walking lock, lets the mouse explore, and restores walking from E', async () => {
+test('sitting keeps a native lock and the first click after losing it only reacquires the mouse', async () => {
   const h = await world({ bench: true });
   h.enter(); await h.lock(); h.key('KeyE');
-  assert.equal(h.root.dataset.seated,'true');
-  assert.equal(h.exitRequests(),1); h.unlock();
-  assert.equal(h.root.dataset.mode,'exploring'); assert.equal(h.root.dataset.inputMode,'pointer');
-  for (let i=0;i<60;i++) h.step();
-  assert.ok(h.camera.rotation.y>1.20, 'releasing the lock must let the turn towards the view finish');
-  const yaw=h.camera.rotation.y;
-  h.pointer('pointerdown'); h.pointer('pointermove',{clientX:850}); h.pointer('pointerup',{clientX:850}); h.step(35);
-  assert.ok(h.camera.rotation.y<yaw-.1);
-  h.click(); assert.equal(h.root.dataset.seated,'true','an empty click is not a stand command');
-  h.pointer('pointerleave'); h.key('KeyE');
-  assert.equal(h.root.dataset.seated,undefined); assert.equal(h.requests.length,2);
-  await h.lock(); for (let i=0;i<28;i++) h.step();
-  assert.equal(h.root.dataset.inputMode,'locked'); assert.equal(h.camera.position.z,17.65);
+  assert.equal(h.exitRequests(), 0);
+  assert.equal(h.root.dataset.seated, 'true'); assert.equal(h.root.dataset.inputMode, 'locked');
+  for (let i = 0; i < 60; i++) h.step();
+  const yaw = h.camera.rotation.y;
+  h.emit(h.document, 'mousemove', { movementX: 100, movementY: 0 }); h.step(35);
+  assert.ok(h.camera.rotation.y < yaw - .1);
+  h.unlock(); assert.equal(h.root.dataset.inputMode, 'pointer');
+  h.click(h.point('centre')); assert.equal(h.requests.length, 2);
+  assert.deepEqual(h.activated, ['centre']); assert.equal(h.root.dataset.seated, 'true');
+  await h.lock(); h.key('KeyE');
+  for (let i = 0; i < 28; i++) h.step();
+  assert.equal(h.root.dataset.seated, undefined); assert.equal(h.root.dataset.inputMode, 'locked');
+  assert.equal(h.camera.position.z, 17.65);
+});
+
+test('clicking the exposed scene after a walking unlock resumes without firing the aimed object', async () => {
+  const h = await world(); h.enter(); await h.lock(); h.unlock();
+  assert.equal(h.root.dataset.mode, 'paused');
+  h.click(h.point('centre')); assert.equal(h.requests.length, 2); assert.deepEqual(h.activated, []);
+  await h.fail(); h.click(h.point('centre'));
+  assert.equal(h.requests.length, 3); assert.deepEqual(h.activated, []);
+  await h.lock(); assert.equal(h.root.dataset.inputMode, 'locked');
+  h.click(h.point('centre')); assert.deepEqual(h.activated, ['centre']);
 });
 
 test('a seated visitor can pause, resume, and use the stand control without pointing at a mesh', async () => {

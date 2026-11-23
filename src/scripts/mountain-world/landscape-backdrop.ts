@@ -245,9 +245,9 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
     update(time) {
       if (disposed) return;
       // The far bank moves more slowly. Both textures wrap continuously while their perimeter stays feathered.
-      upperClouds.offset.set(-time * .016, time * .0048);
-      lowerClouds.offset.set(.27 - time * .006, .13 + time * .0031);
-      canopyMaterial.map?.offset.set(-.028 * Math.sin(time * .032), .013 * Math.sin(time * .025));
+      upperClouds.offset.set(-time * .024, time * .007);
+      lowerClouds.offset.set(.27 - time * .0095, .13 + time * .0046);
+      canopyMaterial.map?.offset.set(-.053 * Math.sin(time * .06), .024 * Math.sin(time * .046));
     },
     dispose() {
       if (disposed) return;

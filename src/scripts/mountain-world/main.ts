@@ -104,7 +104,7 @@ async function initializeWorld(root: HTMLElement) {
     });
     if (!alive || resourcesDisposed) return;
     if (document.fonts) await waitForOptionalAsset(
-      document.fonts.load('500 48px "Noto Serif SC"', '藏书山中手记读诗小记数学随笔桃源读书札记自由的代价初中生活残灵光明算法导论计算机系统离散数学编译原理机器学习新年格物札记夜光何德死则又育坐听松风归观物求知致来访者羽'),
+      document.fonts.load('500 48px "Noto Serif SC"', '藏书简历近作项目山中手记读诗小记数学随笔桃源读书札记自由的代价初中生活残灵光明算法导论计算机系统离散数学编译原理机器学习新年格物札记夜光何德死则又育坐听松风归观物求知致来访者羽'),
       2200,
     );
     if (!alive || resourcesDisposed) return;
@@ -145,7 +145,7 @@ async function initializeWorld(root: HTMLElement) {
     let route: Point[] = [], destination: Interaction | null = null;
     let aimed: Interaction | null = null, seatedAt: Interaction | null = null;
     let seatReturn: THREE.Vector3 | null = null;
-    let restoreWalkingLock = false, releasingForSeat = false, seatWantsLock = false, lastSeatUnlock = -Infinity;
+    let restoreWalkingLock = false, lastSeatUnlock = -Infinity, relockOnTap = false;
     let selectedId: string | null = null, selectedUntil = 0;
     let elapsed = 0, landscapeTime = 0, walked = 0, interactionTimer = 0;
     let frame = 0, previousFrame = performance.now(), lastRender = 0, lastPick = -1, lastSave = 0;
@@ -189,12 +189,12 @@ async function initializeWorld(root: HTMLElement) {
     pipeline.setQuality(qualitySelect.value as RenderQuality);
     const pointerLock = createPointerLockRequest({
       request: raw => raw ? canvas.requestPointerLock({ unadjustedMovement: true }) : canvas.requestPointerLock(),
-      isActive: () => alive && mode === 'exploring' && !ui.isOpen() && (!seatedAt || seatWantsLock),
+      isActive: () => alive && mode === 'exploring' && !ui.isOpen(),
       onFallback: () => {
         if (document.pointerLockElement === canvas) return;
         dragLook = true;
         syncInputMode();
-        ui.showToast(en ? 'Drag to look around; click an object under the mouse. You can retry “Lock mouse”.' : '按住拖动环顾，点击鼠标下的物件。也可点击“锁定鼠标”重试。');
+        ui.showToast(en ? 'Drag to look around. Click the scene to retry the mouse lock.' : '按住拖动可以环顾，点击画面可重试锁定鼠标。');
       },
     });
 
@@ -262,7 +262,6 @@ async function initializeWorld(root: HTMLElement) {
       }
       pauseButton.hidden = value !== 'exploring';
       if (value !== 'exploring') {
-        seatWantsLock = false;
         pointerLock.cancel(); look.suspend();
         clearMovement(); clearPointer();
       }
@@ -275,8 +274,7 @@ async function initializeWorld(root: HTMLElement) {
       enterButton.focus({ preventScroll: true });
     }
     function requestLock() {
-      if (mode !== 'exploring' || ui.isOpen() || releasingForSeat) return;
-      if (seatedAt) seatWantsLock = true;
+      if (mode !== 'exploring' || ui.isOpen()) return;
       clearDrag(); clearPointer(); canvas!.focus({ preventScroll: true });
       if (document.pointerLockElement === canvas) {
         dragLook = false; syncInputMode(); look.begin('locked', performance.now()); return;
@@ -290,8 +288,7 @@ async function initializeWorld(root: HTMLElement) {
     function enter() {
       if (ui.isOpen()) return;
       setMode('exploring');
-      if (seatedAt) { dragLook = true; syncInputMode(); canvas!.focus({ preventScroll: true }); }
-      else requestLock();
+      requestLock();
     }
     function eyePosition() {
       return { x: position.x, y: seatedAt ? position.y + SEATED_EYE_HEIGHT : FLOOR_HEIGHT + EYE_HEIGHT, z: position.z };
@@ -299,7 +296,7 @@ async function initializeWorld(root: HTMLElement) {
     function standUp(resumeMouse = false) {
       if (!seatedAt) return;
       position.copy(seatReturn || seatedAt.approach); position.y = FLOOR_HEIGHT;
-      seatedAt = null; seatReturn = null; seatWantsLock = false; look.cancelTurn();
+      seatedAt = null; seatReturn = null; look.cancelTurn();
       delete root.dataset.seated;
       if (standButton) standButton.hidden = true;
       clearAim();
@@ -352,13 +349,13 @@ async function initializeWorld(root: HTMLElement) {
         seatedAt = item; root.dataset.seated = 'true';
         if (standButton) standButton.hidden = false;
         restoreWalkingLock = document.pointerLockElement === canvas;
-        releasingForSeat = restoreWalkingLock; seatWantsLock = false; dragLook = true;
-        pointerLock.cancel(); look.suspend(); clearAim(); unlock(); syncInputMode();
+        clearAim(); syncInputMode();
         if (item.sitPosition) position.copy(item.sitPosition);
         const view = item.sitYaw ?? look.yaw;
         if (reducedMotion) { stance.reset(); look.snap(view,.05); }
         else { stance.rebase(camera.position, eyePosition()); look.turnTo(view,.05); }
-        ui.showToast(en ? 'Drag to look around. Choose Stand up when you are ready.' : '拖动可环顾山色，想离座时点「起身」。');
+        ui.showToast(touchInput ? (en ? 'Drag to look around. Tap Stand up to leave.' : '拖动环顾，轻触「起身」离座。')
+          : (en ? 'Look around. Press E to stand up.' : '环顾山色，按 E 起身。'));
       } else {
         setMode('transition'); unlock();
         interactionTimer = window.setTimeout(() => {
@@ -419,18 +416,17 @@ async function initializeWorld(root: HTMLElement) {
       if (locked) {
         pointerLock.onLocked();
         clearDrag(); clearPointer();
-        if (!alive || ui.isOpen() || mode !== 'exploring' || (seatedAt && !seatWantsLock)) {
+        if (!alive || ui.isOpen() || mode !== 'exploring') {
           look.suspend(); syncInputMode(); document.exitPointerLock(); return;
         }
-        look.begin('locked', performance.now()); dragLook = false;
+        look.begin('locked', performance.now()); dragLook = false; relockOnTap = false;
       } else {
         pointerLock.cancel();
-        if (seatedAt || releasingForSeat) {
-          if (wasLocked && !releasingForSeat) lastSeatUnlock = performance.now();
-          releasingForSeat = false; seatWantsLock = false; dragLook = true; look.end('locked');
-        } else {
-          look.suspend();
-          if (wasLocked && mode === 'exploring') pause();
+        look.suspend(); dragLook = true;
+        if (wasLocked) relockOnTap = true;
+        if (wasLocked && mode === 'exploring') {
+          if (seatedAt) lastSeatUnlock = performance.now();
+          else pause();
         }
         clearDrag(); clearPointer();
       }
@@ -446,6 +442,10 @@ async function initializeWorld(root: HTMLElement) {
       if (look.sample('locked', event.movementX, event.movementY, eventTime(event), performance.now(), sensitivity)) cancelRoute();
     }, { signal });
     canvas.addEventListener('pointerdown', event => {
+      // The pause overlay passes the exposed scene through to this canvas.
+      if (mode === 'paused' && !ui.isOpen() && event.pointerType === 'mouse' && event.button === 0) {
+        relockOnTap = true; touchInput = false; root.dataset.touch = 'false'; enter(); return;
+      }
       if (mode !== 'exploring' || ui.isOpen() || (event.button !== 0 && event.button !== 2)) return;
       canvas.focus({ preventScroll: true });
       if (document.pointerLockElement === canvas) { if (event.button === 0) interactionAction(); return; }
@@ -469,9 +469,14 @@ async function initializeWorld(root: HTMLElement) {
       if (!press || press.id !== event.pointerId) return;
       trackPointer(event);
       dragMove(event);
-      const tap = !press.moved && event.button === 0;
+      const tap = !press.moved && event.button === 0, mouse = press.source === 'drag';
       clearDrag();
-      if (tap) { showInteraction(); interactionAction(); }
+      if (!tap) return;
+      showInteraction();
+      if (mouse && typeof canvas.requestPointerLock === 'function' && (relockOnTap || seatedAt || !aimed)) {
+        requestLock(); return;
+      }
+      interactionAction();
     }, { signal });
     const endDrag = (event: PointerEvent) => { if (event.pointerId === press?.id) clearDrag(); };
     canvas.addEventListener('pointercancel', endDrag, { signal });
@@ -588,7 +593,7 @@ async function initializeWorld(root: HTMLElement) {
           } else {
             if (destination) {
               face(destination);
-              const prompt = touchInput ? (en ? 'Tap the object prompt to interact.' : '轻触物件提示即可互动。') : (en ? 'Look at the object and press E.' : '看向眼前物件，按 E 细看。');
+              const prompt = touchInput ? (en ? 'Tap the object prompt.' : '轻触物件提示。') : (en ? `Press E · ${destination.labelEn}` : `按 E ${destination.label}。`);
               ui.showToast(prompt);
             }
             cancelRoute(); movement = { x: 0, z: 0 }; velocity.set(0, 0);
