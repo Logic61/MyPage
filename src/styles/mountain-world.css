@@ -223,25 +223,21 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-fall-panel button { color:inherit; border:1px solid #c7cbca; background:#545858; padding:.7rem 1.4rem; cursor:pointer; }
 
 .mw-arrival { position: absolute; inset: 0; z-index: 4; background: #35413b; }
-.mw-cover { width: 100%; height: 100%; object-fit: cover; object-position: 50% 50%; }
+.mw-cover-picture, .mw-cover { display: block; width: 100%; height: 100%; }
+.mw-cover { object-fit: cover; }
 .mw-arrival::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(0deg,rgba(16,28,27,.78),transparent 36%); }
 .mw-cover-title {
   position: absolute; z-index: 1; inset: 22% 0 auto; margin: 0; padding-inline: 12px;
-  transform: translateY(-50%); text-align: center; isolation: isolate;
+  transform: translateY(-50%); text-align: center;
   color: #152f32; font: 600 clamp(35px,5.5vw,82px)/1.08 var(--font-serif,Georgia,serif);
   text-shadow: 0 1px 2px #fcf6e4c7;
-}
-.mw-cover-title::before {
-  content: ''; position: absolute; z-index: -1; pointer-events: none; left: 50%; top: 50%;
-  width: min(18em,125vw); height: 3em; transform: translate(-50%,-50%);
-  background: radial-gradient(ellipse,#f7f2dfed 0%,#f5efdeb8 43%,transparent 72%);
 }
 .mw-cover-actions {
   position: absolute; z-index: 1; left: 50%; bottom: max(16%,env(safe-area-inset-bottom));
   transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px;
 }
 .mountain-world[data-state="poster"] .mw-arrival::after {
-  background: linear-gradient(0deg,#101e1cdd 0%,#132923bf 21%,#172d2552 39%,transparent 55%);
+  background: linear-gradient(0deg,#101e1ca6 0%,#1329238a 21%,#172d2533 39%,transparent 55%);
 }
 .mw-cover-actions :is(button,a) {
   display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;

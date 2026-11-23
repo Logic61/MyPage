@@ -29,7 +29,10 @@ const marks = [
     </main>
 
     <div class="mw-arrival" data-world-arrival>
-      <img class="mw-cover" src={`${base}/world/courtyard-entrance.webp`} width="1560" height="960" fetchpriority="high" alt="" />
+      <picture class="mw-cover-picture">
+        <source media="(orientation: portrait)" srcset={`${base}/world/courtyard-entrance-portrait.webp`} width="936" height="2026" />
+        <img class="mw-cover" src={`${base}/world/courtyard-entrance.webp`} width="1920" height="1200" fetchpriority="high" alt="" />
+      </picture>
       <h1 class="mw-cover-title" lang="en">Shane Lorien's Page</h1>
       <div class="mw-cover-actions">
         <button type="button" class="mw-enter-button" data-world-load>{isEn ? 'Enter the courtyard' : '走进云庭'}</button>
