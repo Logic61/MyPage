@@ -11,7 +11,7 @@ import { createStudyRenderer, type RenderQuality } from './rendering';
 import { createInteractionPicker, movementDirection, FLOOR_HEIGHT, EYE_HEIGHT, SEATED_EYE_HEIGHT } from './first-person';
 import { hallRiseAt } from './hall-terrace';
 import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from './look-controls';
-import { createPointerLockRequest } from './pointer-lock';
+import { createCourtyardMouseLock } from './pointer-lock';
 import type { Interaction, WorldConfig } from './types';
 
 type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition' | 'falling' | 'fallen';
@@ -48,10 +48,11 @@ function describePlace(x: number, z: number) {
   return { name: '云山石径', nameEn: 'The cloud mountain path', indoor: false };
 }
 
-export async function initializeWorld(root: HTMLElement, ambience: ReturnType<typeof createAmbience>) {
+export async function initializeWorld(root: HTMLElement, ambience: ReturnType<typeof createAmbience>, entryLock?: ReturnType<typeof createCourtyardMouseLock>) {
   const canvas = root.querySelector<HTMLCanvasElement>('#mountain-canvas');
   const configElement = document.getElementById('mountain-world-config');
-  if (!canvas || !configElement) return;
+  if (!canvas || !configElement) { entryLock?.dispose(); return; }
+  const pointerLock = entryLock ?? createCourtyardMouseLock(root, canvas);
   const config: WorldConfig = JSON.parse(configElement.textContent || '{}');
   const en = config.isEn;
   const abort = new AbortController(), { signal } = abort;
@@ -76,6 +77,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     ui.showToast(en ? 'Music could not play. Click the speaker to retry.' : '音乐暂时无法播放，点击喇叭可重试。');
   }, { signal });
   function failWorld(reason: string) {
+    pointerLock.dispose();
     ambience.dispose();
     if (document.pointerLockElement === canvas) document.exitPointerLock();
     ui.setFailed(reason);
@@ -85,7 +87,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
   window.addEventListener('pagehide', event => {
     // BFCache restores this same document and its listeners, so retain its resources.
     if (event.persisted) { suspendAction(); return; }
-    alive = false; teardown(); abort.abort(); ui.dispose(); ambience.dispose();
+    alive = false; teardown(); pointerLock.dispose(); abort.abort(); ui.dispose(); ambience.dispose();
   }, { signal });
   window.addEventListener('pageshow', event => { if (event.persisted) resumeAction(); }, { signal });
 
@@ -168,7 +170,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     const stateKey = `mountain-first-person-v5-cloud-pass:${config.base}`;
     const look = new LookController(0, arrivalPitch);
     visitorPose = () => ({ x: position.x, z: position.z, yaw: look.yaw });
-    const stance = new StanceTransition(.3);
+    const stance = new StanceTransition(reducedMotion ? .15 : .3);
     let sensitivity = 1, headBob = false;
     let mode: Mode = 'welcome';
     let achievementUntil = 0;
@@ -179,10 +181,14 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     let selectedId: string | null = null, selectedUntil = 0;
     let elapsed = 0, landscapeTime = 0, walked = 0, interactionTimer = 0;
     let frame = 0, previousFrame = performance.now(), lastRender = 0, lastPick = -1, lastSave = 0;
-    let frameSum = 0, frameSamples = 0, qualityAdjustments = 0;
+    let sampledTime = 0, frameSamples = 0, slowFrames = 0, qualityAdjustments = 0;
+    function resetFrameWindow() {
+      sampledTime = 0; frameSamples = 0; slowFrames = 0;
+    }
     let hadPointerLock = false, dragLook = false, touchInput = coarse;
     let inputMode: InputMode = 'none', pointerInside = false, aimDirty = true;
     const pointerClient = new THREE.Vector2(), pointerNDC = new THREE.Vector2(), centre = new THREE.Vector2();
+    let edgeLookArmed = false;
     let press: DragLookGesture | null = null;
     let stickPointer: number | null = null;
     const entry = root.querySelector<HTMLElement>('[data-world-entry]')!;
@@ -226,17 +232,13 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     } catch { /* Storage is optional. */ }
     sensitivityInput.value = String(sensitivity); bobInput.checked = headBob;
     pipeline.setQuality(qualitySelect.value as RenderQuality);
-    const pointerLock = createPointerLockRequest({
-      request: raw => raw ? canvas.requestPointerLock({ unadjustedMovement: true }) : canvas.requestPointerLock(),
-      isActive: () => alive && mode === 'exploring' && !ui.isOpen(),
-      onFallback: () => {
-        if (document.pointerLockElement === canvas) return;
-        dragLook = true; relockOnTap = false;
-        syncInputMode();
-        if (performance.now() < achievementUntil) return;
-        ui.showToast(en ? 'Move the pointer to an edge or drag to look around. Click open ground to retry mouse lock.' : '鼠标靠近画面边缘或按住拖动都能环顾。点击空处可重试锁定。');
-      },
-    });
+    root.addEventListener('mountain-mouse-fallback', () => {
+      if (mode !== 'exploring' || ui.isOpen() || document.pointerLockElement === canvas) return;
+      dragLook = true; relockOnTap = false;
+      syncInputMode();
+      if (performance.now() < achievementUntil) return;
+      ui.showToast(en ? 'Move the pointer to an edge or drag to look around. Click open ground to retry mouse lock.' : '鼠标靠近画面边缘或按住拖动都能环顾。点击空处可重试锁定。');
+    }, { signal });
 
     function clearAim() {
       aimed = null; ui.setInteraction(null); root.dataset.aimed = 'false'; aimDirty = true;
@@ -254,9 +256,20 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       else if (!dragLook) setInputMode('pending');
       else setInputMode(press?.moved ? 'drag' : 'pointer');
     }
-    function clearPointer() { pointerInside = false; clearAim(); }
+    function clearPointer() { pointerInside = false; edgeLookArmed = false; clearAim(); }
+    function rememberMouse(event: PointerEvent) {
+      if (event.pointerType === 'mouse' && document.pointerLockElement !== canvas) {
+        pointerLock.remember(event.clientX, event.clientY);
+      }
+    }
+    // Toolbar buttons may acquire the lock outside the canvas's own pointer handlers.
+    document.addEventListener('pointerdown', rememberMouse, { capture: true, signal });
+    function beginLockedLook() {
+      look.begin('locked', performance.now(), pointerLock.warp);
+    }
     function trackPointer(event: PointerEvent) {
       if (document.pointerLockElement === canvas) return;
+      rememberMouse(event);
       if (event.pointerType) {
         // A coarse primary pointer does not mean the user has no physical mouse.
         touchInput = event.pointerType === 'touch'; root.dataset.touch = String(touchInput);
@@ -295,6 +308,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       try { sessionStorage.setItem(stateKey, JSON.stringify({ x: p.x, z: p.z, yaw: look.yaw, pitch: look.pitch })); } catch {}
     }
     function setMode(value: Mode) {
+      if (mode !== value) resetFrameWindow();
       mode = value; root.dataset.mode = value;
       entry.hidden = value !== 'paused';
       if (value !== 'exploring' && value !== 'welcome') {
@@ -318,7 +332,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       if (mode !== 'exploring' || ui.isOpen()) return;
       clearDrag(); clearPointer(); canvas!.focus({ preventScroll: true });
       if (document.pointerLockElement === canvas) {
-        dragLook = false; syncInputMode(); look.begin('locked', performance.now()); return;
+        dragLook = false; syncInputMode(); beginLockedLook(); return;
       }
       look.suspend();
       if (touchInput || !canvas!.requestPointerLock) { dragLook = true; syncInputMode(); return; }
@@ -342,8 +356,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       delete root.dataset.seated;
       if (standButton) standButton.hidden = true;
       clearAim();
-      if (reducedMotion) stance.reset();
-      else stance.rebase(camera.position, eyePosition());
+      stance.rebase(camera.position, eyePosition());
       if (resumeMouse && restoreWalkingLock && document.pointerLockElement !== canvas) requestLock();
       restoreWalkingLock = false;
     }
@@ -392,9 +405,9 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
         restoreWalkingLock = document.pointerLockElement === canvas;
         clearAim(); syncInputMode();
         if (item.sitPosition) position.copy(item.sitPosition);
-        const view = item.sitYaw ?? look.yaw;
-        if (reducedMotion) { stance.reset(); look.snap(view,.05); }
-        else { stance.rebase(camera.position, eyePosition()); look.turnTo(view,.05); }
+        stance.rebase(camera.position, eyePosition());
+        if (reducedMotion) look.cancelTurn();
+        else look.turnTo(item.sitYaw ?? look.yaw,.05);
         ui.showToast(touchInput ? (en ? 'Drag to look around. Tap Stand up to leave.' : '拖动环顾，轻触「起身」离座。')
           : (en ? 'Look around. Press E to stand up.' : '环顾山色，按 E 起身。'));
       } else {
@@ -458,7 +471,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       try { localStorage.setItem('mountain-first-person:preferences', JSON.stringify({ quality: qualitySelect.value, sensitivity, headBob })); } catch {}
     }
     qualitySelect.addEventListener('change', () => {
-      pipeline.setQuality(qualitySelect.value as RenderQuality); qualityAdjustments = 0; savePreferences();
+      pipeline.setQuality(qualitySelect.value as RenderQuality); qualityAdjustments = 0; resetFrameWindow(); savePreferences();
     }, { signal });
     sensitivityInput.addEventListener('input', () => { sensitivity = Number(sensitivityInput.value); savePreferences(); }, { signal });
     bobInput.addEventListener('change', () => { headBob = bobInput.checked && !reducedMotion; savePreferences(); }, { signal });
@@ -485,14 +498,12 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       hadPointerLock = locked;
       if (locked) {
         if (mode === 'welcome') return;
-        pointerLock.onLocked();
         clearDrag(); clearPointer();
         if (!alive || ui.isOpen() || mode !== 'exploring') {
           look.suspend(); syncInputMode(); document.exitPointerLock(); return;
         }
-        look.begin('locked', performance.now()); dragLook = false; relockOnTap = false;
+        beginLockedLook(); dragLook = false; relockOnTap = false;
       } else {
-        pointerLock.cancel();
         look.suspend(); dragLook = true;
         if (wasLocked) relockOnTap = true;
         if (wasLocked && mode === 'exploring') {
@@ -503,7 +514,6 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       }
       syncInputMode();
     }, { signal });
-    document.addEventListener('pointerlockerror', () => pointerLock.onError(), { signal });
     function eventTime(event: Event) {
       // Older engines use epoch timestamps; keep input and performance.now on one clock.
       return event.timeStamp > performance.timeOrigin ? event.timeStamp - performance.timeOrigin : event.timeStamp;
@@ -513,6 +523,8 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       if (look.sample('locked', event.movementX, event.movementY, eventTime(event), performance.now(), sensitivity)) cancelRoute();
     }, { signal });
     canvas.addEventListener('pointerdown', event => {
+      edgeLookArmed = false;
+      rememberMouse(event);
       // The pause overlay passes the exposed scene through to this canvas.
       if (mode === 'paused' && !ui.isOpen() && event.pointerType === 'mouse' && event.button === 0) {
         relockOnTap = true; touchInput = false; root.dataset.touch = 'false'; enter(); return;
@@ -534,7 +546,11 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       if (look.sample(press.source, dx, dy, eventTime(event), performance.now(), sensitivity)) cancelRoute();
       syncInputMode();
     }
-    canvas.addEventListener('pointermove', event => { trackPointer(event); dragMove(event); }, { signal });
+    canvas.addEventListener('pointermove', event => {
+      if (!press && event.pointerType === 'mouse' && document.pointerLockElement !== canvas &&
+          (!pointerInside || event.clientX !== pointerClient.x || event.clientY !== pointerClient.y)) edgeLookArmed = true;
+      trackPointer(event); dragMove(event);
+    }, { signal });
     canvas.addEventListener('pointerleave', clearPointer, { signal });
     canvas.addEventListener('pointerup', event => {
       if (!press || press.id !== event.pointerId) return;
@@ -642,7 +658,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     setMode(ui.isOpen() ? 'reading' : document.hidden ? 'paused' : 'exploring');
     if (!ui.isOpen() && !document.hidden) {
       canvas.focus({ preventScroll: true });
-      if (hadPointerLock) look.begin('locked', performance.now());
+      if (hadPointerLock) beginLockedLook();
       root.dataset.arriving = 'true';
       introTimer = window.setTimeout(() => {
         delete root.dataset.arriving; hint.hidden = false;
@@ -662,7 +678,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       if (mode !== 'reading') elapsed += delta;
       let speed = 0;
       if (mode === 'exploring') {
-        if (inputMode === 'pointer' && pointerInside && !press) {
+        if (inputMode === 'pointer' && edgeLookArmed && pointerInside && !press) {
           const pan = edgeTurn(pointerNDC.x), tilt = edgeTurn(pointerNDC.y);
           if (pan || tilt) {
             look.rotate(-pan * delta * 1.8 * sensitivity, tilt * delta * 1.15 * sensitivity);
@@ -737,11 +753,14 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       else ui.setLocation(place.name, place.nameEn);
       pipeline.render(delta);
       if (elapsed - lastSave > 5) { lastSave = elapsed; save(); }
-      if (mode === 'exploring' && rawDelta < 0.15 && elapsed > 5) {
-        frameSum += rawDelta; frameSamples++;
-        if (frameSamples >= 180) {
-          if (frameSum / frameSamples > 0.029 && qualityAdjustments < 3 && pipeline.easeResolution()) qualityAdjustments++;
-          frameSum = 0; frameSamples = 0;
+      if (mode === 'exploring' && qualityAdjustments < 3 && rawDelta > 0) {
+        sampledTime += Math.min(rawDelta, .25); frameSamples++;
+        if (rawDelta > .029) slowFrames++;
+        // A short wall-clock window also works at very low frame rates. A single GC
+        // pause or a return from a background tab cannot move the pixel budget.
+        if (sampledTime >= 1.4 && frameSamples >= 8) {
+          if (slowFrames >= frameSamples * .70 && pipeline.easeResolution()) qualityAdjustments++;
+          resetFrameWindow();
         }
       }
     }

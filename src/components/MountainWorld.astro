@@ -129,10 +129,13 @@ const marks = [
   <noscript><style is:inline>[data-world-load]{display:none!important}</style></noscript>
   <script>
     import { createAmbience } from '../scripts/mountain-world/music';
+    import { createCourtyardMouseLock } from '../scripts/mountain-world/pointer-lock';
     const courtyard = document.querySelector<HTMLElement>('[data-mountain-world]');
-    courtyard?.querySelector('[data-world-load]')?.addEventListener('click', async () => {
+    courtyard?.querySelector<HTMLButtonElement>('[data-world-load]')?.addEventListener('click', async event => {
       courtyard.dataset.state = 'loading';
       const canvas = courtyard.querySelector<HTMLCanvasElement>('#mountain-canvas')!;
+      const mouseLock = createCourtyardMouseLock(courtyard, canvas);
+      if (event.detail > 0) mouseLock.remember(event.clientX, event.clientY);
       const base = import.meta.env.BASE_URL.replace(/\/$/, '');
       const ambience = createAmbience(base, () => courtyard.dispatchEvent(new Event('mountain-music-error')));
       let sound = true;
@@ -142,22 +145,20 @@ const marks = [
       } catch {}
       if (sound) ambience.toggle();
       // Mouse lock and audio playback both use the original entrance gesture.
-      if (!matchMedia('(pointer: coarse)').matches) {
-        try { canvas.requestPointerLock?.()?.catch(() => {}); } catch {}
-      }
+      if (!matchMedia('(pointer: coarse)').matches && canvas.requestPointerLock) mouseLock.start();
       const releaseLock = () => { if (document.pointerLockElement === canvas) document.exitPointerLock(); };
       const pending = new AbortController();
       document.addEventListener('visibilitychange', () => ambience.setHidden(document.hidden), { signal: pending.signal });
       window.addEventListener('pagehide', event => {
-        if (!event.persisted) { pending.abort(); ambience.dispose(); releaseLock(); }
+        if (!event.persisted) { pending.abort(); mouseLock.dispose(); ambience.dispose(); releaseLock(); }
       }, { signal: pending.signal });
       try {
         const { initializeWorld } = await import('../scripts/mountain-world/main');
         if (pending.signal.aborted) return;
         pending.abort();
-        await initializeWorld(courtyard, ambience);
+        await initializeWorld(courtyard, ambience, mouseLock);
       } catch {
-        pending.abort(); ambience.dispose(); releaseLock();
+        pending.abort(); mouseLock.dispose(); ambience.dispose(); releaseLock();
         courtyard.dataset.state = 'failed';
         courtyard.querySelector<HTMLElement>('[data-world-fallback]')!.hidden = false;
       }

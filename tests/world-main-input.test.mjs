@@ -51,6 +51,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     }
     querySelector(selector) { return this.children.get(selector) || null; }
     getBoundingClientRect() { return { ...rect }; }
+    dispatchEvent(event) { this.emit(event.type); return true; }
     focus() { document.activeElement = this; }
     setPointerCapture(id) { this.captures.add(id); }
     hasPointerCapture(id) { return this.captures.has(id); }
@@ -59,6 +60,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   class Input extends Element {}
   class Select extends Element {}
   const root = new Element(), canvas = new Element(), document = new Element(), window = new Element();
+  canvas.ownerDocument = document;
   document.hidden = false; document.pointerLockElement = null;
   document.querySelector = () => root;
   document.getElementById = () => ({ textContent: JSON.stringify({ isEn: true, prefix: '', base: '/', posts: [] }) });
@@ -113,7 +115,9 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
       assert.equal(_scene.getObjectByName('test-backdrop')?.userData.ignoreAmbientOcclusion, true,
         'The backdrop must exist before the rendering pipeline collects AO exclusions.');
       camera = value;
-      return { dispose() { disposed('pipeline'); }, setQuality() {}, render() { lifecycle.renders++; }, easeResolution: () => false,
+      lifecycle.resolutionAdjustments = 0;
+      return { dispose() { disposed('pipeline'); }, setQuality() {}, render() { lifecycle.renders++; },
+        easeResolution() { lifecycle.resolutionAdjustments++; return true; },
         resize(width, height) { camera.aspect = width / height; camera.updateProjectionMatrix(); } };
     } },
     './navigation': { createNavigation: () => ({ nearest, canWalk, hasFloor: () => true,
@@ -371,14 +375,51 @@ test('a browser that denies capture still turns at the edge and stops when the c
   assert.equal(h.root.dataset.pointerLocked, 'false');
 });
 
+test('releasing a drag at the edge stops turning until the free mouse moves again', async () => {
+  const h = await world({ unavailable:true });
+  h.enter();
+  const rect = h.canvas.getBoundingClientRect(), y = rect.top + rect.height / 2;
+  const edge = {clientX:rect.left + rect.width - 2, clientY:y};
+  h.pointer('pointerdown', {clientX:edge.clientX - 90,clientY:y});
+  h.pointer('pointermove', edge); h.pointer('pointerup', edge);
+  h.pointer('pointermove', edge); // A stationary post-capture move may be dispatched.
+  for (let i=0;i<30;i++) h.step();
+  const yaw = h.camera.rotation.y;
+  for (let i=0;i<20;i++) h.step();
+  assert.ok(Math.abs(h.camera.rotation.y-yaw)<1e-6);
+  h.pointer('pointermove', {clientX:edge.clientX+1,clientY:y});
+  for (let i=0;i<15;i++) h.step();
+  assert.ok(h.camera.rotation.y<yaw-.25);
+});
+
+test('relocking from the free cursor ignores its delayed transfer to the canvas centre', async () => {
+  const h = await world();
+  h.enter(); await h.fail();
+  h.click({clientX:250,clientY:180}); await h.lock();
+  const yaw = h.camera.rotation.y, pitch = h.camera.rotation.x;
+  h.emit(h.document,'mousemove',{movementX:2,movementY:-1}); h.step(85);
+  h.emit(h.document,'mousemove',{movementX:430,movementY:260});
+  for (let i=0;i<20;i++) h.step();
+  assert.ok(Math.abs(h.camera.rotation.y-yaw+2*.0021)<1e-6);
+  assert.ok(Math.abs(h.camera.rotation.x-pitch-.0021)<1e-6);
+});
+
 test('a seated visitor can pause, resume, and use the stand control without pointing at a mesh', async () => {
   const h=await world({bench:true,unavailable:true,reduced:true});
+  const standing=h.camera.position.clone(), yaw=h.camera.rotation.y, pitch=h.camera.rotation.x;
   h.enter(); h.click(h.point('centre')); h.step(16);
-  assert.equal(h.root.dataset.seated,'true'); assert.equal(h.camera.rotation.y,1.25);
+  assert.equal(h.root.dataset.seated,'true');
+  assert.equal(h.camera.rotation.y,yaw); assert.equal(h.camera.rotation.x,pitch);
+  assert.ok(h.camera.position.distanceTo(standing)>0 && h.camera.position.distanceTo(standing)<.1);
+  for(let i=0;i<10;i++) h.step(16);
+  const seated=h.camera.position.clone();
+  assert.ok(seated.distanceTo(standing)>.4); assert.equal(h.camera.rotation.y,yaw);
   h.reader(true); h.reader(false); h.enter();
-  h.emit(h.controls.stand,'click'); h.step(320);
+  h.emit(h.controls.stand,'click'); h.step(16);
+  assert.ok(h.camera.position.distanceTo(seated)>0 && h.camera.position.distanceTo(seated)<.1);
+  for(let i=0;i<10;i++) h.step(16);
   assert.equal(h.root.dataset.seated,undefined); assert.equal(h.root.dataset.inputMode,'pointer');
-  assert.equal(h.camera.position.z,34);
+  assert.ok(h.camera.position.distanceTo(standing)<1e-8);
 });
 
 test('escaping a seated mouse lock keeps the seat and exposes its controls', async () => {
@@ -620,6 +661,20 @@ test('the cloud clock freezes in place while reading or when the live motion pre
   h.step(120); assert.equal(h.lifecycle.landscapeTime, first);
   h.reader(false); h.step(120);
   assert.ok(Math.abs(h.lifecycle.landscapeTime - first - .12) < 1e-6);
+});
+
+test('sustained long frames ease the drawing-buffer budget but a single stall or a paused view does not', async () => {
+  const h = await world({ coarse: true });
+  for (let i = 0; i < 100; i++) h.step(16);
+  h.step(600);
+  for (let i = 0; i < 100; i++) h.step(16);
+  assert.equal(h.lifecycle.resolutionAdjustments, 0);
+  for (let i = 0; i < 17; i++) h.step(165);
+  assert.ok(h.lifecycle.resolutionAdjustments > 0, 'Frames above 150ms still contribute to the budget');
+  h.key('Escape');
+  const paused = h.lifecycle.resolutionAdjustments;
+  for (let i = 0; i < 20; i++) h.step(200);
+  assert.equal(h.lifecycle.resolutionAdjustments, paused);
 });
 
 test('the entrance guide follows the opening and disappears five seconds later', async () => {

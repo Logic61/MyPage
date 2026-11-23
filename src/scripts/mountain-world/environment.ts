@@ -260,28 +260,61 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
 
   function mergeStatic() {
     root.updateWorldMatrix(true, true);
-    const groups = new Map<string, { material: THREE.Material; cast: boolean; receive: boolean; geometries: THREE.BufferGeometry[]; sources: THREE.Mesh[] }>();
+    type StaticMesh = THREE.Mesh<THREE.BufferGeometry, THREE.Material>;
+    const groups = new Map<string, StaticMesh[]>();
     root.traverse(object => {
       if (!(object instanceof THREE.Mesh) || object instanceof THREE.InstancedMesh || Array.isArray(object.material)) return;
-      let ancestor: THREE.Object3D | null = object;
-      while (ancestor) { if (ancestor.userData.dynamic) return; ancestor = ancestor.parent; }
-      const key = `${object.material.uuid}:${object.castShadow}:${object.receiveShadow}`;
-      if (!groups.has(key)) groups.set(key, { material: object.material, cast: object.castShadow, receive: object.receiveShadow, geometries: [], sources: [] });
-      const group = groups.get(key)!;
-      let copy = object.geometry.clone(); copy.applyMatrix4(object.matrixWorld);
-      if (copy.index) { const flat = copy.toNonIndexed(); copy.dispose(); copy = flat; }
-      if (!copy.attributes.uv) copy.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(copy.attributes.position.count * 2), 2));
-      if (object.material instanceof THREE.MeshStandardMaterial && object.material.vertexColors && !copy.attributes.color)
-        copy.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(copy.attributes.position.count * 3).fill(1), 3));
-      for (const name of Object.keys(copy.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(name)) copy.deleteAttribute(name);
-      group.geometries.push(copy); group.sources.push(object);
+      for (let ancestor: THREE.Object3D | null = object; ancestor; ancestor = ancestor.parent) {
+        if (ancestor.userData.dynamic) return;
+      }
+      // Keep the roof grids indexed. Adjacent tiles then reuse vertices in both the colour and the shadow pass.
+      const key = [object.material.uuid, object.castShadow, object.receiveShadow, Boolean(object.geometry.index)].join(':');
+      const list = groups.get(key);
+      if (list) list.push(object);
+      else groups.set(key, [object]);
     });
-    for (const group of groups.values()) {
-      if (group.geometries.length < 2) { group.geometries.forEach(g => g.dispose()); continue; }
-      const geometry = mergeGeometries(group.geometries, false); group.geometries.forEach(g => g.dispose());
-      if (!geometry) continue;
-      group.sources.forEach(object => object.removeFromParent());
-      const merged = mesh(keep(geometry), group.material); merged.name = `Static environment ${group.material.name || group.material.type}`; merged.castShadow = group.cast; merged.receiveShadow = group.receive;
+
+    function combine(sources: StaticMesh[]) {
+      if (sources.length < 2) return;
+      const { material, castShadow, receiveShadow } = sources[0];
+      const copies = sources.map(source => {
+        const copy = source.geometry.clone().applyMatrix4(source.matrixWorld);
+        const count = copy.attributes.position.count;
+        if (!copy.attributes.uv) copy.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(count * 2), 2));
+        if (material instanceof THREE.MeshStandardMaterial && material.vertexColors && !copy.attributes.color)
+          copy.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(count * 3).fill(1), 3));
+        for (const name of Object.keys(copy.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(name)) copy.deleteAttribute(name);
+        return copy;
+      });
+      const geometry = mergeGeometries(copies, false);
+      copies.forEach(copy => copy.dispose());
+      if (!geometry) return;
+      sources.forEach(source => source.removeFromParent());
+      const merged = mesh(keep(geometry), material);
+      merged.name = `Static environment ${material.name || material.type}`;
+      merged.castShadow = castShadow; merged.receiveShadow = receiveShadow;
+    }
+
+    const centre = new THREE.Vector3();
+    for (const sources of groups.values()) {
+      const triangles = sources.reduce((sum, {geometry}) => sum + (geometry.index?.count ?? geometry.attributes.position.count) / 3, 0);
+      if (triangles < 36000 || sources.length < 2) {
+        combine(sources);
+        continue;
+      }
+      // Localise only triangle-heavy batches; small fittings still share a single draw.
+      // Use the geometry centre because roof panels and pine limbs are modelled in site coordinates.
+      const cells = new Map<string, StaticMesh[]>();
+      for (const source of sources) {
+        const geometry = source.geometry;
+        if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+        centre.copy(geometry.boundingSphere!.center).applyMatrix4(source.matrixWorld);
+        const key = `${Math.floor(centre.x / 10)},${Math.floor(centre.z / 10)}`;
+        const cell = cells.get(key);
+        if (cell) cell.push(source);
+        else cells.set(key, [source]);
+      }
+      cells.forEach(combine);
     }
   }
 }

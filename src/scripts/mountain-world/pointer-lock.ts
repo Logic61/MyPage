@@ -14,6 +14,40 @@ interface Attempt {
   errorDuringCall: boolean;
 }
 
+/** The entrance and the visit share one native request, including browsers that settle it after loading. */
+export function createCourtyardMouseLock(root: HTMLElement, canvas: HTMLCanvasElement) {
+  const doc = canvas.ownerDocument;
+  const listeners = new AbortController();
+  let mouse: { x: number; y: number } | null = null;
+  let warp: { x: number; y: number; pixelRatio: number; acquiredAt: number } | null = null;
+  const lock = createPointerLockRequest({
+    request: raw => raw ? canvas.requestPointerLock({ unadjustedMovement: true }) : canvas.requestPointerLock(),
+    isActive: () => !doc.hidden && (root.dataset.state === 'loading' || root.dataset.mode === 'exploring'),
+    onFallback: () => root.dispatchEvent(new Event('mountain-mouse-fallback')),
+  });
+  doc.addEventListener('pointerlockerror', lock.onError, { signal: listeners.signal });
+  doc.addEventListener('pointerlockchange', event => {
+    if (doc.pointerLockElement === canvas) {
+      lock.onLocked();
+      if (!mouse) return;
+      const rect = canvas.getBoundingClientRect();
+      const acquiredAt = event.timeStamp > performance.timeOrigin ? event.timeStamp - performance.timeOrigin : event.timeStamp;
+      warp = { x: rect.left + rect.width / 2 - mouse.x, y: rect.top + rect.height / 2 - mouse.y,
+        pixelRatio: doc.defaultView?.devicePixelRatio || 1, acquiredAt };
+      mouse = null;
+    } else {
+      lock.cancel(); warp = null; mouse = null;
+    }
+  }, { signal: listeners.signal });
+  return {
+    start: lock.start,
+    cancel: lock.cancel,
+    remember(x: number, y: number) { mouse = { x, y }; },
+    get warp() { return warp; },
+    dispose() { lock.cancel(); listeners.abort(); },
+  };
+}
+
 /**
  * Coordinates Promise-returning and older event-only Pointer Lock implementations.
  *

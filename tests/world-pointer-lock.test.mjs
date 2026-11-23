@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { setImmediate as nextTurn } from 'node:timers/promises';
-import { createPointerLockRequest } from '../src/scripts/mountain-world/pointer-lock.ts';
+import { createCourtyardMouseLock, createPointerLockRequest } from '../src/scripts/mountain-world/pointer-lock.ts';
 
 function deferred() {
   let resolve, reject;
@@ -21,6 +21,30 @@ function harness(request) {
 }
 
 const failure = name => new DOMException('Pointer lock request failed', name);
+
+test('an off-centre entrance click and a late native lock survive the handover to the loaded world', () => {
+  const doc = new EventTarget(), root = new EventTarget(), calls = [];
+  root.dataset = { state:'loading' };
+  doc.defaultView = {devicePixelRatio:1.5};
+  const canvas = {
+    ownerDocument:doc, requestPointerLock: options => { calls.push(options); },
+    getBoundingClientRect: () => ({left:30,top:50,width:800,height:480}),
+  };
+  const lock = createCourtyardMouseLock(root,canvas);
+  lock.remember(300,200); lock.start();
+  root.dataset = {state:'ready',mode:'exploring'};
+  lock.start();
+  assert.deepEqual(calls,[{unadjustedMovement:true}]);
+  doc.pointerLockElement = canvas;
+  const acquired = new Event('pointerlockchange');
+  doc.dispatchEvent(acquired);
+  assert.deepEqual(lock.warp,{x:130,y:90,pixelRatio:1.5,acquiredAt:acquired.timeStamp});
+  doc.pointerLockElement = null; doc.dispatchEvent(new Event('pointerlockchange'));
+  assert.equal(lock.warp,null);
+  lock.start();
+  assert.deepEqual(calls,[{unadjustedMovement:true},{unadjustedMovement:true}]);
+  lock.dispose();
+});
 
 test('the error event before a raw Promise rejection preserves the ordinary-input retry', async () => {
   const raw = deferred(), ordinary = deferred();

@@ -77,7 +77,7 @@ test('releasing a short flick before the next frame keeps the final motion', () 
 
 test('lock handoff ignores a recenter-sized first sample and stale or invalid input', () => {
   const look = new LookController(0, 0);
-  look.begin('locked', 100);
+  look.begin('locked', 100, { x:800, y:0, pixelRatio:1, acquiredAt:100 });
   assert.equal(look.sample('locked', 800, 0, 104, 104, 1), false);
   assert.equal(look.sample('locked', 20, 0, 90, 105, 1), false);
   assert.equal(look.sample('locked', 20, 0, 105, 250, 1), false);
@@ -86,6 +86,33 @@ test('lock handoff ignores a recenter-sized first sample and stale or invalid in
   assert.equal(look.sample('locked', 10, 0, 251, 253, 1), false);
   look.advance(0.5);
   close(look.yaw, -0.042);
+});
+
+test('a small sample can precede a delayed cursor-centre warp on a scaled display', () => {
+  const look = new LookController(0, 0);
+  look.begin('locked', 100, { x:140, y:-60, pixelRatio:1.5, acquiredAt:100 });
+  assert.equal(look.sample('locked', 2, 1, 105, 105, 1), true);
+  assert.equal(look.sample('locked', 210, -90, 198, 198, 1), false);
+  assert.equal(look.sample('locked', 210, -90, 207, 207, 1), true, 'only the one matching handoff is suppressed');
+  look.advance(.5);
+  close(look.yaw, -212*.0021); close(look.pitch, 89*.0021);
+});
+
+test('a genuine large first flick survives acquisition and a duplicate lock notification', () => {
+  const look = new LookController(0, 0);
+  const warp = {x:400,y:100,pixelRatio:1,acquiredAt:0};
+  look.begin('locked',0,warp);
+  assert.equal(look.sample('locked',820,-140,4,4,1),true);
+  look.begin('locked',6,warp);
+  assert.equal(look.sample('locked',400,100,245,245,1),true, 'the acquisition window has closed');
+  look.advance(.5); close(look.yaw,-1220*.0021); close(look.pitch,40*.0021);
+});
+
+test('opening the scene after a slow load does not restart an old lock handoff', () => {
+  const look = new LookController(0, 0);
+  look.begin('locked', 5200, { x:360, y:80, pixelRatio:1, acquiredAt:105 });
+  assert.equal(look.sample('locked',360,80,5201,5201,1),true);
+  look.advance(.5); close(look.yaw,-360*.0021);
 });
 
 test('ordinary fast sweeps retain their full distance and direction beyond half a turn', () => {

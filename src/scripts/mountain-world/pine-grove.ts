@@ -83,7 +83,6 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
   ]);
   branchWind(material,clock,'x',.108);
   const fan = keep(gridSurface(7,3,(u,v) => new THREE.Vector3(u,(v-.105)*.49+.06*Math.sin(Math.PI*u),.12*(v-.105)+.09*u*Math.sin(u*Math.PI))));
-  const transforms: THREE.Matrix4[] = [], colors: THREE.Color[] = [];
   const brush = new THREE.Object3D();
   // The study shows a few exposed lower boughs and overlapping tables of needles at the summit.
   const tiers = [
@@ -98,6 +97,7 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
     const mesh=new THREE.Mesh(geometry,bark); mesh.castShadow=mesh.receiveShadow=true; root.add(mesh);
   }
   function pine(x: number,z: number,h: number,lean: number,seed: number, spread=1) {
+    const transforms: THREE.Matrix4[] = [], colors: THREE.Color[] = [];
     const rng=seeded(seed), base=new THREE.Vector3(x,.3,z), twist=(rng()-.5)*.80;
     // Lift the crown above the eaves while retaining the bough spread and rooting space in each bed.
     const height = h * 1.32;
@@ -164,6 +164,14 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
         }
       }
     }
+    const crown = new THREE.InstancedMesh(fan, material, transforms.length);
+    crown.name = 'Wind-shaped pine boughs';
+    transforms.forEach((matrix, i) => { crown.setMatrixAt(i, matrix); crown.setColorAt(i, colors[i]); });
+    crown.computeBoundingSphere();
+    crown.boundingSphere!.radius += .14; // Include the largest shader-driven needle sway.
+    crown.castShadow = crown.receiveShadow = true;
+    crown.userData.ignoreInteractionRay = crown.userData.ignoreAmbientOcclusion = true;
+    root.add(crown);
   }
   pine(-5.55,4.0,4.35,1.18,119,.91);
   pine(5.55,4.0,4.25,-1.06,91,.88);
@@ -172,9 +180,5 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
   pine(13.65,8.4,5.10,.85,108,.90);
   pine(8.1,10.6,4.75,.91,86,.84); pine(-8.35,10.7,5.05,-.94,52,.94);
   pine(-2.85,35.5,4.8,-.94,67,.94);
-  const crowns = new THREE.InstancedMesh(fan,material,transforms.length); crowns.name='Wind-shaped pine boughs';
-  transforms.forEach((matrix,i)=>{crowns.setMatrixAt(i,matrix); crowns.setColorAt(i,colors[i]);});
-  crowns.castShadow=crowns.receiveShadow=true;
-  crowns.userData.ignoreInteractionRay=true; crowns.userData.ignoreAmbientOcclusion=true; root.add(crowns);
   return { material, ready, dispose() { disposed=true; } };
 }
