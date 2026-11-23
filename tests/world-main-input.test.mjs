@@ -63,7 +63,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   document.getElementById = () => ({ textContent: JSON.stringify({ isEn: true, prefix: '', base: '/', posts: [] }) });
   document.exitPointerLock = () => { exitRequests++; };
   const controls = {};
-  for (const name of ['arrival', 'begin', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
+  for (const name of ['arrival', 'track', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
     controls[name] = name === 'quality' ? new Select() : ['sensitivity', 'bob'].includes(name) ? new Input() : new Element();
     root.children.set(`[data-world-${name}]`, controls[name]);
   }
@@ -88,7 +88,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
       label: id, labelEn: id, radius: 2.5, meshes: [mesh], activate: () => activated.push(id) });
   }
   const ui = {
-    updateWaymarks() {}, useCentredWaymark() {},
+    setSound() {}, updateWaymarks() {}, useCentredWaymark() {},
     interaction: null, screen: undefined,
     setInteraction(item, screen) { this.interaction = item; this.screen = screen; },
     setLocation(name, nameEn) { this.location = { name, nameEn }; }, showToast(message) { toasts.push(message); },
@@ -158,6 +158,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   function unlock() { document.pointerLockElement = null; emit(document, 'pointerlockchange'); }
   function reader(open, notify = true) { readerOpen = open; if (notify) actions.onReadingChange(open); }
   vm.runInContext(main, context, { filename: 'main.ts' });
+  void context.exports.initializeWorld(root, music.createAmbience('/', () => {}));
   step(); await nextTurn();
   if (!expectFailure) assert.deepEqual(errors, []);
   if (camera) {
@@ -172,7 +173,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   }
   if (expectReady) {
     assert.equal(root.dataset.state, 'ready');
-    assert.equal(root.dataset.inputMode, 'none');
+    assert.equal(root.dataset.inputMode, coarse ? 'touch' : 'pointer');
   }
   return { root, canvas, document, window, controls, ui, requests, activated, toasts, camera, lifecycle, errors, sessionStore, motionPreference,
     actions, step, emit, pointer, point, key, click, enter, fail, lock, unlock, reader,
@@ -410,7 +411,7 @@ test('painting and backdrop share one deadline and both settle before early comp
   assert.equal(h.pendingTimers(), 1);
   backdrop.resolve(); await nextTurn();
   assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 1);
-  assert.equal(h.pendingTimers(), 0);
+  assert.equal(h.pendingTimers(), 1, 'Only the opening guide timer remains');
   assert.deepEqual(h.lifecycle.disposed, {});
 });
 
@@ -421,7 +422,7 @@ test('stalled decorative assets allow entry after one 1500ms deadline; late imag
   assert.equal(h.lifecycle.compiles, 0); assert.equal(h.lifecycle.ready, 0);
   h.step(1); await nextTurn();
   assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 1);
-  assert.equal(h.pendingTimers(), 0);
+  assert.equal(h.pendingTimers(), 1, 'Only the opening guide timer remains');
   artwork.resolve(); backdrop.resolve(); await nextTurn(); h.step(40);
   assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 1);
   assert.ok(h.lifecycle.renders > 1);
@@ -474,7 +475,7 @@ test('an optional backdrop failure preserves the painting wait and allows the fa
   assert.equal(h.lifecycle.compiles, 0); assert.equal(h.pendingTimers(), 1);
   artwork.resolve(); await nextTurn();
   assert.equal(h.lifecycle.compiles, 1); assert.equal(h.lifecycle.ready, 1);
-  assert.equal(h.pendingTimers(), 0); assert.deepEqual(h.errors, []);
+  assert.equal(h.pendingTimers(), 1, 'Only the opening guide timer remains'); assert.deepEqual(h.errors, []);
   h.emit(h.window, 'pagehide', { persisted: false }); assertReleasedOnce(h);
 });
 
@@ -621,7 +622,6 @@ test('the cloud clock freezes in place while reading or when the live motion pre
 
 test('the entrance guide follows the opening and disappears five seconds later', async () => {
   const h = await world({ coarse: true });
-  h.emit(h.controls.begin, 'click');
   assert.equal(h.root.dataset.mode, 'exploring');
   assert.equal(h.controls.arrival.hidden, true);
   assert.equal(h.controls.hint.hidden, true);

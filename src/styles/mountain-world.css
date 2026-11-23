@@ -240,22 +240,24 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
   position: absolute; z-index: 1; left: 50%; bottom: max(16%,env(safe-area-inset-bottom));
   transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 10px;
 }
+.mountain-world[data-state="poster"] .mw-arrival::after {
+  background: linear-gradient(0deg,#101e1cdd 0%,#132923bf 21%,#172d2552 39%,transparent 55%);
+}
 .mw-cover-actions :is(button,a) {
   display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;
-  width: max-content; min-width: 7.6em; padding: .18em .95em; line-height: 1.5;
-  border: 1px solid #d3bd88; border-radius: 2px; text-shadow: none; letter-spacing: .08em;
-  box-shadow: 0 3px 12px #172a244a;
+  min-height: 46px; padding: .1em .6em; border: 0; background: transparent;
+  line-height: 1.5; text-shadow: 0 1px 5px #10231e; letter-spacing: .12em;
 }
-.mw-cover-actions .mw-enter-button {
-  min-height: 50px; font-size: clamp(25px,2.45vw,34px); font-weight: 600;
-  color: #20392f; background: #f4e8cdee;
+.mw-cover-actions .mw-enter-button { color: #fff4d6; font-size: clamp(25px,2.45vw,34px); font-weight: 600; }
+.mw-cover-actions .mw-enter-button::before,.mw-cover-actions .mw-enter-button::after {
+  content: ''; width: clamp(22px,3vw,43px); height: 1px;
+  background: linear-gradient(90deg,transparent,#e5ca91);
 }
-.mw-cover-actions .mw-read-button {
-  min-height: 46px; font-size: clamp(21px,1.85vw,27px); font-weight: 500;
-  color: #fff5d9; background: #183830ec;
+.mw-cover-actions .mw-enter-button::after { transform: rotate(180deg); }
+.mw-cover-actions .mw-read-button { color: #f6edd9; font-size: clamp(21px,1.85vw,27px); }
+.mw-cover-actions :is(button,a):is(:hover,:focus-visible) {
+  color: #fff; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: .28em;
 }
-.mw-cover-actions .mw-enter-button:is(:hover,:focus-visible) { background: #fff3d8; }
-.mw-cover-actions .mw-read-button:is(:hover,:focus-visible) { background: #245043; }
 @media (max-height: 480px) {
   .mw-cover-actions { bottom: max(6%,env(safe-area-inset-bottom)); gap: 6px; }
 }
@@ -265,14 +267,6 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mountain-world:not([data-state="ready"]) :is(.mw-header,.mw-hud),
 .mountain-world[data-mode="welcome"] .mw-header { display: none; }
 .mountain-world .mw-loading { z-index: 5; background: rgba(21,33,34,.56); }
-.mw-arrival-bar {
-  position: absolute; z-index: 1; left: 0; width: 100%; bottom: max(12vh,48px,env(safe-area-inset-bottom)); min-height: 48px;
-  border: 0; border-block: 1px solid #94ceee54; color: #fff;
-  background: linear-gradient(90deg,#438fbd32,#2269959c 22%,#123e69d9 50%,#2269959c 78%,#438fbd32);
-  text-shadow: 0 1px 3px #123454; font-weight: 600; letter-spacing: .24em; text-indent: .24em;
-}
-.mw-arrival-bar:hover { background-color: #337cb73d; }
-.mountain-world .mw-arrival-bar:focus-visible { outline-offset: -3px; }
 .mountain-world[data-arriving] .mw-stage { animation: mw-open-gate .95s cubic-bezier(.16,.76,.25,1) both; }
 .mountain-world[data-arriving] :is(.mw-header,.mw-hud,.mw-waymarks,.mw-thumbstick,.mw-reticle) { visibility: hidden; }
 @keyframes mw-open-gate { from { transform: scale(1.045) translateY(.6%); filter: brightness(.66); } to { transform: none; filter: brightness(1); } }
@@ -280,11 +274,10 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-tools [data-world-settings-open] { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px; border: 0; color: inherit; background: transparent; }
 dialog.mw-settings { position: fixed; inset: max(66px,10vh) max(16px,4vw) auto auto; width: min(335px,calc(100vw - 32px)); max-height: 80dvh; overflow: auto; margin: 0; padding: 21px 24px 26px; border: 1px solid #758075; background: #223432; color: #f0ead8; box-shadow: 0 12px 48px #101d2099; }
 .mw-settings::backdrop { background: rgba(18,28,27,.34); }
-.mw-settings-head,.mw-music-setting { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.mw-settings-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .mw-settings-head { border-bottom: 1px solid #ffffff25; padding-bottom: 10px; }
 .mw-settings-head h2 { margin: 0; font: 20px/1.5 var(--font-serif,serif); }
 .mw-settings button { color: #eadbb7; background: transparent; border: 0; min-height: 36px; }
 .mw-settings-head button { font-size: 22px; width: 36px; }
-.mw-music-setting button { padding-inline: 12px; border: 1px solid #859183; }
 .mountain-world .mw-hint { position: absolute; left: 50%; bottom: 4vh; right: auto; transform: translateX(-50%); width: max-content; max-width: min(90vw,620px); background: rgba(28,43,41,.9); border: 1px solid #ddd0ac66; color: #f2eddf; border-radius: 3px; padding: 9px 14px; pointer-events: auto; }
 @media (max-width: 540px) { .mw-tools [data-world-settings-open] span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); } }

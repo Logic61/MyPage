@@ -1,6 +1,7 @@
 ---
 import { Icon } from 'astro-icon/components';
 import Layout from '../layouts/Layout.astro';
+import { tracks } from '../scripts/mountain-world/music';
 import CourtyardFolio from './CourtyardFolio.astro';
 import '../styles/mountain-world.css';
 import '../styles/mountain-folio.css';
@@ -34,7 +35,6 @@ const marks = [
         <button type="button" class="mw-enter-button" data-world-load>{isEn ? 'Enter the courtyard' : '走进云庭'}</button>
         <a class="mw-read-button" href={`${prefix}/static/`}>{isEn ? 'Static site' : '静态页面'}</a>
       </div>
-      <button type="button" class="mw-arrival-bar" data-world-begin hidden>{isEn ? 'Click to enter' : '点击进入'}</button>
     </div>
     <header class="mw-header">
       <a class="mw-brand" href={`${prefix}/`} aria-label={isEn ? 'Cloud Court Study · home' : '云庭书斋 · 首页'}>
@@ -44,6 +44,10 @@ const marks = [
       <nav class="mw-tools" aria-label={isEn ? 'Study controls' : '书斋操作'}>
         <button type="button" class="mw-lock-button" data-world-lock aria-label={isEn ? 'Lock the mouse and aim with the centre dot' : '锁定鼠标，使用中心准心环顾与交互'}><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" /><path d="M12 2v4m0 12v4M2 12h4m12 0h4" /></svg><span>{isEn ? 'Lock mouse' : '锁定鼠标'}</span></button>
         <a href={`${prefix}/blog`} class="mw-directory-button" data-world-action="directory"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 5h14M5 12h14M5 19h14" /></svg><span>{isEn ? 'Directory' : '目录'}</span></a>
+        <button type="button" class="mw-tool-button" data-world-action="sound" aria-pressed="false" disabled>
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z" /><path class="mw-sound-waves" d="M15 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14" /><path class="mw-sound-cross" d="m16 9 5 6m0-6-5 6" /></svg>
+          <span class="mw-sr-only" data-sound-label>{isEn ? 'Background music' : '背景音乐'}</span>
+        </button>
         <button type="button" data-world-settings-open aria-haspopup="dialog"><Icon name="mdi:cog-outline" /><span>{isEn ? 'Settings' : '设置'}</span></button>
         <button type="button" class="mw-tool-button" data-world-action="reset" aria-label={isEn ? 'Return to the courtyard gate' : '回到庭门'} disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></svg></button>
         <button type="button" class="mw-tool-button" data-world-pause aria-label={isEn ? 'Pause exploring' : '暂停探索'} hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg></button>
@@ -72,9 +76,12 @@ const marks = [
           <label><span>{isEn ? 'Picture' : '画面'}</span><select data-world-quality><option value="detail">{isEn ? 'Detailed' : '细致'}</option><option value="smooth">{isEn ? 'Smooth' : '流畅'}</option></select></label>
           <label><span>{isEn ? 'Look sensitivity' : '视角灵敏度'}</span><input type="range" min="0.4" max="1.8" step="0.1" value="1" data-world-sensitivity /></label>
           <label class="mw-bob-option"><span>{isEn ? 'Gentle walking motion' : '轻微行走起伏'}</span><input type="checkbox" data-world-bob /></label>
-        <div class="mw-music-setting"><span>{isEn ? 'Background music' : '背景音乐'}</span>
-          <button type="button" data-world-action="sound" aria-pressed="false" disabled><span data-sound-label>{isEn ? 'Music off' : '音乐关闭'}</span></button>
-        </div>
+        <label><span>{isEn ? 'Background track' : '背景曲目'}</span>
+          <select data-world-track>
+            <option value="shuffle">{isEn ? 'Shuffle' : '随机播放'}</option>
+            {tracks.map(track => <option value={track.file}>{isEn ? track.nameEn : track.name}</option>)}
+          </select>
+        </label>
       </div>
     </dialog>
     <nav class="mw-waymarks" data-world-marks aria-label={isEn ? 'Courtyard landmarks' : '庭中去处'}>
@@ -121,12 +128,36 @@ const marks = [
   </div>
   <noscript><style is:inline>[data-world-load]{display:none!important}</style></noscript>
   <script>
+    import { createAmbience } from '../scripts/mountain-world/music';
     const courtyard = document.querySelector<HTMLElement>('[data-mountain-world]');
     courtyard?.querySelector('[data-world-load]')?.addEventListener('click', async () => {
       courtyard.dataset.state = 'loading';
+      const canvas = courtyard.querySelector<HTMLCanvasElement>('#mountain-canvas')!;
+      const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+      const ambience = createAmbience(base, () => courtyard.dispatchEvent(new Event('mountain-music-error')));
+      let sound = true;
       try {
-        await import('../scripts/mountain-world/main');
+        sound = localStorage.getItem('mountain-study:music') !== 'off';
+        ambience.select(localStorage.getItem('mountain-study:track') || 'shuffle');
+      } catch {}
+      if (sound) ambience.toggle();
+      // Mouse lock and audio playback both use the original entrance gesture.
+      if (!matchMedia('(pointer: coarse)').matches) {
+        try { canvas.requestPointerLock?.()?.catch(() => {}); } catch {}
+      }
+      const releaseLock = () => { if (document.pointerLockElement === canvas) document.exitPointerLock(); };
+      const pending = new AbortController();
+      document.addEventListener('visibilitychange', () => ambience.setHidden(document.hidden), { signal: pending.signal });
+      window.addEventListener('pagehide', event => {
+        if (!event.persisted) { pending.abort(); ambience.dispose(); releaseLock(); }
+      }, { signal: pending.signal });
+      try {
+        const { initializeWorld } = await import('../scripts/mountain-world/main');
+        if (pending.signal.aborted) return;
+        pending.abort();
+        await initializeWorld(courtyard, ambience);
       } catch {
+        pending.abort(); ambience.dispose(); releaseLock();
         courtyard.dataset.state = 'failed';
         courtyard.querySelector<HTMLElement>('[data-world-fallback]')!.hidden = false;
       }

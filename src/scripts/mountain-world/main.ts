@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { createMusic } from './music';
+import type { createAmbience } from './music';
 import { createEnvironment } from './environment';
 import { createFurnishings } from './furnishings';
 import { createSurfaceLibrary } from './materials';
@@ -39,10 +39,7 @@ function describePlace(x: number, z: number) {
   return { name: '云山石径', nameEn: 'The cloud mountain path', indoor: false };
 }
 
-const root = document.querySelector<HTMLElement>('[data-mountain-world]');
-if (root) void initializeWorld(root);
-
-async function initializeWorld(root: HTMLElement) {
+export async function initializeWorld(root: HTMLElement, ambience: ReturnType<typeof createAmbience>) {
   const canvas = root.querySelector<HTMLCanvasElement>('#mountain-canvas');
   const configElement = document.getElementById('mountain-world-config');
   if (!canvas || !configElement) return;
@@ -50,12 +47,7 @@ async function initializeWorld(root: HTMLElement) {
   const en = config.isEn;
   const abort = new AbortController(), { signal } = abort;
   const musicPreferenceKey = 'mountain-study:music';
-  let musicPreferred = true;
-  try { musicPreferred = localStorage.getItem(musicPreferenceKey) !== 'off'; } catch {}
-  const ambience = createAmbience(config.base, () => {
-    ui.setSound(false);
-    ui.showToast(en ? 'Music could not play. Click the speaker to retry.' : '音乐暂时无法播放，可在设置中重试。');
-  });
+
   let alive = true, teardown = () => {};
   let suspendAction = () => {}, resumeAction = () => {};
   let interactionAction = () => {}, resetAction = () => {};
@@ -70,6 +62,17 @@ async function initializeWorld(root: HTMLElement) {
     }, onNavigate: id => navigateAction(id),
     onReadingChange: open => readingAction(open), getPose: () => visitorPose(),
   });
+  root.addEventListener('mountain-music-error', () => {
+    ui.setSound(false);
+    ui.showToast(en ? 'Music could not play. Click the speaker to retry.' : '音乐暂时无法播放，点击喇叭可重试。');
+  }, { signal });
+  function failWorld(reason: string) {
+    ambience.dispose();
+    if (document.pointerLockElement === canvas) document.exitPointerLock();
+    ui.setFailed(reason);
+  }
+  document.addEventListener('visibilitychange', () => ambience.setHidden(document.hidden), { signal });
+  ambience.setHidden(document.hidden);
   window.addEventListener('pagehide', event => {
     // BFCache restores this same document and its listeners, so retain its resources.
     if (event.persisted) { suspendAction(); return; }
@@ -81,7 +84,7 @@ async function initializeWorld(root: HTMLElement) {
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
   } catch {
-    ui.setFailed('WebGL2 could not be initialized.');
+    failWorld('WebGL2 could not be initialized.');
     return;
   }
   const resources: (() => void)[] = [() => renderer.dispose()];
@@ -175,7 +178,12 @@ async function initializeWorld(root: HTMLElement) {
     let stickPointer: number | null = null;
     const entry = root.querySelector<HTMLElement>('[data-world-entry]')!;
     const enterButton = root.querySelector<HTMLButtonElement>('[data-world-enter]')!;
-    const beginButton = root.querySelector<HTMLButtonElement>('[data-world-begin]')!;
+    const trackSelect = root.querySelector<HTMLSelectElement>('[data-world-track]')!;
+    trackSelect.value = ambience.selection;
+    trackSelect.addEventListener('change', () => {
+      ambience.select(trackSelect.value);
+      try { localStorage.setItem('mountain-study:track', ambience.selection); } catch {}
+    }, { signal });
     const stage = root.querySelector<HTMLElement>('.mw-stage')!;
     const hint = root.querySelector<HTMLElement>('[data-world-hint]')!;
     const settings = root.querySelector<HTMLDialogElement>('[data-world-settings]')!;
@@ -442,21 +450,6 @@ async function initializeWorld(root: HTMLElement) {
     }, { signal });
     sensitivityInput.addEventListener('input', () => { sensitivity = Number(sensitivityInput.value); savePreferences(); }, { signal });
     bobInput.addEventListener('change', () => { headBob = bobInput.checked && !reducedMotion; savePreferences(); }, { signal });
-    beginButton.addEventListener('click', () => {
-      if (mode !== 'welcome') return;
-      root.querySelector<HTMLElement>('[data-world-arrival]')!.hidden = true;
-      stage.inert = false;
-      if (musicPreferred && typeof Audio !== 'undefined') {
-        ambience.setHidden(document.hidden); ui.setSound(ambience.toggle());
-      }
-      root.dataset.arriving = 'true';
-      enter();
-      introTimer = window.setTimeout(() => {
-        delete root.dataset.arriving;
-        hint.hidden = false;
-        hintTimer = window.setTimeout(() => { hint.hidden = true; }, 5000);
-      }, motionPreference.matches ? 0 : 950);
-    }, { signal });
     settingsButton.addEventListener('click', () => {
       if (mode !== 'exploring' && mode !== 'paused') return;
       resumeAfterSettings = mode === 'exploring';
@@ -479,6 +472,7 @@ async function initializeWorld(root: HTMLElement) {
       const wasLocked = hadPointerLock;
       hadPointerLock = locked;
       if (locked) {
+        if (mode === 'welcome') return;
         pointerLock.onLocked();
         clearDrag(); clearPointer();
         if (!alive || ui.isOpen() || mode !== 'exploring') {
@@ -550,7 +544,7 @@ async function initializeWorld(root: HTMLElement) {
     canvas.addEventListener('webglcontextlost', event => {
       event.preventDefault(); window.clearTimeout(interactionTimer);
       cancelRoute(); setMode('paused'); teardown();
-      ui.setFailed('The graphics context was lost. Reload the page to restart the study.');
+      failWorld('The graphics context was lost. Reload the page to restart the study.');
     }, { signal });
     function updateStick(event: PointerEvent) {
       const rect = stick.getBoundingClientRect();
@@ -593,7 +587,7 @@ async function initializeWorld(root: HTMLElement) {
     window.addEventListener('keyup', event => keys.delete(event.code), { signal });
     window.addEventListener('blur', () => { clearMovement(); if (mode === 'exploring') pause(); }, { signal });
     document.addEventListener('visibilitychange', () => {
-      ambience.setHidden(document.hidden); clearMovement();
+      clearMovement();
       if (document.hidden) { save(); if (mode === 'exploring') pause(); }
       previousFrame = performance.now();
     }, { signal });
@@ -628,8 +622,21 @@ async function initializeWorld(root: HTMLElement) {
     if (!alive || resourcesDisposed) return;
     pipeline.render(0);
     if (shaderFailed) throw new Error('A scene material shader could not compile.');
-    ui.setReady(); setMode('welcome');
-    beginButton.hidden = false; beginButton.focus({ preventScroll: true });
+    ui.setReady(); ui.setSound(ambience.enabled);
+    root.querySelector<HTMLElement>('[data-world-arrival]')!.hidden = true;
+    stage.inert = false;
+    hadPointerLock = document.pointerLockElement === canvas;
+    dragLook = !hadPointerLock;
+    setMode(ui.isOpen() ? 'reading' : document.hidden ? 'paused' : 'exploring');
+    if (!ui.isOpen() && !document.hidden) {
+      canvas.focus({ preventScroll: true });
+      if (hadPointerLock) look.begin('locked', performance.now());
+      root.dataset.arriving = 'true';
+      introTimer = window.setTimeout(() => {
+        delete root.dataset.arriving; hint.hidden = false;
+        hintTimer = window.setTimeout(() => { hint.hidden = true; }, 5000);
+      }, motionPreference.matches ? 0 : 950);
+    } else { unlock(); }
 
     function tick(now: number) {
       if (!alive) return;
@@ -731,56 +738,7 @@ async function initializeWorld(root: HTMLElement) {
     teardown();
     if (alive) {
       console.error('The mountain study could not open:', error);
-      ui.setFailed(error instanceof Error ? error.message : 'The 3D scene could not start.');
+      failWorld(error instanceof Error ? error.message : 'The 3D scene could not start.');
     }
   }
-}
-
-function createAmbience(base: string, onFailure: () => void) {
-  let context: AudioContext | null = null, master: GainNode | null = null, windGain: GainNode | null = null;
-  let enabled = false, hidden = false, footClock = 0;
-  const music = createMusic(base, () => {
-    enabled = false;
-    if (master && context) master.gain.setTargetAtTime(0, context.currentTime, .1);
-    onFailure();
-  });
-  const sources: AudioScheduledSourceNode[] = [];
-  function ensure() {
-    if (context) return;
-    context = new AudioContext();
-    master = context.createGain(); master.gain.value = 0; master.connect(context.destination);
-    const noise = context.createBuffer(1, context.sampleRate * 4, context.sampleRate);
-    const samples = noise.getChannelData(0);
-    let previous = 0;
-    for (let i = 0; i < samples.length; i++) { previous = (previous + (Math.random() * 2 - 1) * 0.02) / 1.02; samples[i] = previous * 3; }
-    const source = context.createBufferSource(); source.buffer = noise; source.loop = true;
-    const low = context.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 750;
-    windGain = context.createGain(); windGain.gain.value = 0.18;
-    source.connect(low).connect(windGain).connect(master); source.start(); sources.push(source);
-  }
-  return {
-    toggle() {
-      enabled = !enabled;
-      music.setAudible(enabled && !hidden);
-      try { ensure(); void context?.resume().catch(() => {}); master?.gain.setTargetAtTime(enabled && !hidden ? .6 : 0, context!.currentTime, .4); }
-      catch { /* Music can play without synthesized footsteps. */ }
-      return enabled;
-    },
-    setHidden(value: boolean) { hidden = value; music.setAudible(enabled && !hidden); if (master && context) master.gain.setTargetAtTime(enabled && !hidden ? 0.6 : 0, context.currentTime, 0.2); },
-    update(indoor: boolean, speed: number, delta: number) {
-      if (!context || !enabled || hidden) return;
-      windGain?.gain.setTargetAtTime(indoor ? .025 : .055, context.currentTime, 1.2);
-      footClock += speed * delta;
-      if (speed > 0.5 && footClock > 1.1) {
-        footClock = 0;
-        const tone = context.createOscillator(), gain = context.createGain();
-        tone.type = 'sine'; tone.frequency.setValueAtTime(indoor ? 130 : 95, context.currentTime);
-        tone.frequency.exponentialRampToValueAtTime(40, context.currentTime + 0.07);
-        gain.gain.setValueAtTime(0.035, context.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.09);
-        tone.connect(gain).connect(master!); tone.start(); tone.stop(context.currentTime + 0.1);
-        tone.onended = () => { tone.disconnect(); gain.disconnect(); };
-      }
-    },
-    dispose() { music.dispose(); sources.forEach(source => source.stop()); void context?.close(); },
-  };
 }
