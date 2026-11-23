@@ -49,9 +49,12 @@ async function initializeWorld(root: HTMLElement) {
   const config: WorldConfig = JSON.parse(configElement.textContent || '{}');
   const en = config.isEn;
   const abort = new AbortController(), { signal } = abort;
+  const musicPreferenceKey = 'mountain-study:music';
+  let musicPreferred = true;
+  try { musicPreferred = localStorage.getItem(musicPreferenceKey) !== 'off'; } catch {}
   const ambience = createAmbience(config.base, () => {
     ui.setSound(false);
-    ui.showToast(en ? 'Music could not play. Click the speaker to retry.' : '音乐暂时无法播放，点击喇叭可重试。');
+    ui.showToast(en ? 'Music could not play. Click the speaker to retry.' : '音乐暂时无法播放，可在设置中重试。');
   });
   let alive = true, teardown = () => {};
   let suspendAction = () => {}, resumeAction = () => {};
@@ -60,7 +63,11 @@ async function initializeWorld(root: HTMLElement) {
   let visitorPose: () => { x: number; z: number; yaw: number } | null = () => null;
   const ui = createWorldUI(root, config, {
     onInteract: () => interactionAction(), onReset: () => resetAction(),
-    onSound: () => ambience.toggle(), onNavigate: id => navigateAction(id),
+    onSound: () => {
+      const playing = ambience.toggle();
+      try { localStorage.setItem(musicPreferenceKey, playing ? 'on' : 'off'); } catch {}
+      return playing;
+    }, onNavigate: id => navigateAction(id),
     onReadingChange: open => readingAction(open), getPose: () => visitorPose(),
   });
   window.addEventListener('pagehide', event => {
@@ -168,8 +175,12 @@ async function initializeWorld(root: HTMLElement) {
     let stickPointer: number | null = null;
     const entry = root.querySelector<HTMLElement>('[data-world-entry]')!;
     const enterButton = root.querySelector<HTMLButtonElement>('[data-world-enter]')!;
-    const entryTitle = root.querySelector<HTMLElement>('[data-world-entry-title]')!;
-    const entryCopy = root.querySelector<HTMLElement>('[data-world-entry-copy]')!;
+    const beginButton = root.querySelector<HTMLButtonElement>('[data-world-begin]')!;
+    const stage = root.querySelector<HTMLElement>('.mw-stage')!;
+    const hint = root.querySelector<HTMLElement>('[data-world-hint]')!;
+    const settings = root.querySelector<HTMLDialogElement>('[data-world-settings]')!;
+    const settingsButton = root.querySelector<HTMLButtonElement>('[data-world-settings-open]')!;
+    let introTimer = 0, hintTimer = 0, resumeAfterSettings = false;
     const pauseButton = root.querySelector<HTMLButtonElement>('[data-world-pause]')!;
     const standButton = root.querySelector<HTMLButtonElement>('[data-world-stand]');
     const lockButton = root.querySelector<HTMLButtonElement>('[data-world-lock]');
@@ -268,14 +279,10 @@ async function initializeWorld(root: HTMLElement) {
     }
     function setMode(value: Mode) {
       mode = value; root.dataset.mode = value;
-      const visible = value === 'welcome' || value === 'paused';
-      entry.hidden = !visible;
-      if (visible) {
-        entryTitle.textContent = value === 'welcome' ? (en ? 'A quiet courtyard, above the clouds.' : '云庭有光，且坐片刻。') : (en ? 'Stay a little longer.' : '稍作停留。');
-        entryCopy.textContent = value === 'welcome'
-          ? (en ? 'Follow the stone path into the courtyard. Find a book, and take in the mountains.' : '循着石径走进云庭，取一卷书，看看山色。')
-          : (en ? 'The study is waiting, just where you left it.' : '书斋仍在，回到刚才驻足的地方。');
-        enterButton.querySelector('[data-world-enter-label]')!.textContent = value === 'welcome' ? (en ? 'Enter the courtyard' : '走进云庭') : (en ? 'Continue exploring' : '继续探索');
+      entry.hidden = value !== 'paused';
+      if (value !== 'exploring' && value !== 'welcome') {
+        window.clearTimeout(introTimer); window.clearTimeout(hintTimer);
+        delete root.dataset.arriving; hint.hidden = true;
       }
       pauseButton.hidden = value !== 'exploring';
       if (value !== 'exploring') {
@@ -435,6 +442,32 @@ async function initializeWorld(root: HTMLElement) {
     }, { signal });
     sensitivityInput.addEventListener('input', () => { sensitivity = Number(sensitivityInput.value); savePreferences(); }, { signal });
     bobInput.addEventListener('change', () => { headBob = bobInput.checked && !reducedMotion; savePreferences(); }, { signal });
+    beginButton.addEventListener('click', () => {
+      if (mode !== 'welcome') return;
+      root.querySelector<HTMLElement>('[data-world-arrival]')!.hidden = true;
+      stage.inert = false;
+      if (musicPreferred && typeof Audio !== 'undefined') {
+        ambience.setHidden(document.hidden); ui.setSound(ambience.toggle());
+      }
+      root.dataset.arriving = 'true';
+      enter();
+      introTimer = window.setTimeout(() => {
+        delete root.dataset.arriving;
+        hint.hidden = false;
+        hintTimer = window.setTimeout(() => { hint.hidden = true; }, 5000);
+      }, motionPreference.matches ? 0 : 950);
+    }, { signal });
+    settingsButton.addEventListener('click', () => {
+      if (mode !== 'exploring' && mode !== 'paused') return;
+      resumeAfterSettings = mode === 'exploring';
+      if (resumeAfterSettings) pause();
+      settings.showModal();
+    }, { signal });
+    root.querySelector('[data-world-settings-close]')!.addEventListener('click', () => {
+      settings.close();
+      if (resumeAfterSettings) enter();
+      else settingsButton.focus();
+    }, { signal });
     enterButton.addEventListener('click', enter, { signal });
     standButton?.addEventListener('click', () => {
       if (mode === 'exploring' && seatedAt) { standUp(true); canvas!.focus({ preventScroll: true }); }
@@ -541,6 +574,8 @@ async function initializeWorld(root: HTMLElement) {
     stick.addEventListener('pointercancel', endStick, { signal });
     stick.addEventListener('lostpointercapture', endStick, { signal });
     window.addEventListener('keydown', event => {
+      if (settings.open) return;
+      if (event.code === 'KeyH' && mode === 'exploring' && !hint.hidden) { hint.hidden = true; return; }
       if (ui.isOpen() || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.code === 'Escape' && mode === 'exploring' && seatedAt && (document.pointerLockElement === canvas || performance.now() - lastSeatUnlock < 180)) {
         if (document.pointerLockElement === canvas) unlock();
@@ -582,7 +617,7 @@ async function initializeWorld(root: HTMLElement) {
       shaderFailed = true; console.error('Mountain study material could not compile:', gl.getProgramInfoLog(program));
     };
     stopWorld = () => {
-      save(); window.clearTimeout(interactionTimer); cancelAnimationFrame(frame);
+      save(); window.clearTimeout(interactionTimer); window.clearTimeout(introTimer); window.clearTimeout(hintTimer); cancelAnimationFrame(frame);
       pointerLock.cancel(); look.suspend(); clearMovement(); unlock();
     };
     // Painting and mountains share one deadline. Their existing fallbacks remain
@@ -593,11 +628,8 @@ async function initializeWorld(root: HTMLElement) {
     if (!alive || resourcesDisposed) return;
     pipeline.render(0);
     if (shaderFailed) throw new Error('A scene material shader could not compile.');
-    if (typeof Audio !== 'undefined') {
-      ambience.setHidden(document.hidden);
-      ui.setSound(ambience.toggle());
-    }
-    ui.setReady(); setMode(ui.isOpen() ? 'reading' : 'welcome');
+    ui.setReady(); setMode('welcome');
+    beginButton.hidden = false; beginButton.focus({ preventScroll: true });
 
     function tick(now: number) {
       if (!alive) return;

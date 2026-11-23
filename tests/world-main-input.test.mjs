@@ -63,11 +63,13 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   document.getElementById = () => ({ textContent: JSON.stringify({ isEn: true, prefix: '', base: '/', posts: [] }) });
   document.exitPointerLock = () => { exitRequests++; };
   const controls = {};
-  for (const name of ['entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
+  for (const name of ['arrival', 'begin', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
     controls[name] = name === 'quality' ? new Select() : ['sensitivity', 'bob'].includes(name) ? new Input() : new Element();
     root.children.set(`[data-world-${name}]`, controls[name]);
   }
   controls.enter.children.set('[data-world-enter-label]', new Element());
+  root.children.set('.mw-stage', new Element());
+  controls.hint.hidden = true;
   root.children.set('#mountain-canvas', canvas);
   if (!unavailable) canvas.requestPointerLock = options => {
     const request = { raw: options?.unadjustedMovement === true, ...deferred() };
@@ -615,4 +617,18 @@ test('the cloud clock freezes in place while reading or when the live motion pre
   h.step(120); assert.equal(h.lifecycle.landscapeTime, first);
   h.reader(false); h.step(120);
   assert.ok(Math.abs(h.lifecycle.landscapeTime - first - .12) < 1e-6);
+});
+
+test('the entrance guide follows the opening and disappears five seconds later', async () => {
+  const h = await world({ coarse: true });
+  h.emit(h.controls.begin, 'click');
+  assert.equal(h.root.dataset.mode, 'exploring');
+  assert.equal(h.controls.arrival.hidden, true);
+  assert.equal(h.controls.hint.hidden, true);
+  h.step(950);
+  assert.equal(h.controls.hint.hidden, false);
+  h.step(4999);
+  assert.equal(h.controls.hint.hidden, false);
+  h.step(1);
+  assert.equal(h.controls.hint.hidden, true);
 });
