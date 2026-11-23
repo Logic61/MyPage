@@ -123,6 +123,8 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 /* First-person view: a small centre cue, quiet controls, and an explicit pause. */
 .mw-entry { position: absolute; z-index: 4; inset: 0; display: flex; align-items: flex-end; padding: 90px max(5vw,30px) max(5vh,28px); pointer-events: none; background: linear-gradient(20deg,rgba(13,29,28,.94),rgba(13,29,28,.74) 16%,rgba(13,29,28,.15) 38%,transparent 56%); }
 .mw-entry-card { pointer-events: auto; width: min(420px,100%); color: #faf2de; text-shadow: 0 1px 6px #19312c; }
+.mountain-world[data-mode="paused"][data-touch="false"] .mw-entry-card { pointer-events: none; }
+.mw-entry-card :is(button, a, details) { pointer-events: auto; }
 .mw-entry h1 { font-size: clamp(28px,2.7vw,42px); font-weight: 400; line-height: 1.7; letter-spacing: .07em; margin: 0 0 12px; text-wrap: balance; }
 .mw-entry-copy { font-size: 15px; line-height: 1.95; color: #ede8d8; margin: 0; max-width: 32em; }
 .mw-entry-actions { display: flex; align-items: center; gap: 23px; margin: 27px 0 23px; }
