@@ -144,3 +144,39 @@ export function createBrushRestGeometry() {
   const g=new THREE.ExtrudeGeometry(ridge,{depth:.032,bevelEnabled:true,bevelThickness:.004,bevelSize:.003,bevelSegments:3,curveSegments:10});
   g.translate(0,.004,-.016);return g;
 }
+
+/** Woven lozenges and smaller shuttle marks around the silk mounting. */
+export function createBrocadeMount(): THREE.BufferGeometry {
+  const positions: number[] = [], uvs: number[] = [], indices: number[] = [];
+  const radius = 1.444;
+  const repeats = 44;
+
+  function lozenge(angle: number, halfWidth: number, halfHeight: number, inset: number) {
+    const first = positions.length / 3;
+    for (const scale of [1, 1 - inset / halfHeight]) {
+      for (const [along, across] of [[0, halfHeight], [halfWidth, 0], [0, -halfHeight], [-halfWidth, 0]]) {
+        const theta = angle + along * scale / radius;
+        const distance = radius + across * scale;
+        const x = distance * Math.cos(theta), y = distance * Math.sin(theta);
+        positions.push(x, y, 0);
+        uvs.push(0.5 + x / 3.2, 0.5 + y / 3.2);
+      }
+    }
+    for (let edge = 0; edge < 4; edge++) {
+      const a = first + edge, b = first + (edge + 1) % 4;
+      indices.push(a, b, a + 4, b, b + 4, a + 4);
+    }
+  }
+
+  for (let i = 0; i < repeats; i++) {
+    const step = 2 * Math.PI / repeats;
+    lozenge(i * step, .073, .030, .0055);
+    lozenge((i + .5) * step, .018, .009, .004);
+  }
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+  return geometry;
+}

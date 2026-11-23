@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary, type SurfaceKind, type SurfaceOptions } from './materials';
 import { createFurnishingInk } from './furnishing-ink';
-import { createBenchCushionGeometry, createBrushRestGeometry, createInkstoneGeometry, createScreenArtwork } from './furnishing-design';
+import { createBrocadeMount, createBenchCushionGeometry, createBrushRestGeometry, createInkstoneGeometry, createScreenArtwork } from './furnishing-design';
 import type { Collider, Furnishings, Interaction } from './types';
 
 /** Human-scale furnishings: all dimensions are metres; the common floor is y=.3. */
@@ -214,24 +214,50 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   // A single circular landscape is the room's principal composition, with real depth and a silk face.
   const screen = group('circular-landscape-screen', 0, -9.36);
   screen.position.y = 2.5;
-  const screenFrame = geometry('screen-deep-bevelled-wood-ring', () => {
-    const shape = new THREE.Shape(); shape.absarc(0, 0, 1.60, 0, Math.PI * 2, false);
-    const hole = new THREE.Path(); hole.absarc(0, 0, 1.46, 0, Math.PI * 2, true); shape.holes.push(hole);
-    const result = new THREE.ExtrudeGeometry(shape, { depth: .12, steps: 1, curveSegments: 80,
-      bevelEnabled: true, bevelThickness: .012, bevelSize: .008, bevelSegments: 3 });
-    result.translate(0, 0, -.06); return result;
-  });
-  mesh(screen, screenFrame, woodDark);
-  cylinder(screen, wood, 1.535, 1.535, .045, 0, 0, -.045, 96).rotation.x = Math.PI / 2;
-  torus(screen, woodEdge, 1.565, .012, 0, 0, .061, 96);
-  torus(screen, brass, 1.469, .0065, 0, 0, .074, 96);
+  // The frame is turned as one profile. The recess between its two lips catches
+  // a different shadow as the visitor walks past the painting.
+  const screenFrame = lathe(screen, woodDark, 'turned-landscape-frame', [
+    [1.481,-.069], [1.586,-.069], [1.600,-.054], [1.600,.018],
+    [1.595,.044], [1.586,.064], [1.576,.069], [1.565,.064],
+    [1.558,.050], [1.552,.031], [1.540,.026], [1.528,.030],
+    [1.514,.043], [1.503,.059], [1.492,.063], [1.481,.054], [1.481,-.069],
+  ], 0, 0, 0, 128);
+  screenFrame.rotation.x = Math.PI / 2;
+  cylinder(screen, wood, 1.503, 1.503, .045, 0, 0, -.045, 96).rotation.x = Math.PI / 2;
+  const mount = material({ color: '#b4a68a', roughness: .92 });
+  const thread = material({ color: '#8d7e61', roughness: .81 });
+  mesh(screen, geometry('silk-mount', () => new THREE.RingGeometry(1.386, 1.496, 128)), mount, 0, 0, .048);
+  mesh(screen, geometry('woven-mount-diamonds', createBrocadeMount), thread, 0, 0, .049);
+  torus(screen, brassDark, 1.394, .004, 0, 0, .054, 128);
   const silk = surface('paper', { color: '#ffffff', roughness: .98, normalScale: .12 });
   silk.name = 'non-emissive-landscape-silk'; silk.map = artwork.texture;
   silk.userData.artworkSource = 'canvas-fallback';
-  mesh(screen, geometry('screen-silk-circle', () => new THREE.CircleGeometry(1.46, 96)), silk, 0, 0, .066, false);
-  for (const xx of [-.9, .9]) for (const yy of [-.9, .9]) {
-    cylinder(screen, woodDark, .045, .045, .45, xx, yy, -.285, 12).rotation.x = Math.PI / 2;
+  mesh(screen, geometry('screen-silk-circle', () => new THREE.CircleGeometry(1.389, 128)), silk, 0, 0, .050, false);
+
+  // Paired yokes meet the curvature of the round frame and carry it down to
+  // the feet. The cutaway leaves daylight above the lower stretcher.
+  const yoke = geometry('carved-screen-yoke', () => {
+    const s = new THREE.Shape();
+    s.moveTo(.49,-1.477);
+    s.quadraticCurveTo(.86,-1.397,1.176,-1.048);
+    s.quadraticCurveTo(1.219,-1.018,1.207,-1.106);
+    s.bezierCurveTo(1.187,-1.271,1.083,-1.369,1.003,-1.430);
+    s.bezierCurveTo(.940,-1.474,.925,-1.563,.925,-1.652);
+    s.lineTo(.925,-2.087); s.lineTo(.779,-2.087); s.lineTo(.779,-1.702);
+    s.bezierCurveTo(.779,-1.579,.735,-1.551,.640,-1.557);
+    s.quadraticCurveTo(.511,-1.568,.49,-1.477);
+    s.closePath();
+    return new THREE.ExtrudeGeometry(s, { depth: .110, bevelEnabled: true,
+      bevelThickness: .009, bevelSize: .009, bevelSegments: 2, curveSegments: 10 });
+  });
+  for (const side of [-1, 1]) {
+    const joint = mesh(screen, yoke, wood, 0, 0, -.118);
+    joint.scale.x = side;
+    const x = side * .852;
+    bevel(screen, woodDark, .342, .080, .433, x, -2.160, -.108, .014);
+    bevel(screen, wood, .249, .058, .337, x, -2.096, -.104, .012);
   }
+  bevel(screen, woodDark, 1.64, .072, .074, 0, -1.882, -.066, .008);
   batchStatic(screen);
   colliders.push({ x: 0, z: -9.5, halfX: 1.64, halfZ: .26 });
   const screenReady = artwork.ready.then(texture => {
