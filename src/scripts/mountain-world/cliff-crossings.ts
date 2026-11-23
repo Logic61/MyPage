@@ -1,19 +1,21 @@
 import * as THREE from 'three';
 import { architecturalBlock } from './environment-geometry';
+import { stoneBalustrade } from './stone-balustrade';
 import type { SurfaceLibrary } from './materials';
+import type { createFloorFinishes } from './courtyard-paving';
 import type { Collider } from './types';
 
-type StonePalette = { stone: THREE.Material; darkStone: THREE.Material; moss: THREE.Material };
+type StonePalette = { stone: THREE.Material; darkStone: THREE.Material };
 type GeometryOwner = <T extends THREE.BufferGeometry>(geometry: T) => T;
 type MaterialOwner = <T extends THREE.Material>(material: T) => T;
 
 /** The approach and viewing terrace share dressed limestone, rebated kerbs and bronze fittings. */
 export function buildCliffCrossings(
   root: THREE.Group, library: SurfaceLibrary, palette: StonePalette, colliders: Collider[],
-  keep: GeometryOwner, own: MaterialOwner,
+  keep: GeometryOwner, own: MaterialOwner, floors: ReturnType<typeof createFloorFinishes>,
 ) {
-  const lime = own(library.material('limestone', { color: '#e7e5d7', worldScale: .66, normalScale: .62 }));
-  const slate = own(library.material('limestone', { color: '#b9c7be', worldScale: .87, normalScale: .70 }));
+  const lime = own(library.material('limestone', { color: '#e1e3e2', worldScale: .66, normalScale: .39 }));
+  const slate = own(library.material('limestone', { color: '#bcbfc0', worldScale: .87, normalScale: .46 }));
   const honeyStone = own(library.material('limestone', { color: '#d9c8ad', worldScale: .59, normalScale: .53 }));
   const bronze = own(library.material('brass', { color: '#809a89', worldScale: 1.7, roughness: .75, metalness: .42, normalScale: .32 }));
   const gilt = own(library.material('brass', { color: '#e5bb76', worldScale: 1.1, roughness: .57, metalness: .38, normalScale: .21 }));
@@ -24,7 +26,7 @@ export function buildCliffCrossings(
   let disposed = false;
   lime.addEventListener('dispose', () => { disposed = true; stoneImages.forEach(texture => texture.dispose()); });
   const assetRoot = (import.meta.env?.BASE_URL || '/').replace(/\/$/,'')+'/world/';
-  for (const [file, channel] of [['court-stone.webp','map'],['flagstone-normal.webp','normalMap']] as const) {
+  for (const [file, channel] of [['honed-limestone.webp','map'],['flagstone-normal.webp','normalMap']] as const) {
     void new THREE.TextureLoader().loadAsync(assetRoot+file).then(texture => {
       if (disposed) { texture.dispose(); return; }
       texture.colorSpace = channel === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
@@ -53,9 +55,31 @@ export function buildCliffCrossings(
     if (!geometry) { geometry = keep(architecturalBlock(width,height,depth,.014)); dressedStones.set(key,geometry); }
     return place(parent,geometry,mat,x,y,z);
   }
-  const postCap = keep(new THREE.LatheGeometry([[.115,0],[.135,.035],[.123,.07],[.085,.10],[.104,.145],[.083,.19],[.032,.23],[0,.25]]
-    .map(([x,y]) => new THREE.Vector2(x,y)),12));
-  const postFillet = keep(new THREE.TorusGeometry(.035,.007,5,16));
+  const parapet = stoneBalustrade(root,lime,slate,keep);
+
+  // Use short solid pieces on a diagonal so the middle of an arc is never an invisible obstacle.
+  function edge(points: [number,number][], height: number, omitFirst=false) {
+    parapet(points,height,.301,omitFirst);
+    for (let i=1; i<points.length; i++) {
+      const [x0,z0]=points[i-1], [x1,z1]=points[i], dx=x1-x0, dz=z1-z0;
+      const steps=Math.abs(dx)<.001 || Math.abs(dz)<.001 ? 1 : Math.ceil(Math.hypot(dx,dz)/.33);
+      for (let k=0;k<steps;k++) {
+        const t=(k+.5)/steps;
+        colliders.push({x:x0+dx*t,z:z0+dz*t, halfX:Math.abs(dx)/(2*steps)+.118, halfZ:Math.abs(dz)/(2*steps)+.118});
+      }
+    }
+  }
+
+  function line(x0: number,z0: number,x1: number,z1: number,bays: number,height: number,omitFirst=false) {
+    edge(Array.from({length:bays+1},(_,i)=>[x0+(x1-x0)*i/bays,z0+(z1-z0)*i/bays]),height,omitFirst);
+  }
+
+  function arc(x: number,z: number,r: number,start: number,end: number,bays: number,height: number) {
+    edge(Array.from({length:bays+1},(_,i)=>{
+      const angle=start+(end-start)*i/bays;
+      return [x+Math.cos(angle)*r,z+Math.sin(angle)*r];
+    }),height);
+  }
 
   function cliff(x: number, z: number, radius: number, phase: number) {
     const xy: number[] = [], indices: number[] = [];
@@ -78,24 +102,18 @@ export function buildCliffCrossings(
     place(root,face,palette.darkStone,0,0,0);
     tier(root,palette.stone,x,z,.14,radius,.40);
     tier(root,lime,x,z,.293,radius-.10,.18);
-    // Broken vertical rock ribs meet the worked upper cornice below its pavement.
-    for (let i=0;i<14;i++) {
-      const a=tau*i/14 + phase, depth=2.1+1.7*(1+Math.sin(i*13+phase));
-      const rib=place(root,block,i%4===0?palette.moss:palette.stone,x+(radius-.41)*Math.cos(a),-depth/2-.36,z+(radius-.41)*Math.sin(a),.44,depth,.48);
-      rib.rotation.set(.085*Math.sin(a),-a,.08*Math.cos(a));
-    }
+    floors.round(root,x,z,radius-.11,.299, x===0 ? 0 : 3.04);
   }
 
   function span(x: number, z: number, length: number, width: number, east: boolean, bays: number) {
     const group = new THREE.Group(); group.position.set(x,0,z); group.rotation.y=east?Math.PI/2:0; root.add(group);
     const bay=length/bays, walkingWidth=width-.18, postX=width/2-.11;
-    const tileCount=Math.ceil(length/.82), dl=length/tileCount;
     place(group,block,palette.stone,0,-.035,0,width,.42,length);
-    for (let i=0;i<tileCount;i++) {
-      const zi=-length/2 + dl*(i+.5), cut = (i%2 ? .64 : .36)*walkingWidth;
-      ashlar(group,i%7===2?honeyStone:i%4===1?slate:lime,(cut-walkingWidth)/2,.23,zi,cut-.012,.146,dl-.012);
-      ashlar(group,i%7===3?honeyStone:i%4===0?slate:lime,cut/2,.23,zi,walkingWidth-cut-.012,.146,dl-.012);
-    }
+    const edge=walkingWidth/2, margin=east ? .10 : .17, bed={z0:-length/2,z1:length/2};
+    place(group,block,slate,0,.238,0,walkingWidth,.122,length);
+    floors.flags(group,{...bed,x0:-edge+margin,x1:edge-margin},east ? .40 : .54,east ? .98 : 1.46,[],'field',.308);
+    for(const x0 of [-edge,edge-margin])
+      floors.flags(group,{...bed,x0,x1:x0+margin},1.18,margin,[],'border',.308);
     // Build each full-width spandrel around a real elliptical void.
     const rise = east ? 1.74 : 2.15, bottom=-rise-.66, opening=bay*.42;
     const section=new THREE.Shape();
@@ -110,6 +128,16 @@ export function buildCliffCrossings(
       const mid=-length/2+(j+.5)*bay;
       place(group,vault,palette.stone,0,0,mid);
     }
+    // The shared springing carries both arches down into the gorge.
+    for (let i=1;i<bays;i++) {
+      const pz=-length/2+bay*i;
+      const pierWidth=bay-2*opening;
+      ashlar(group,slate,0,bottom+.095,pz,depth+.22,.30,pierWidth+.40);
+      ashlar(group,lime,0,bottom-.11,pz,depth+.34,.11,pierWidth+.49);
+      ashlar(group,palette.stone,0,bottom-1.08,pz,depth+.12,1.90,pierWidth+.26);
+      ashlar(group,slate,0,bottom-2.08,pz,depth+.29,.17,pierWidth+.41);
+      ashlar(group,palette.darkStone,0,bottom-8.15,pz,depth+.34,12.06,pierWidth+.57);
+    }
     // Individual voussoirs project from the faces so their radial joints read across the gorge.
     for(let k=0;k<15;k++) {
       const a0=Math.PI*k/15+.006, a1=Math.PI*(k+1)/15-.006;
@@ -120,31 +148,17 @@ export function buildCliffCrossings(
       outline.lineTo((opening+.19)*Math.cos(a0),bottom+(rise+.22)*Math.sin(a0)); outline.closePath();
       const wedge=keep(new THREE.ExtrudeGeometry(outline,{depth:.07,bevelEnabled:false}));
       wedge.translate(0,0,-.035).rotateY(-Math.PI/2);
-      for(let j=0;j<bays;j++) for(const side of [-1,1]) place(group,wedge,lime,side*(depth/2+.022),0,-length/2+(j+.5)*bay);
-    }
-    const railHeight=east?.82:.97, panelCount=bays*3, spacing=(length-.36)/panelCount;
-    for (const side of [-1,1]) {
-      const px=side*postX;
-      ashlar(group,slate,px,.36,0,.23,.21,length);
-      for(let j=0;j<=panelCount;j++) {
-        const pz=-length/2+.18+j*spacing;
-        ashlar(group,lime,px,.64,pz,.18,railHeight-.28,.18);
-        ashlar(group,slate,px,.472,pz,.23,.076,.23);
-        ashlar(group,lime,px,.64+(railHeight-.28)/2-.032,pz,.214,.068,.214);
-        const carving = place(group,postFillet,slate,px-side*.091,.69,pz,.85,1.5,1);
-        carving.rotation.y = Math.PI/2;
-        place(group,postCap,lime,px,.64+(railHeight-.28)/2,pz);
-        if (j===panelCount) continue;
-        const mid=pz+spacing/2;
-        ashlar(group,lime,px,railHeight,mid,.14,.10,spacing);
-        ashlar(group,slate,px,.53,mid,.103,.11,spacing);
-        // Pierced quatrefoil-style baluster, with light passing through its central opening.
-        for (const direction of [-1,1]) {
-          const strut = place(group,block,lime,px,(railHeight+.53)/2,mid+direction*.17,.092,railHeight-.46,.075);
-          strut.rotation.x=direction*.28;
-        }
+      const isKey=k===7, stoneColor=isKey ? honeyStone : k%4===1 ? slate : lime;
+      for(let j=0;j<bays;j++) for(const side of [-1,1]) {
+        place(group,wedge,stoneColor,side*(depth/2+(isKey?.035:.022)),0,-length/2+(j+.5)*bay,isKey?1.45:1,1,1);
       }
-      colliders.push(east ? {x,z:z-px,halfX:length/2-.10,halfZ:.10} : {x:x+px,z,halfX:.10,halfZ:length/2-.10});
+    }
+    for (const side of [-1,1]) {
+      ashlar(group,slate,side*(depth/2-.04),-.145,0,.28,.17,length-.03);
+      ashlar(group,lime,side*(depth/2-.04),-.024,0,.35,.086,length);
+      const px=side*postX, half=length/2-.15;
+      if (east) line(x-half,z-px,x+half,z-px,5,.79);
+      else line(x+px,z-half,x+px,z+half,8,.95);
     }
   }
 
@@ -197,12 +211,30 @@ export function buildCliffCrossings(
   span(0,23.875,16.25,3.3,false,2);
   span(18.75,5,10.5,1.9,true,1);
   for (const side of [-1,1]) lantern(side*2.2,31.85);
+  for (const side of [-1,1]) {
+    // The gate terminates the bridge and anchors both wings of the welcoming terrace.
+    line(side*2.20,13.06,side*6.10,13.06,2,.85);
+    line(side*6.10,13.06,side*6.10,11.17,1,.85,true);
+    // The pavilion exit stays open in the middle of each gallery edge.
+    line(side*7.8,-7.9,side*12.84,-7.9,3,.91);
+    line(side*12.84,-7.9,side*12.84,3.67,6,.91,true);
+    line(side*12.84,6.34,side*12.84,8.04,1,.91);
+  }
+  edge([[-1.80,17.04],[-3.24,16.04],[-4.63,15.09]],.71);
+  edge([[1.77,17.22],[3.41,16.87],[4.51,15.43]],.71);
+  // Leave the landing's rear steps and the view through the bronze disc open.
+  for (const offset of [0,Math.PI]) arc(0,34,3.94,offset-.93,offset+.93,4,.76);
+  arc(26,5,4.03,.22*Math.PI,.82*Math.PI,4,.80);
+  arc(26,5,4.03,1.18*Math.PI,1.78*Math.PI,4,.80);
 
   // The disc is deliberately perforated: its only central image is the mountain beyond it.
   const altar = new THREE.Group(); altar.position.set(26,0,5); root.add(altar);
   tier(altar,palette.stone,0,0,.366,3.06,.094);
   tier(altar,lime,0,0,.427,2.77,.065);
   tier(altar,lime,0,0,.477,2.43,.056);
+  floors.round(altar,0,0,3.045,.370,2.75);
+  floors.round(altar,0,0,2.755,.431,2.41);
+  floors.round(altar,0,0,2.415,.481);
   function rim(parent:THREE.Object3D, material:THREE.Material,r:number,thickness:number,y:number,z:number) {
     return place(parent,keep(new THREE.TorusGeometry(r,thickness,10,96)),material,0,y,z);
   }

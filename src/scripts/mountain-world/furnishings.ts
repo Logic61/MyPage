@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { NORTH_HALL_RISE } from './hall-terrace';
+import { POOL_LAMP } from './water-court';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary, type SurfaceKind, type SurfaceOptions } from './materials';
 import { createFurnishingInk } from './furnishing-ink';
@@ -213,7 +215,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
 
   // A single circular landscape is the room's principal composition, with real depth and a silk face.
   const screen = group('circular-landscape-screen', 0, -9.36);
-  screen.position.y = 2.5;
+  screen.position.y = 2.5 + NORTH_HALL_RISE;
   const screenFrame = geometry('screen-deep-bevelled-wood-ring', () => {
     const shape = new THREE.Shape(); shape.absarc(0, 0, 1.60, 0, Math.PI * 2, false);
     const hole = new THREE.Path(); hole.absarc(0, 0, 1.46, 0, Math.PI * 2, true); shape.holes.push(hole);
@@ -254,7 +256,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     sheet.computeVertexNormals(); return sheet;
   });
   function mountScroll(name: string, x: number, field: THREE.Material) {
-    const mount=group(name,x,-9.77); mount.position.y=2.13;
+    const mount=group(name,x,-9.77); mount.position.y=2.13 + NORTH_HALL_RISE;
     bevel(mount,brocade,1.43,2.34,.022,0,0,-.017,.005);
     for (const side of [-1,1]) {
       box(mount,cord,.014,1.91,.009,side*.608,0,.003);
@@ -274,14 +276,14 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   mountScroll('North wall poetic inscription',-3.68,written('scroll'));
   const hostMount=mountScroll('North wall host biography scroll',3.68,hostPaper);
   interactions.push({ id:'about', kind:'about', label:'展读简历', labelEn:'Read the CV',
-    position:new THREE.Vector3(3.68,2.22,-9.73), approach:new THREE.Vector3(3.68,.3,-7.46), radius:2.75, meshes:[hostMount] });
+    position:new THREE.Vector3(3.68,2.22 + NORTH_HALL_RISE,-9.73), approach:new THREE.Vector3(3.68,.3 + NORTH_HALL_RISE,-7.46), radius:2.75, meshes:[hostMount] });
   const assetsReady=Promise.all([screenReady,lettering.portraitReady]).then(()=>{});
 
   const wallPaper = surface('paper', { roughness: 1, normalScale: .25 });
   wallPaper.emissive.set('#ffcea0'); wallPaper.emissiveIntensity = .42;
   for (const x of [-2.29, 2.29]) {
     const wallLamp = group('north-wall-paper-sconce', x, -9.82);
-    wallLamp.position.y = 2.46;
+    wallLamp.position.y = 2.46 + NORTH_HALL_RISE;
     bevel(wallLamp, woodDark, .16, .42, .065, 0, .02, 0);
     bevel(wallLamp, wood, .038, .045, .25, 0, .24, .10);
     cylinder(wallLamp, wallPaper, .115, .115, .31, 0, .02, .23, 24);
@@ -423,6 +425,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
 
   // ---------------------- Writing desk and open book ----------------------
   const desk = group('writing-desk', 0, -7);
+  desk.position.y += NORTH_HALL_RISE;
   writingTable(desk, 2.95, 1.25);
   // One generous woven field gathers the writing tools; the tea and letter have their own space.
   bevel(desk, cloth, 1.74, .003, .89, -.06, .7815, -.015, .0005);
@@ -612,7 +615,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
 
   // ------------------------- Six-sided silk lantern -------------------------
   function courtLamp(side: number, id: string) {
-    const lamp = group('courtyard-paper-lantern', side * 3.53, 4.55);
+    const lamp = group('courtyard-paper-lantern', side * (POOL_LAMP.postX-.53), POOL_LAMP.z);
     if (side > 0) lamp.rotation.y = Math.PI;
     bevel(lamp, woodDark, .48, .09, .44, -.53, .045, 0, .014);
     bevel(lamp, wood, .37, .028, .34, -.53, .102, 0, .009);
@@ -656,10 +659,11 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     const lampLight = new THREE.PointLight('#ffd2a0',5.8,6.5,2); lampLight.position.set(0,-.535,0); lantern.add(lampLight);
     batchStatic(lamp,[lantern]); batchStatic(lantern);
     // The standard stands on the stone coping. Its shade hangs freely over the water.
-    colliders.push({x:side*4.06,z:4.55,halfX:.22,halfZ:.18});
+    colliders.push({x:side*POOL_LAMP.postX,z:POOL_LAMP.z,halfX:.28,halfZ:.29});
     let lampOn=true,lampAmount=1;
     interactions.push({id,kind:'lantern',label:'拨一盏灯',labelEn:'Switch the lantern',
-      position:new THREE.Vector3(side*3.38,2.105,4.55),approach:new THREE.Vector3(side*1.99,.3,4.55),radius:1.95,
+      position:new THREE.Vector3(side*(POOL_LAMP.postX-.68),2.105,POOL_LAMP.z),
+      approach:new THREE.Vector3(side*POOL_LAMP.approachX,.3,POOL_LAMP.approachZ),radius:1.95,
       meshes:[lantern],activate:()=>{lampOn=!lampOn;} });
     return (time: number, dt: number) => {
       lantern.rotation.z = Math.sin(time * .8) * .018;

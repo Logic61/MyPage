@@ -1,5 +1,6 @@
 ---
 import FolioGlyph from './FolioGlyph.astro';
+import { COURTYARD_POOL } from '../scripts/mountain-world/water-court';
 import { getBlogPosts, postDate, postDescription, postSlug } from '../utils/posts';
 
 interface Props { isEn: boolean; }
@@ -68,7 +69,8 @@ const places = [
                     <polygon points="-14.5,-11.7 -7.8,-14.2 .2,-13.2 8.7,-12.4 13.7,-8.4 15,-1.2 14.1,8.3 10.7,12 5.5,14.4 3.6,17.1 -1.1,17.9 -5.1,15.1 -11.4,12 -14.9,6.1 -16,-.8" fill="#c6bfa32b"/>
                     <path d="M-6.1-10H6.1v4.2H-6.1z M-6.1-5.8h2.9V.6h-2.9z M3.2-5.8h2.9V.6H3.2z" fill="url(#hatch)"/>
                     <path d="M-6.35.6V8.4h4.5m3.7 0h4.5V.6 M-1.65 8.4v23.7m3.3-23.7v23.7 M13.5 4.05h9.1m-9.1 1.9h9.1"/>
-                    <g fill="#a5ae9870"><rect x="-4.79" y="1.15" width="2.36" height="4.93"/><rect x="2.43" y="1.15" width="2.36" height="4.93"/></g>
+                    <path d="M-2.99 12.01h5.98v2.42h-5.98z M-2.99 12.01l1.07 1.21-1.07 1.21m1.07-1.21h3.84l1.07-1.21m-1.07 1.21 1.07 1.21" fill="url(#hatch)"/>
+                    <rect x={COURTYARD_POOL.x0} y={COURTYARD_POOL.z0} width={COURTYARD_POOL.x1-COURTYARD_POOL.x0} height={COURTYARD_POOL.z1-COURTYARD_POOL.z0} fill="#8fa99c9c"><title>{t('天光水庭 · 方荷池','Water court · Lotus pond')}</title></rect>
                     <path d="m-10.15 2.48 2.18 1.26v2.52l-2.18 1.26-2.18-1.26V3.74z M10.15 2.48l2.18 1.26v2.52l-2.18 1.26-2.18-1.26V3.74z"/>
                     <circle cx="0" cy="34" r="4.2" fill="url(#hatch)"/>
                     <a href="#sunwheel" data-world-destination="sunwheel" aria-label={t('指路至日轮台','Guide me to Sunwheel Terrace')}>

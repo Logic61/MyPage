@@ -9,6 +9,7 @@ import * as lookControls from '../src/scripts/mountain-world/look-controls.ts';
 import * as music from '../src/scripts/mountain-world/music.ts';
 import * as pointerLock from '../src/scripts/mountain-world/pointer-lock.ts';
 import * as firstPerson from '../src/scripts/mountain-world/first-person.ts';
+import * as hallTerrace from '../src/scripts/mountain-world/hall-terrace.ts';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 
 // Execute the real entry point and real CPU picking against small DOM/WebGL stubs.
@@ -118,6 +119,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     './navigation': { createNavigation: () => ({ nearest, canWalk, hasFloor: () => true,
       findPath: (_start, end) => [{ x: end.x, z: end.z }],
       move: (point, dx, dz) => ({ x: point.x + dx, z: point.z + dz }) }) },
+    './hall-terrace': hallTerrace,
     './ui': { createWorldUI(_root, _config, value) { actions = value; return ui; } },
   };
   const context = vm.createContext({

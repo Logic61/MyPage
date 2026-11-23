@@ -3,10 +3,11 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary } from './materials';
 import { branchGeometry, mistTexture, naturalRock, roundedBlock, seeded } from './environment-geometry';
 import { bambooWind, buildBamboo } from './bamboo';
-import { cliffGarden, cragFace, mountainRunoff } from './cliff-garden';
+import { cliffGarden, cliffSpurs, cragFace, mountainRunoff, plantingSoil } from './cliff-garden';
 import { buildCliffCrossings } from './cliff-crossings';
 import { branchWind, buildPines } from './pine-grove';
-import { COURTYARD_POOLS, createStudyArchitecture } from './environment-design';
+import { createStudyArchitecture } from './environment-design';
+import { COURTYARD_POOL } from './water-court';
 import type { Collider, Environment } from './types';
 
 /** A bright, inhabited mountain courtyard on a continuous level walking plane. */
@@ -23,14 +24,22 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   const darkStone = own(library.material('darkStone', { worldScale: .43, normalScale: .75 }));
   const cutStone = own(library.material('stone', { worldScale: .82, normalScale: .45, roughness: .88 }));
   const earth = own(library.material('ground', { worldScale: .55, normalScale: .55 }));
+  const projectEarth = earth.onBeforeCompile;
+  earth.onBeforeCompile = (shader, renderer) => {
+    projectEarth.call(earth,shader,renderer);
+    shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>', `
+      #include <color_fragment>
+      vec2 p = vSurfaceWorldPosition.xz;
+      float patches = .5 + .22*sin(.85*p.x + sin(.52*p.y)) + .18*cos(1.25*p.y-.54*p.x) + .10*sin(3.2*p.x+2.8*p.y);
+      diffuseColor.rgb *= mix(vec3(.51,.67,.36),vec3(1.07,.94,.76),smoothstep(.16,.84,patches));
+    `);
+  };
+  earth.customProgramCacheKey = () => 'courtyard-granite-and-turf';
   const wood = own(library.material('wood', { repeat: [1, 1.35], normalScale: .45 }));
-  const deckWood = own(library.material('paleWood', { color: '#dce1dc', repeat: [1.25, 2.1], normalScale: .32 }));
   const bark = own(library.material('bark', { repeat: [1.7, 1], normalScale: .85 }));
   const moss = own(library.material('moss', { worldScale: 1.1, normalScale: .4 }));
-  const iron = own(new THREE.MeshStandardMaterial({ color: '#4b4c43', metalness: .63, roughness: .72 }));
   const fernMaterial = own(new THREE.MeshStandardMaterial({ color: '#596e4c', roughness: .95, side: THREE.DoubleSide }));
   const block = keep(roundedBlock()), cube = keep(new THREE.BoxGeometry(1, 1, 1));
-  const cylinder = keep(new THREE.CylinderGeometry(1, 1, 1, 12));
   const mossRock = keep(naturalRock(12));
   const smallRock = keep(naturalRock(31, 1));
   const matrix = new THREE.Matrix4(), quat = new THREE.Quaternion(), vector = new THREE.Vector3(), scale = new THREE.Vector3();
@@ -51,25 +60,32 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     result.castShadow = true; result.receiveShadow = true; result.computeBoundingSphere(); parent.add(result); return result;
   }
   function obstacle(x: number, z: number, halfX: number, halfZ: number) { colliders.push({ x, z, halfX, halfZ }); }
-  function boundsCollider(geometry: THREE.BufferGeometry, transform: THREE.Matrix4, padding = .025) {
-    const bounds = new THREE.Box3(), p = new THREE.Vector3(), positions = geometry.attributes.position;
-    for (let i = 0; i < positions.count; i++) bounds.expandByPoint(p.fromBufferAttribute(positions, i).applyMatrix4(transform));
-    if (bounds.max.y <= .35 || bounds.min.y >= 2.15) return;
-    obstacle((bounds.min.x + bounds.max.x) / 2, (bounds.min.z + bounds.max.z) / 2,
-      (bounds.max.x - bounds.min.x) / 2 + padding, (bounds.max.z - bounds.min.z) / 2 + padding);
-  }
   function branch(points: THREE.Vector3[], start: number, end: number, m: THREE.Material = bark) {
     return mesh(keep(branchGeometry(points, start, end, 12, 12)), m);
   }
   function timber(a: THREE.Vector3, b: THREE.Vector3, radius: number, m: THREE.Material = wood) {
     return branch([a, a.clone().lerp(b, .5), b], radius, radius * .93, m);
   }
-  const white = new THREE.Color('#ffffff');
 
   // The ledge grows into a mountainside below the mist, rather than tapering into a floating toy island.
   const outline = [[-14.5, -11.7], [-7.8, -14.2], [.2, -13.2], [8.7, -12.4], [13.7, -8.4], [15, -1.2], [14.1, 8.3], [10.7, 12], [5.5, 14.4], [3.6, 17.1], [-1.1, 17.9], [-5.1, 15.1], [-11.4, 12], [-14.9, 6.1], [-16, -.8]];
   const granite = own(library.material('stone', { worldScale: .28, normalScale: .63, roughness: .86 }));
   granite.vertexColors = true;
+  for (const rock of [granite,darkStone]) {
+    const projectStone = rock.onBeforeCompile;
+    rock.onBeforeCompile = (shader,renderer) => {
+      projectStone.call(rock,shader,renderer);
+      shader.fragmentShader = shader.fragmentShader.replace('#include <fog_fragment>', `
+        #include <fog_fragment>
+        float cloudDepth = -vSurfaceWorldPosition.y + 1.4*sin(vSurfaceWorldPosition.x*.51) + .8*cos(vSurfaceWorldPosition.z*.76);
+        float veil = smoothstep(3.6,17.5,cloudDepth);
+        gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(.84,.87,.87), veil*.92);
+        float dither = fract(52.9829189*fract(dot(gl_FragCoord.xy,vec2(.06711056,.00583715))));
+        if (smoothstep(13.,23.,cloudDepth) > dither) discard;
+      `);
+    };
+    rock.customProgramCacheKey = () => 'courtyard-granite-in-cloud';
+  }
   let disposed = false;
   const assetRoot = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/, '');
   const graniteReady = new THREE.TextureLoader().loadAsync(assetRoot + '/world/cloud-pass-granite.webp').then(texture => {
@@ -80,19 +96,20 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     for (const face of [granite,darkStone]) { face.map = texture; face.needsUpdate = true; }
   }).catch(() => { /* The procedural stone is already visible. */ });
   mesh(keep(cragFace(outline)), granite).castShadow = false;
+  const ledges = cliffSpurs(outline);
+  mesh(keep(ledges.rock), granite).castShadow = false;
+  mesh(keep(plantingSoil()), moss).castShadow = false;
   const reeds = own(new THREE.MeshStandardMaterial({vertexColors: true, side: THREE.DoubleSide, roughness: .9}));
-  mesh(keep(cliffGarden()), reeds).castShadow = false;
+  mesh(keep(cliffGarden(ledges.spurs)), reeds).castShadow = false;
   const fall = mountainRunoff();
   const cascade = mesh(keep(fall.geometry), own(fall.material));
   cascade.castShadow = cascade.receiveShadow = false;
   cascade.userData.dynamic = cascade.userData.ignoreInteractionRay = cascade.userData.ignoreAmbientOcclusion = true;
   const groundShape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
-  for (const p of COURTYARD_POOLS) {
-    const hole = new THREE.Path();
-    hole.moveTo(p.x0-.015,-p.z0+.015); hole.lineTo(p.x1+.015,-p.z0+.015);
-    hole.lineTo(p.x1+.015,-p.z1-.015); hole.lineTo(p.x0-.015,-p.z1-.015); hole.closePath();
-    groundShape.holes.push(hole);
-  }
+  const {x0,x1,z0,z1}=COURTYARD_POOL, hole=new THREE.Path();
+  hole.moveTo(x0-.015,-z0+.015); hole.lineTo(x1+.015,-z0+.015);
+  hole.lineTo(x1+.015,-z1-.015); hole.lineTo(x0-.015,-z1-.015); hole.closePath();
+  groundShape.holes.push(hole);
   const ground = mesh(keep(new THREE.ShapeGeometry(groundShape)), earth, 0, .284, 0); ground.rotation.x = -Math.PI / 2; ground.castShadow = false;
 
   // Small fractured stones, moss islands and grass sit at edges, not across the path.
@@ -109,39 +126,18 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   batch(smallRock, cutStone, rubble, 'Small fractured edge stones');
   batch(mossRock, moss, growth, 'Low moss islands').castShadow = false;
 
-  // Timber veranda: separated, end-grained planks, pegged posts and two slender rails.
-  const deckGeometry = keep(roundedBlock()), deckUV = deckGeometry.attributes.uv, deckPosition = deckGeometry.attributes.position;
-  for (let i = 0; i < deckUV.count; i++) deckUV.setXY(i, deckPosition.getZ(i) + .5, (deckPosition.getX(i) + .5) * 2.1);
+  // Timber veranda. Its outer carved-stone parapets meet the bridge railing at the pavilion gate.
+  const architecture = createStudyArchitecture(root, library, en);
   for (const side of [-1,1]) {
     mesh(cube, wood, side * 10.15, .111, .1, 5.65, .36, 16.4);
-    const planks: Placed[] = [], nails: Placed[] = [];
-    for (let i = 0; i < 39; i++) {
-      const z = -7.88 + i * .42;
-      planks.push({ x: side * 10.15, y: .274, z, sx: 5.58, sy: .048, sz: .402, color: white.clone().multiplyScalar(.89 + rng() * .15) });
-      for (const x of [7.53, 12.77]) nails.push({ x: side * x, y: .298, z, sx: .009, sy: .004, sz: .009 });
-    }
-    batch(deckGeometry, deckWood, planks, 'Individual weathered veranda planks');
-    batch(cylinder, iron, nails, 'Recessed iron plank nails').castShadow = false;
-    const railPosts: Placed[] = [];
-    for (let z = -7.8; z <= 8.2; z += 2) if (z < 3.8 || z > 6.0) railPosts.push({ x: side * 12.87, y: .77, z, sx: .12, sy: .94, sz: .12 });
-    for (let x = 7.9; x < 12.8; x += 2.3) railPosts.push({ x: side * x, y: .77, z: -7.9, sx: .12, sy: .94, sz: .12 });
-    batch(block, wood, railPosts, 'Carved veranda posts');
-    // A real opening in each rail connects the pavilion deck to the outer ledge.
-    for (const [start,end] of [[-7.9,3.8],[6.2,8.2]]) {
-      for (const [y,r] of [[1.23,.045],[.68,.026]]) {
-        timber(new THREE.Vector3(side*12.87,y,start),new THREE.Vector3(side*12.87,y,end),r,deckWood);
-      }
-      obstacle(side*12.87,(start+end)/2,.11,(end-start)/2);
-    }
-    timber(new THREE.Vector3(side * 7.8, 1.23, -7.9), new THREE.Vector3(side * 12.87, 1.23, -7.9), .045, deckWood);
-    obstacle(side * 10.3, -7.95, 2.75, .1);
+    architecture.floors.boards(root,{x0:side*10.15-2.79,x1:side*10.15+2.79,z0:-8.08,z1:8.29},true);
     for (const z of [-6.3, -.2, 6.4]) {
       timber(new THREE.Vector3(side * 9.8, -2.4, z), new THREE.Vector3(side * 12.62, -.12, z), .105);
       mesh(block, wood, side * 11, -.17, z, 4.1, .28, .22);
     }
   }
 
-  buildCliffCrossings(root, library, { stone, darkStone, moss }, colliders, keep, own);
+  buildCliffCrossings(root, library, { stone, darkStone }, colliders, keep, own, architecture.floors);
 
   const windTime = { value: 0 };
   const pines = buildPines(root, bark, colliders, windTime, keep, texture => localTextures.add(texture));
@@ -166,12 +162,6 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     ferns.push({ x, y: .3, z, sx: .6, sy: .7, sz: .7, ry: j * Math.PI / 6, rx: -.8 + (j % 3) * .1 });
   batch(leafShape, fernMaterial, ferns, 'Low edge ferns');
 
-  // Low stones guard the outer ledge without obstructing the entrance or the lookout.
-  const edging: Placed[] = [];
-  for (let i = 0; i < 10; i++) edging.push({ x: -13.95 + Math.sin(i * .35) * .25, y: .48, z: .3 + i * 1.02, sx: .61, sy: .43 + rng() * .15, sz: .76, ry: rng() * .3 });
-  const edgeBatch = batch(smallRock, stone, edging, 'Low natural ledge boundary');
-  for (let i = 0; i < edgeBatch.count; i++) { edgeBatch.getMatrixAt(i, matrix); boundsCollider(edgeBatch.geometry, matrix); }
-
   // The distant mountains belong to the generated landscape backdrop, not opaque polygon rings.
   const mistMap = mistTexture(); localTextures.add(mistMap);
   const clouds = Array.from({ length: 20 }, (_, i) => {
@@ -192,11 +182,22 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     return { sprite, x, y, z, width, height, opacity, travel: distant ? 9 : high ? 4.5 : 8.6, phase: rng() * Math.PI * 2 };
   });
   const dustGeometry = keep(new THREE.BufferGeometry()), dust = new Float32Array(38 * 3), origins: number[] = [];
+  // The outer landings stand beyond the main island's mist belt. Wisps cross their lower flanks.
+  for (const [x,y,z,width,phase] of [
+    [-4,-6.8,32,17,.8],[3,-10.4,38,21,3.7],[5,-4.9,33,11,5.1],
+    [23,-5.5,9,16,2.8],[29,-8.3,3,18,1.5],[5,-8.5,17,20,4.1],
+  ]) {
+    const opacity=.54, height=width*.33;
+    const material=own(new THREE.SpriteMaterial({map:mistMap,color:'#e9e9df',opacity,transparent:true,depthWrite:false}));
+    const sprite=new THREE.Sprite(material); sprite.name='Mist on the granite shoulder';
+    sprite.userData.ignoreInteractionRay=sprite.userData.ignoreAmbientOcclusion=true;
+    sprite.position.set(x,y,z); sprite.scale.set(width,height,1); root.add(sprite);
+    clouds.push({sprite,x,y,z,width,height,opacity,travel:3.4,phase});
+  }
   for (let i = 0; i < 38; i++) { const x = (rng() - .5) * 5.7, y = .7 + rng() * 3.5, z = -5.5 + rng() * 6.5; dust.set([x, y, z], i * 3); origins.push(x, y, z, rng() * 6); }
   dustGeometry.setAttribute('position', new THREE.BufferAttribute(dust, 3));
   const dustPoints = new THREE.Points(dustGeometry, own(new THREE.PointsMaterial({ size: .017, color: '#e8d4ad', transparent: true, opacity: .37, depthWrite: false }))); root.add(dustPoints);
 
-  const architecture = createStudyArchitecture(root, library, en);
   const walkAreas = architecture.walkAreas;
   architecture.geometries.forEach(geometry => geometries.add(geometry));
   architecture.materials.forEach(material => materials.add(material));

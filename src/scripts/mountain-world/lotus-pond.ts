@@ -47,9 +47,10 @@ export function createLotusPlanting(parent: THREE.Group, geometries: Set<THREE.B
   const stalk = keep(new THREE.CylinderGeometry(.006,.008,1,8));
   const receptacle = keep(new THREE.CylinderGeometry(.026,.012,.024,26));
   const dot = keep(new THREE.SphereGeometry(1,8,6)), up = new THREE.Vector3(0,1,0);
+  let colony: THREE.Group;
   function place(geometry: THREE.BufferGeometry, material: THREE.Material, x: number, y: number, z: number) {
     const mesh = new THREE.Mesh(geometry,material); mesh.position.set(x,y,z);
-    mesh.castShadow = mesh.receiveShadow = true; parent.add(mesh); return mesh;
+    mesh.castShadow = mesh.receiveShadow = true; colony.add(mesh); return mesh;
   }
   function stem(x: number, y: number, z: number, lean: number) {
     const delta = new THREE.Vector3(lean,y-.20,.018);
@@ -87,19 +88,21 @@ export function createLotusPlanting(parent: THREE.Group, geometries: Set<THREE.B
   }).catch(()=>{ /* The folded green blade is visible as soon as the pond is built. */ });
   return {
     ready, dispose() { disposed=true; texture?.dispose(); },
-    plant(x: number, z: number, side: number) {
-      // Offsets are in metres inside each pool; the flowers rise on separate stems between the leaves.
+    plant(x: number, z: number, side: number, heading: number, scale: number) {
+      colony=new THREE.Group(); colony.name='Lotus colony';
+      colony.position.set(x,.24*(1-scale),z); colony.rotation.y=heading; colony.scale.setScalar(scale);
+      parent.add(colony);
       const patches = [[-.33,-.64,.19,.285],[.09,-.53,.22,.38],[.35,-.29,.16,.30],
         [-.29,-.08,.27,.43],[.17,.09,.23,.28],[-.34,.40,.16,.29],[.08,.57,.26,.39],[.38,.73,.15,.30]];
       patches.forEach(([dx,dz,r,h],j)=>{
-        const px=x+side*dx,pz=z+dz;
+        const px=side*dx,pz=dz;
         stem(px,h,pz,side*.027);
         const m=place(leaves[j%leaves.length],blade,px,h,pz);
         m.scale.setScalar(r); m.rotation.set(.05*Math.sin(j),j*2.39*side,.10*Math.cos(j),'YXZ');
       });
-      blossom(x+side*.25,.49,z-.48,side*.6,false);
-      blossom(x-side*.12,.55,z+.54,side*1.4,false);
-      blossom(x-side*.35,.54,z-.32,side*.8,true);
+      blossom(side*.25,.49,-.48,side*.6,false);
+      if (scale>.8) blossom(-side*.12,.55,.54,side*1.4,false);
+      blossom(-side*.35,.54,-.32,side*.8,true);
     },
   };
 }

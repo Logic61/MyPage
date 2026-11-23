@@ -150,7 +150,7 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
   scene.add(root);
   const radius = THREE.MathUtils.clamp(options.radius ?? 108, 60, 130);
   const height = Math.PI * radius / IMAGE_ASPECT;
-  const horizonY = options.horizonY ?? 18.5;
+  const horizonY = options.horizonY ?? 25.5;
   const fogColor = new THREE.Color(options.fogColor ?? LANDSCAPE_FOG_COLOR);
   const cloudOpacity = THREE.MathUtils.clamp(options.cloudOpacity ?? .69, 0, 1);
   const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), textures = new Set<THREE.Texture>();
