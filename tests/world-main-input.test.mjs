@@ -26,7 +26,7 @@ function deferred() {
 async function world({ coarse = false, legacy = false, unavailable = false, bench = false, reduced = false,
   assetsReady = Promise.resolve(), backdropReady = Promise.resolve(), compileReady = Promise.resolve(),
   expectReady = true, expectFailure = false, hash = '', session = {},
-  canWalk = () => true, nearest = point => point } = {}) {
+  canWalk = () => true, hasFloor = () => true, nearest = point => point } = {}) {
   let now = 100, nextId = 0, readerOpen = false, actions, camera, exitRequests = 0;
   const frames = new Map(), timers = new Map(), requests = [], activated = [], errors = [], toasts = [];
   const motionPreference = { matches: reduced };
@@ -49,6 +49,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
       return event;
     }
     querySelector(selector) { return this.children.get(selector) || null; }
+    closest() { return null; }
     getBoundingClientRect() { return { ...rect }; }
     focus() { document.activeElement = this; }
     setPointerCapture(id) { this.captures.add(id); }
@@ -63,13 +64,15 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   document.getElementById = () => ({ textContent: JSON.stringify({ isEn: true, prefix: '', base: '/', posts: [] }) });
   document.exitPointerLock = () => { exitRequests++; };
   const controls = {};
-  for (const name of ['arrival', 'track', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
+  for (const name of ['arrival', 'track', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'jump', 'stick', 'stick-thumb', 'fall', 'respawn', 'quality', 'sensitivity', 'bob']) {
     controls[name] = name === 'quality' ? new Select() : ['sensitivity', 'bob'].includes(name) ? new Input() : new Element();
     root.children.set(`[data-world-${name}]`, controls[name]);
   }
   controls.enter.children.set('[data-world-enter-label]', new Element());
   root.children.set('.mw-stage', new Element());
   controls.hint.hidden = true;
+  controls.fall.showModal = () => { controls.fall.open = true; };
+  controls.fall.close = () => { controls.fall.open = false; };
   root.children.set('#mountain-canvas', canvas);
   if (!unavailable) canvas.requestPointerLock = options => {
     const request = { raw: options?.unadjustedMovement === true, ...deferred() };
@@ -115,7 +118,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
       return { dispose() { disposed('pipeline'); }, setQuality() {}, render() { lifecycle.renders++; }, easeResolution: () => false,
         resize(width, height) { camera.aspect = width / height; camera.updateProjectionMatrix(); } };
     } },
-    './navigation': { createNavigation: () => ({ nearest, canWalk, hasFloor: () => true,
+    './navigation': { createNavigation: () => ({ nearest, canWalk, hasFloor,
       findPath: (_start, end) => [{ x: end.x, z: end.z }],
       move: (point, dx, dz) => ({ x: point.x + dx, z: point.z + dz }) }) },
     './ui': { createWorldUI(_root, _config, value) { actions = value; return ui; } },
@@ -179,6 +182,66 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     actions, step, emit, pointer, point, key, click, enter, fail, lock, unlock, reader,
     exitRequests: () => exitRequests, pendingTimers: () => timers.size, pendingFrames: () => frames.size };
 }
+
+test('Space jumps once, allows forward movement, and needs a fresh press after landing', async () => {
+  const h = await world();
+  const start = h.camera.position.clone();
+  h.emit(h.window, 'keydown', { code: 'KeyW' });
+  h.emit(h.window, 'keydown', { code: 'Space', target: h.canvas });
+  h.step(100);
+  assert.ok(h.camera.position.y > start.y && h.camera.position.z < start.z);
+  for (let i = 0; i < 4; i++) h.step(100);
+  const descending = h.camera.position.y;
+  h.key('Space');
+  h.step(100);
+  assert.ok(h.camera.position.y < descending, 'A fresh press in midair cannot start a second arc.');
+  for (let i = 0; i < 4; i++) h.step(100);
+  assert.equal(h.camera.position.y, start.y);
+  h.emit(h.window, 'keydown', { code: 'Space', repeat: true });
+  h.step(100);
+  assert.equal(h.camera.position.y, start.y);
+  h.key('Space'); h.step(100);
+  assert.ok(h.camera.position.y > start.y);
+});
+
+test('a second touch jumps while steering, and pausing freezes the airborne player', async () => {
+  const h = await world({ coarse: true });
+  const start = h.camera.position.clone();
+  const stick = h.controls.stick, bounds = stick.getBoundingClientRect();
+  h.emit(stick, 'pointerdown', { pointerId: 1, pointerType: 'touch', clientY: bounds.top + bounds.height / 2 - 35 });
+  h.emit(h.controls.jump, 'pointerdown', { pointerId: 2, pointerType: 'touch', isPrimary: false });
+  h.step(100);
+  assert.ok(h.camera.position.z < start.z && h.camera.position.y > start.y);
+  assert.ok(stick.hasPointerCapture(1));
+  h.emit(h.controls.pause, 'click');
+  const paused = h.camera.position.clone();
+  h.key('Space'); h.step(100);
+  assert.ok(h.camera.position.equals(paused));
+  h.enter();
+  for (let i = 0; i < 10; i++) h.step(100);
+  assert.equal(h.camera.position.y, start.y);
+  h.emit(h.controls.jump, 'click', { detail: 1 }); h.step(100);
+  assert.equal(h.camera.position.y, start.y, 'A delayed touch click cannot jump again after landing.');
+});
+
+test('jumping past a cliff falls through ground level and respawns ready to jump', async () => {
+  const h = await world({ hasFloor: (_x, z) => z >= 17.61 });
+  const start = h.camera.position.clone();
+  h.emit(h.window, 'keydown', { code: 'KeyW' }); h.key('Space'); h.step(100); h.step(100);
+  assert.ok(h.camera.position.z < 17.61 && h.camera.position.y > start.y);
+  assert.equal(h.root.dataset.mode, 'exploring');
+  for (let i = 0; i < 8; i++) h.step(100);
+  assert.equal(h.root.dataset.mode, 'falling');
+  assert.equal(h.controls.fall.open, true);
+  assert.ok(h.camera.position.y < start.y);
+  for (let i = 0; i < 12; i++) h.step(100);
+  assert.equal(h.root.dataset.mode, 'fallen');
+  h.emit(h.controls.respawn, 'click');
+  assert.equal(h.controls.fall.open, false);
+  assert.ok(h.camera.position.equals(start));
+  h.key('Space'); h.step(100);
+  assert.ok(h.camera.position.y > start.y);
+});
 
 test('a failed lock uses the visible mouse ray for hover, click, and E; leaving the canvas clears it', async () => {
   const h = await world(); h.enter();
@@ -373,6 +436,9 @@ test('a seated visitor can pause, resume, and use the stand control without poin
   const h=await world({bench:true,unavailable:true,reduced:true});
   h.enter(); h.click(h.point('centre')); h.step(16);
   assert.equal(h.root.dataset.seated,'true'); assert.equal(h.camera.rotation.y,1.25);
+  const seatedEye = h.camera.position.y;
+  h.key('Space'); h.step(100);
+  assert.equal(h.camera.position.y, seatedEye);
   h.reader(true); h.reader(false); h.enter();
   h.emit(h.controls.stand,'click'); h.step(320);
   assert.equal(h.root.dataset.seated,undefined); assert.equal(h.root.dataset.inputMode,'pointer');

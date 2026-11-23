@@ -24,7 +24,7 @@ const marks = [
 <Layout title={isEn ? 'Cloud Court Study · Shane Lorien' : '云庭书斋 · Shane Lorien'} section="home" spatial>
   <div class="mountain-world" data-mountain-world data-state="poster" data-language={isEn ? 'en' : 'zh'}>
     <main inert id="main-content" class="mw-stage" tabindex="-1" aria-label={isEn ? 'Explore the cloud courtyard' : '探索云庭书斋'}>
-      <canvas id="mountain-canvas" tabindex="0" aria-label={isEn ? 'First-person cloud courtyard. WASD to walk. Hold Shift to run. When the mouse is locked, aim with the centre dot and press E or click. After unlocking, click the scene to lock the mouse again. Escape to pause. Touch: left thumbstick to walk, drag on the right to look.' : '第一人称云庭书斋。WASD 行走，按住 Shift 奔跑。鼠标锁定时用中心准心瞄准，按 E 或左键交互；脱锁后点击画面即可重新锁定。Esc 暂停。触屏使用左侧摇杆行走、右侧拖动环顾。'}></canvas>
+      <canvas id="mountain-canvas" tabindex="0" aria-label={isEn ? 'First-person cloud courtyard. WASD to walk. Hold Shift to run. Press Space to jump. When the mouse is locked, aim with the centre dot and press E or click. After unlocking, click the scene to lock the mouse again. Escape to pause. Touch: use the left thumbstick to walk, drag on the right to look, and tap Jump.' : '第一人称云庭书斋。WASD 行走，按住 Shift 奔跑，空格跳跃。鼠标锁定时用中心准心瞄准，按 E 或左键交互；脱锁后点击画面即可重新锁定。Esc 暂停。触屏使用左侧摇杆行走、右侧拖动环顾，轻触「跳跃」起跳。'}></canvas>
       <div class="mw-vignette" aria-hidden="true"></div>
     </main>
 
@@ -92,6 +92,7 @@ const marks = [
     </nav>
     <div class="mw-reticle" data-world-reticle aria-hidden="true"><span></span></div>
     <div class="mw-thumbstick" data-world-stick role="group" aria-label={isEn ? 'Drag to walk' : '拖动摇杆行走'}><span class="mw-thumbstick-ring"></span><span class="mw-thumbstick-knob" data-world-stick-thumb></span></div>
+    <button type="button" class="mw-jump" data-world-jump aria-keyshortcuts="Space">{isEn ? 'Jump' : '跳跃'}</button>
 
     <section class="mw-fallback" data-world-fallback aria-labelledby="mw-fallback-title" hidden>
       <img src={`${base}/world/immortal-mountains-panorama.webp`} width="2172" height="724" alt="" loading="lazy" decoding="async" />
@@ -106,8 +107,8 @@ const marks = [
     <footer class="mw-hud">
       <div class="mw-place"><span class="mw-place-overline">{isEn ? 'YOU ARE HERE' : '此刻所在'}</span><strong data-world-location>{isEn ? 'The cloud mountain path' : '云山石径'}</strong><span class="mw-place-note">{isEn ? 'Take your time.' : '此间无事，随意走走。'}</span></div>
       <div class="mw-hint" data-world-hint role="status" hidden>
-        <p class="mw-hint-desktop"><span><kbd>WASD</kbd> {isEn ? 'walk' : '行走'}</span><span class="mw-look-locked">{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span class="mw-look-pointer">{isEn ? 'Drag or move to the edge to look' : '拖动或靠边环顾'}</span><span class="mw-look-pending">{isEn ? 'Locking the mouse…' : '正在锁定鼠标…'}</span><span><kbd>Shift</kbd> {isEn ? 'run' : '奔跑'}</span><span><kbd>Esc</kbd> {isEn ? 'pause' : '暂停'}</span></p>
-        <p class="mw-hint-touch">{isEn ? 'Left to walk · drag right to look · tap the object prompt' : '左侧行走 · 右侧环顾 · 轻触物件提示'}</p>
+        <p class="mw-hint-desktop"><span><kbd>WASD</kbd> {isEn ? 'walk' : '行走'}</span><span class="mw-look-locked">{isEn ? 'Mouse to look' : '鼠标环顾'}</span><span class="mw-look-pointer">{isEn ? 'Drag or move to the edge to look' : '拖动或靠边环顾'}</span><span class="mw-look-pending">{isEn ? 'Locking the mouse…' : '正在锁定鼠标…'}</span><span><kbd>Shift</kbd> {isEn ? 'run' : '奔跑'}</span><span><kbd>{isEn ? 'Space' : '空格'}</kbd> {isEn ? 'jump' : '跳跃'}</span><span><kbd>Esc</kbd> {isEn ? 'pause' : '暂停'}</span></p>
+        <p class="mw-hint-touch">{isEn ? 'Left to walk · drag right to look · tap Jump or an object prompt' : '左侧行走 · 右侧环顾 · 轻触「跳跃」或物件提示'}</p>
         <button type="button" data-world-action="dismiss-hint" aria-keyshortcuts="H" title={isEn ? 'Dismiss (H)' : '收起提示（H）'} aria-label={isEn ? 'Dismiss movement guide' : '收起操作提示'}>×</button>
       </div>
       <button type="button" class="mw-map-button" data-world-action="map"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="m5 9 8-3 10 3 8-3v22l-8 3-10-3-8 3V9Zm8-3v22m10-19v22" /><path d="m9 20 9-6 9 7" stroke-dasharray="2 3" /></svg><span>{isEn ? 'Around here' : '山居小引'}</span></button>

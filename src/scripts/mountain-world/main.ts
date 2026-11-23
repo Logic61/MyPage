@@ -16,6 +16,9 @@ import type { Interaction, WorldConfig } from './types';
 type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition' | 'falling' | 'fallen';
 type InputMode = 'none' | 'pending' | 'locked' | 'pointer' | 'drag' | 'touch';
 
+const GRAVITY = 9.8;
+const JUMP_SPEED = 3.8;
+
 // A free cursor can turn the camera inside the outer 15% of each edge.
 function edgeTurn(position: number) {
   const amount = Math.max(0, (Math.abs(position) - .7) / .3);
@@ -152,6 +155,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     if (!spawn || !navigation.canWalk(spawn.x, spawn.z)) throw new Error('The courtyard entrance has no safe walking position.');
     const position = new THREE.Vector3(spawn.x, FLOOR_HEIGHT, spawn.z);
     const velocity = new THREE.Vector2();
+    let verticalSpeed = 0;
     const keys = new Set<string>();
     const joystick = new THREE.Vector2();
     // Layout changes invalidate old world coordinates, while language switches
@@ -192,6 +196,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     const pauseButton = root.querySelector<HTMLButtonElement>('[data-world-pause]')!;
     const standButton = root.querySelector<HTMLButtonElement>('[data-world-stand]');
     const lockButton = root.querySelector<HTMLButtonElement>('[data-world-lock]');
+    const jumpButton = root.querySelector<HTMLButtonElement>('[data-world-jump]')!;
     const stick = root.querySelector<HTMLElement>('[data-world-stick]')!;
     const stickThumb = root.querySelector<HTMLElement>('[data-world-stick-thumb]')!;
     const qualitySelect = root.querySelector<HTMLSelectElement>('[data-world-quality]')!;
@@ -283,6 +288,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     function save() {
       if (inFall()) return;
       const p = seatReturn || position;
+      if (!navigation.hasFloor(p.x, p.z)) return;
       try { sessionStorage.setItem(stateKey, JSON.stringify({ x: p.x, z: p.z, yaw: look.yaw, pitch: look.pitch })); } catch {}
     }
     function setMode(value: Mode) {
@@ -322,8 +328,20 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       setMode('exploring');
       requestLock();
     }
+    function airborne() {
+      return verticalSpeed !== 0 || position.y > FLOOR_HEIGHT;
+    }
+    function jump() {
+      if (mode !== 'exploring' || seatedAt || ui.isOpen() || settings.open || airborne()) return;
+      cancelRoute(); look.cancelTurn();
+      verticalSpeed = JUMP_SPEED;
+    }
+    function advanceHeight(dt: number) {
+      position.y += verticalSpeed * dt - 0.5 * GRAVITY * dt * dt;
+      verticalSpeed -= GRAVITY * dt;
+    }
     function eyePosition() {
-      return { x: position.x, y: seatedAt ? position.y + SEATED_EYE_HEIGHT : FLOOR_HEIGHT + EYE_HEIGHT, z: position.z };
+      return { x: position.x, y: position.y + (seatedAt ? SEATED_EYE_HEIGHT : EYE_HEIGHT), z: position.z };
     }
     function standUp(resumeMouse = false) {
       if (!seatedAt) return;
@@ -345,7 +363,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     }
     function updateCamera(delta: number, speed = 0) {
       const eye = stance.apply(eyePosition(), delta);
-      const bob = headBob && !seatedAt && speed > 0.3 ? Math.sin(walked * 8) * 0.014 * Math.min(1, speed / 2.2) : 0;
+      const bob = headBob && !seatedAt && !airborne() && speed > 0.3 ? Math.sin(walked * 8) * 0.014 * Math.min(1, speed / 2.2) : 0;
       camera.position.set(eye.x, eye.y + bob, eye.z);
       camera.rotation.set(look.pitch, look.yaw, 0, 'YXZ');
       camera.updateMatrixWorld();
@@ -362,7 +380,8 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       const point = aimPoint();
       if (!point) return null;
       scene.updateMatrixWorld();
-      return picker.pick(camera, point);
+      const item = picker.pick(camera, point);
+      return item?.kind === 'bench' && airborne() ? null : item;
     }
     function showInteraction() {
       aimDirty = false; lastPick = elapsed; aimed = findAimed();
@@ -425,6 +444,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       window.clearTimeout(interactionTimer);
       if (mode === 'transition') setMode('paused');
       standUp(); cancelRoute(); clearMovement();
+      verticalSpeed = 0;
       position.set(spawn.x, FLOOR_HEIGHT, spawn.z); look.snap(0, arrivalPitch); stance.reset();
       updateCamera(1); save(); ui.showToast(en ? 'Back at the courtyard gate.' : '回到庭门，云庭就在眼前。');
     };
@@ -554,6 +574,15 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       joystick.set(x / length, -y / length);
       stickThumb.style.transform = `translate(calc(-50% + ${joystick.x * 29}px), calc(-50% - ${joystick.y * 29}px))`;
     }
+    // A second finger can jump immediately while the first holds the thumbstick.
+    jumpButton.addEventListener('pointerdown', event => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      jump();
+    }, { signal });
+    jumpButton.addEventListener('click', event => {
+      if (event.detail === 0) jump();
+    }, { signal });
     stick.addEventListener('pointerdown', event => {
       if (mode !== 'exploring') return;
       event.preventDefault(); stickPointer = event.pointerId; cancelRoute(); look.cancelTurn();
@@ -577,6 +606,12 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       }
       if (event.code === 'Escape') { if (mode === 'exploring' || mode === 'transition') pause(); return; }
       if (mode !== 'exploring') return;
+      if (event.code === 'Space') {
+        if (event.target instanceof HTMLElement && event.target.closest('button, a[href], textarea, [contenteditable]:not([contenteditable="false"])')) return;
+        event.preventDefault();
+        if (!event.repeat) jump();
+        return;
+      }
       if (event.code === 'KeyM') { event.preventDefault(); ui.openContent('books', true); return; }
       if (event.code === 'KeyE') { event.preventDefault(); if (!event.repeat) { if (seatedAt) standUp(true); else interactionAction(); } return; }
       if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight'].includes(event.code)) {
@@ -691,24 +726,27 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
           const distance = Math.hypot(next.x - position.x, next.z - position.z);
           position.x = next.x; position.z = next.z;
           speed = distance / delta; walked += distance;
-          if (!navigation.hasFloor(next.x,next.z)) {
-            fallTime = 0; fallDX = velocity.x; fallDZ = velocity.y;
-            cancelRoute(); clearAim(); setMode('falling'); unlock(); fallDialog?.showModal();
+          if (airborne()) advanceHeight(Math.min(0.12, Math.max(0, rawDelta)));
+          if (position.y <= FLOOR_HEIGHT && verticalSpeed <= 0) {
+            if (navigation.hasFloor(next.x, next.z)) {
+              position.y = FLOOR_HEIGHT;
+              verticalSpeed = 0;
+            } else {
+              fallTime = 0; fallDX = velocity.x; fallDZ = velocity.y;
+              cancelRoute(); clearAim(); setMode('falling'); unlock(); fallDialog?.showModal();
+            }
           }
+        }
+      } else if (mode === 'falling') {
+        const dt = Math.min(0.12, Math.max(0, rawDelta));
+        fallTime += dt;
+        position.x += fallDX * dt; position.z += fallDZ * dt;
+        advanceHeight(dt);
+        if (fallTime >= (motionPreference.matches ? .12 : 1.15)) {
+          setMode('fallen'); respawnButton?.focus();
         }
       }
       updateCamera(Math.min(0.05, Math.max(0, rawDelta)), speed);
-      if (inFall()) {
-        if (mode === 'falling') {
-          const dt = Math.min(.12, Math.max(0,rawDelta));
-          fallTime += dt; position.x += fallDX*dt; position.z += fallDZ*dt;
-          if (fallTime >= (motionPreference.matches ? .12 : 1.15)) {
-            setMode('fallen'); respawnButton?.focus();
-          }
-        }
-        camera.position.y -= 4.9*fallTime*fallTime;
-        camera.updateMatrixWorld();
-      }
       const place = describePlace(position.x, position.z), indoor = place.indoor;
       // Clouds keep the same pace across frame rates. A preference change freezes the current view.
       const landscapeDelta = motionPreference.matches || mode === 'reading' ? 0 : Math.min(.25, Math.max(0, rawDelta));
