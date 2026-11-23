@@ -214,3 +214,10 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 .mw-stand kbd { font:11px var(--font-sans,sans-serif); border:1px solid #a8997c; padding:2px 4px; }
 .mountain-world:not([data-mode="exploring"]) .mw-stand, .mountain-world[data-seated="true"] :is(.mw-hint,.mw-place-note), .mountain-world[data-touch="true"] .mw-stand kbd { display:none; }
 .mountain-world[data-seated="true"][data-mode="exploring"] .mw-stand { display:flex; }
+.mw-fall[open] { position:fixed; inset:0; margin:0; width:100%; height:100%; max-width:none; max-height:none; border:0; padding:0; display:grid; place-items:center; background:transparent; color:#fff; text-align:center; }
+.mw-fall::backdrop { background:transparent; }
+.mw-fall-panel { visibility:hidden; }
+[data-mode="fallen"] .mw-fall { background:#656969; }
+[data-mode="fallen"] .mw-fall-panel { visibility:visible; }
+.mw-fall-panel p { font:clamp(21px,4vw,34px)/1.6 var(--font-serif,serif); padding:0 1rem; }
+.mw-fall-panel button { color:inherit; border:1px solid #c7cbca; background:#545858; padding:.7rem 1.4rem; cursor:pointer; }

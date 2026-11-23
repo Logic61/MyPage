@@ -95,6 +95,12 @@ const marks = [
     <button type="button" class="mw-stand" data-world-stand aria-keyshortcuts="E" hidden><kbd>E</kbd> {isEn ? 'Stand up' : '起身'}</button>
     <div class="mw-toast" data-world-toast role="status" hidden></div>
 
+    <dialog class="mw-fall" data-world-fall aria-labelledby="fall-message">
+      <div class="mw-fall-panel">
+        <p id="fall-message">{isEn ? 'Let’s explore the land ahead another time.' : '前面的区域，以后再来探索吧'}</p>
+        <button type="button" data-world-respawn>{isEn ? 'Return to the entrance' : '回到初始位置'}</button>
+      </div>
+    </dialog>
     <CourtyardFolio {isEn}/>
     <script is:inline type="application/json" id="mountain-world-config" set:html={config}></script>
   </div>

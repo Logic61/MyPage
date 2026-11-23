@@ -3,39 +3,50 @@ import type { Collider, WalkArea } from './types';
 export interface Point { x: number; z: number; }
 
 /** Small static floor navigation. The rendered world remains fully three-dimensional. */
-export function createNavigation(areas: WalkArea[], obstacles: Collider[], radius = 0.32) {
-  const inside = (x: number, z: number) => areas.some(a =>
-    Math.abs(x - a.x) <= a.halfX && Math.abs(z - a.z) <= a.halfZ);
+export function createNavigation(areas: WalkArea[], obstacles: Collider[], radius = 0.32, outline: number[][] = []) {
+  function inside(x: number, z: number) {
+    if (areas.some(a => Math.abs(x-a.x) <= a.halfX && Math.abs(z-a.z) <= a.halfZ)) return true;
+    let enclosed = false;
+    for (let i=0, j=outline.length-1; i<outline.length; j=i++) {
+      const [ax,az] = outline[i], [bx,bz] = outline[j];
+      if ((az>z) !== (bz>z) && x < ax+(z-az)*(bx-ax)/(bz-az)) enclosed = !enclosed;
+    }
+    return enclosed;
+  }
   function canWalk(x: number, z: number) {
     if (!Number.isFinite(x + z) || !inside(x, z)) return false;
     for (let a = 0; a < 8; a++) {
       const angle = a * Math.PI / 4;
       if (!inside(x + Math.cos(angle) * radius, z + Math.sin(angle) * radius)) return false;
     }
+    return clearOfSolids(x,z);
+  }
+  function clearOfSolids(x: number,z: number) {
     return !obstacles.some(o => {
       const dx = Math.max(Math.abs(x - o.x) - o.halfX, 0);
       const dz = Math.max(Math.abs(z - o.z) - o.halfZ, 0);
       return dx * dx + dz * dz < radius * radius;
     });
   }
-  function move(p: Point, dx: number, dz: number): Point {
+  function move(p: Point, dx: number, dz: number, allowDrop = false): Point {
+    const permitted = allowDrop ? clearOfSolids : canWalk;
     const count = Math.max(1, Math.ceil(Math.hypot(dx, dz) / 0.12));
     let x = p.x, z = p.z;
     for (let i = 0; i < count; i++) {
       const sx = dx / count, sz = dz / count;
-      if (canWalk(x + sx, z + sz)) { x += sx; z += sz; }
+      if (permitted(x + sx, z + sz)) { x += sx; z += sz; }
       else {
-        if (canWalk(x + sx, z)) x += sx;
-        if (canWalk(x, z + sz)) z += sz;
+        if (permitted(x + sx, z)) x += sx;
+        if (permitted(x, z + sz)) z += sz;
       }
     }
     return { x, z };
   }
   const step = 0.45;
-  const minX = Math.floor(Math.min(...areas.map(a => a.x - a.halfX)) / step) * step;
-  const minZ = Math.floor(Math.min(...areas.map(a => a.z - a.halfZ)) / step) * step;
-  const width = Math.ceil((Math.max(...areas.map(a => a.x + a.halfX)) - minX) / step) + 1;
-  const height = Math.ceil((Math.max(...areas.map(a => a.z + a.halfZ)) - minZ) / step) + 1;
+  const minX = Math.floor(Math.min(...areas.map(a => a.x - a.halfX), ...outline.map(p=>p[0])) / step) * step;
+  const minZ = Math.floor(Math.min(...areas.map(a => a.z - a.halfZ), ...outline.map(p=>p[1])) / step) * step;
+  const width = Math.ceil((Math.max(...areas.map(a => a.x + a.halfX), ...outline.map(p=>p[0])) - minX) / step) + 1;
+  const height = Math.ceil((Math.max(...areas.map(a => a.z + a.halfZ), ...outline.map(p=>p[1])) - minZ) / step) + 1;
   const allowed = new Uint8Array(width * height);
   const point = (id: number): Point => ({ x: minX + (id % width) * step, z: minZ + Math.floor(id / width) * step });
   for (let id = 0; id < allowed.length; id++) { const p = point(id); allowed[id] = +canWalk(p.x, p.z); }
@@ -108,5 +119,5 @@ export function createNavigation(areas: WalkArea[], obstacles: Collider[], radiu
     }
     return smooth;
   }
-  return { canWalk, move, nearest, findPath, clearLine };
+  return { hasFloor: inside, canWalk, move, nearest, findPath, clearLine };
 }

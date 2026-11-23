@@ -36,3 +36,13 @@ test('unreachable destinations do not move the visitor through a wall', () => {
   const nav = createNavigation([{ x: 0, z: 0, halfX: 6, halfZ: 6 }], [{ x: 0, z: 0, halfX: 0.2, halfZ: 7 }]);
   assert.deepEqual(nav.findPath({ x: -3, z: 0 }, { x: 3, z: 0 }), []);
 });
+
+test('walking crosses former route boundaries, clearing a real cliff but respecting solid posts', () => {
+  const nav = createNavigation([{x:0,z:0,halfX:1,halfZ:1}], [{x:2,z:0,halfX:.2,halfZ:.2}], .25,
+    [[-3,-3],[3,-3],[3,3],[-3,3]]);
+  assert.equal(nav.canWalk(2,1),true);
+  assert.ok(nav.move({x:1,z:0},2,0,true).x < 2);
+  const beyond = nav.move({x:2,z:1},2,0,true);
+  assert.equal(nav.hasFloor(beyond.x,beyond.z),false);
+  assert.equal(nav.clearLine({x:2,z:1},beyond),false);
+});

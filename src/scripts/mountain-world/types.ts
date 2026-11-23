@@ -17,6 +17,7 @@ export interface Interaction {
   sitYaw?: number;
 }
 export interface Environment {
+  outline: number[][];
   root: THREE.Group;
   colliders: Collider[];
   walkAreas: WalkArea[];

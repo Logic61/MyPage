@@ -113,7 +113,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
       return { dispose() { disposed('pipeline'); }, setQuality() {}, render() { lifecycle.renders++; }, easeResolution: () => false,
         resize(width, height) { camera.aspect = width / height; camera.updateProjectionMatrix(); } };
     } },
-    './navigation': { createNavigation: () => ({ nearest, canWalk,
+    './navigation': { createNavigation: () => ({ nearest, canWalk, hasFloor: () => true,
       findPath: (_start, end) => [{ x: end.x, z: end.z }],
       move: (point, dx, dz) => ({ x: point.x + dx, z: point.z + dz }) }) },
     './ui': { createWorldUI(_root, _config, value) { actions = value; return ui; } },

@@ -125,13 +125,18 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     batch(deckGeometry, deckWood, planks, 'Individual weathered veranda planks');
     batch(cylinder, iron, nails, 'Recessed iron plank nails').castShadow = false;
     const railPosts: Placed[] = [];
-    for (let z = -7.8; z <= 8.2; z += 2) railPosts.push({ x: side * 12.87, y: .77, z, sx: .12, sy: .94, sz: .12 });
+    for (let z = -7.8; z <= 8.2; z += 2) if (z < 3.8 || z > 6.0) railPosts.push({ x: side * 12.87, y: .77, z, sx: .12, sy: .94, sz: .12 });
     for (let x = 7.9; x < 12.8; x += 2.3) railPosts.push({ x: side * x, y: .77, z: -7.9, sx: .12, sy: .94, sz: .12 });
     batch(block, wood, railPosts, 'Carved veranda posts');
-    timber(new THREE.Vector3(side * 12.87, 1.23, -7.9), new THREE.Vector3(side * 12.87, 1.23, 8.2), .045, deckWood);
-    timber(new THREE.Vector3(side * 12.87, .68, -7.9), new THREE.Vector3(side * 12.87, .68, 8.2), .026);
+    // A real opening in each rail connects the pavilion deck to the outer ledge.
+    for (const [start,end] of [[-7.9,3.8],[6.2,8.2]]) {
+      for (const [y,r] of [[1.23,.045],[.68,.026]]) {
+        timber(new THREE.Vector3(side*12.87,y,start),new THREE.Vector3(side*12.87,y,end),r,deckWood);
+      }
+      obstacle(side*12.87,(start+end)/2,.11,(end-start)/2);
+    }
     timber(new THREE.Vector3(side * 7.8, 1.23, -7.9), new THREE.Vector3(side * 12.87, 1.23, -7.9), .045, deckWood);
-    obstacle(side * 12.87, .15, .11, 8.18); obstacle(side * 10.3, -7.95, 2.75, .1);
+    obstacle(side * 10.3, -7.95, 2.75, .1);
     for (const z of [-6.3, -.2, 6.4]) {
       timber(new THREE.Vector3(side * 9.8, -2.4, z), new THREE.Vector3(side * 12.62, -.12, z), .105);
       mesh(block, wood, side * 11, -.17, z, 4.1, .28, .22);
@@ -189,14 +194,14 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     const x = Math.cos(angle) * (radius + rng()*6), z = Math.sin(angle) * (radius + rng()*5);
     const y = distant ? 6 + rng()*4.2 : high ? -.7 - rng()*1.25 : -3.6 - rng()*4.2;
     const width = (distant ? 22 : high ? 17 : 23) + rng()*8, height = (high ? 3.6 : 5.8) + rng()*1.8;
-    const opacity = distant ? .40 : high ? .47 : .41;
+    const opacity = distant ? .40 : high ? .47 : .64;
     const material = own(new THREE.SpriteMaterial({ map: mistMap, color: high ? '#fffcf3' : '#dbe9ed',
       opacity, transparent: true, depthWrite: false, fog: true }));
     const sprite = new THREE.Sprite(material);
     sprite.name = high ? 'High cliff wisp' : 'Low valley mist'; sprite.userData.ignoreInteractionRay = true;
     sprite.userData.ignoreAmbientOcclusion = true;
     sprite.position.set(x, y, z); sprite.scale.set(width, height, 1); root.add(sprite);
-    return { sprite, x, y, z, width, height, opacity, travel: distant ? 9 : 4.5, phase: rng() * Math.PI * 2 };
+    return { sprite, x, y, z, width, height, opacity, travel: distant ? 9 : high ? 4.5 : 8.6, phase: rng() * Math.PI * 2 };
   });
   const dustGeometry = keep(new THREE.BufferGeometry()), dust = new Float32Array(38 * 3), origins: number[] = [];
   for (let i = 0; i < 38; i++) { const x = (rng() - .5) * 5.7, y = .7 + rng() * 3.5, z = -5.5 + rng() * 6.5; dust.set([x, y, z], i * 3); origins.push(x, y, z, rng() * 6); }
@@ -209,10 +214,36 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   architecture.materials.forEach(material => materials.add(material));
   colliders.push(...architecture.colliders);
   mergeStatic();
+  // A shallow swept wing, shaped in plan, hinges on the long axis of the body.
+  const feathers = keep(new THREE.BufferGeometry());
+  feathers.setAttribute('position', new THREE.Float32BufferAttribute([
+    0,0,.22,  .49,.09,.12,  .66,.055,-.14,
+    0,0,.22,  .66,.055,-.14,  0,0,-.18,
+    .49,.09,.12,  1.16,.035,-.32,  .66,.055,-.14,
+  ],3));
+  feathers.computeVertexNormals();
+  const plumage = own(new THREE.MeshBasicMaterial({color:'#46575b',side:THREE.DoubleSide}));
+  const breast = keep(new THREE.SphereGeometry(1,8,6));
+  const flock = Array.from({length:6},(_,i)=>{
+    const bird=new THREE.Group(), body=new THREE.Mesh(breast,plumage);
+    body.scale.set(.095,.085,.43); bird.add(body);
+    const wings=[-1,1].map(side=>{
+      const wing=new THREE.Mesh(feathers,plumage); wing.scale.x=side; bird.add(wing); return wing;
+    });
+    bird.scale.setScalar(.76+.09*(i%3)); root.add(bird);
+    return {bird,wings};
+  });
   return {
-    root, colliders, walkAreas, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready]).then(() => {}),
+    root, colliders, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready]).then(() => {}),
     update(time, delta, _indoor) {
       // All three roofs remain real geometry. Only leaves, pool and mist move.
+      flock.forEach(({bird,wings},i)=>{
+        const a=time*.091+i*.041-.1, r=33+Math.abs(i-2)*1.25;
+        bird.position.set(Math.sin(a)*r,9+.45*Math.sin(2*a+i)+i*.23,-Math.cos(a)*r);
+        bird.rotation.set(0,Math.PI/2-a,.12*Math.sin(a+i));
+        const flap=.16+.48*Math.sin(time*5+i)*Math.max(0,Math.sin(time*.68+i*.9));
+        wings[0].rotation.z=-flap; wings[1].rotation.z=flap;
+      });
       architecture.update(time);
       windTime.value = time;
       for (const cloud of clouds) {

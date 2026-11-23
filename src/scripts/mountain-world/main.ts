@@ -13,7 +13,7 @@ import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from 
 import { createPointerLockRequest } from './pointer-lock';
 import type { Interaction, WorldConfig } from './types';
 
-type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition';
+type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition' | 'falling' | 'fallen';
 type InputMode = 'none' | 'pending' | 'locked' | 'pointer' | 'drag' | 'touch';
 
 // A free cursor can turn the camera inside the outer 15% of each edge.
@@ -134,7 +134,7 @@ async function initializeWorld(root: HTMLElement) {
     const lighting = createStudyLighting(scene, coarse); resources.unshift(() => lighting.dispose());
     lighting.sun.shadow.autoUpdate = false; lighting.sun.shadow.needsUpdate = true;
     const pipeline = createStudyRenderer(renderer, scene, camera, coarse); resources.unshift(() => pipeline.dispose());
-    const navigation = createNavigation(environment.walkAreas, [...environment.colliders, ...furniture.colliders]);
+    const navigation = createNavigation(environment.walkAreas, [...environment.colliders, ...furniture.colliders], .32, environment.outline);
     const picker = createInteractionPicker([environment.root, furniture.root], furniture.interactions);
     const entrance = { x: 0, z: 17.65 };
     const arrivalPitch = .085;
@@ -152,6 +152,7 @@ async function initializeWorld(root: HTMLElement) {
     const stance = new StanceTransition(.3);
     let sensitivity = 1, headBob = false;
     let mode: Mode = 'welcome';
+    let achievementUntil = 0;
     let route: Point[] = [], destination: Interaction | null = null;
     let aimed: Interaction | null = null, seatedAt: Interaction | null = null;
     let seatReturn: THREE.Vector3 | null = null;
@@ -204,6 +205,7 @@ async function initializeWorld(root: HTMLElement) {
         if (document.pointerLockElement === canvas) return;
         dragLook = true; relockOnTap = false;
         syncInputMode();
+        if (performance.now() < achievementUntil) return;
         ui.showToast(en ? 'Move the pointer to an edge or drag to look around. Click open ground to retry mouse lock.' : '鼠标靠近画面边缘或按住拖动都能环顾。点击空处可重试锁定。');
       },
     });
@@ -255,7 +257,12 @@ async function initializeWorld(root: HTMLElement) {
       stickThumb.style.transform = 'translate(-50%, -50%)';
     }
     function cancelRoute() { route = []; destination = null; delete root.dataset.guided; }
+    const fallDialog = root.querySelector<HTMLDialogElement>('[data-world-fall]');
+    const respawnButton = root.querySelector<HTMLButtonElement>('[data-world-respawn]');
+    let fallTime = 0, fallDX = 0, fallDZ = 0, awardedThisVisit = false;
+    function inFall() { return mode === 'falling' || mode === 'fallen'; }
     function save() {
+      if (inFall()) return;
       const p = seatReturn || position;
       try { sessionStorage.setItem(stateKey, JSON.stringify({ x: p.x, z: p.z, yaw: look.yaw, pitch: look.pitch })); } catch {}
     }
@@ -279,7 +286,7 @@ async function initializeWorld(root: HTMLElement) {
     }
     function unlock() { if (document.pointerLockElement === canvas) document.exitPointerLock(); }
     function pause() {
-      if (mode === 'reading' || mode === 'welcome') return;
+      if (mode === 'reading' || mode === 'welcome' || inFall()) return;
       window.clearTimeout(interactionTimer); cancelRoute(); setMode('paused'); unlock(); save();
       enterButton.focus({ preventScroll: true });
     }
@@ -380,6 +387,7 @@ async function initializeWorld(root: HTMLElement) {
       else if (inputMode === 'locked') ui.useCentredWaymark();
     };
     readingAction = open => {
+      if (inFall()) return;
       if (open) {
         window.clearTimeout(interactionTimer); cancelRoute(); setMode('reading'); unlock(); save();
       } else if (mode === 'reading') {
@@ -398,12 +406,27 @@ async function initializeWorld(root: HTMLElement) {
       enter(); ui.showToast(en ? `Walking to ${item.labelEn.toLowerCase()}. Look around or move to take control.` : `向${item.label}走去。转动视线或自行走动即可接管。`);
     };
     resetAction = () => {
+      if (inFall()) return;
       window.clearTimeout(interactionTimer);
       if (mode === 'transition') setMode('paused');
       standUp(); cancelRoute(); clearMovement();
       position.set(spawn.x, FLOOR_HEIGHT, spawn.z); look.snap(0, arrivalPitch); stance.reset();
       updateCamera(1); save(); ui.showToast(en ? 'Back at the courtyard gate.' : '回到庭门，云庭就在眼前。');
     };
+    fallDialog?.addEventListener('cancel', event => event.preventDefault(), {signal});
+    respawnButton?.addEventListener('click', () => {
+      if (mode !== 'fallen') return;
+      fallDialog?.close();
+      setMode('paused'); resetAction(); enter();
+      const key = 'mountain-study:achievement:first-fall';
+      let first = !awardedThisVisit;
+      try { first = first && !localStorage.getItem(key); localStorage.setItem(key,'1'); } catch {}
+      awardedThisVisit = true;
+      if (first) {
+        achievementUntil = performance.now()+3400;
+        ui.showToast(en ? 'Achievement unlocked: A Flying Leap of Three Thousand Feet' : '获得成就：飞人直下三千尺');
+      }
+    }, {signal});
     function savePreferences() {
       try { localStorage.setItem('mountain-first-person:preferences', JSON.stringify({ quality: qualitySelect.value, sensitivity, headBob })); } catch {}
     }
@@ -625,13 +648,28 @@ async function initializeWorld(root: HTMLElement) {
         velocity.x = THREE.MathUtils.lerp(velocity.x, movement.x * pace, damping);
         velocity.y = THREE.MathUtils.lerp(velocity.y, movement.z * pace, damping);
         if (!seatedAt) {
-          const next = navigation.move(position, velocity.x * delta, velocity.y * delta);
+          const next = navigation.move(position, velocity.x * delta, velocity.y * delta, !guided);
           const distance = Math.hypot(next.x - position.x, next.z - position.z);
           position.x = next.x; position.z = next.z;
           speed = distance / delta; walked += distance;
+          if (!navigation.hasFloor(next.x,next.z)) {
+            fallTime = 0; fallDX = velocity.x; fallDZ = velocity.y;
+            cancelRoute(); clearAim(); setMode('falling'); unlock(); fallDialog?.showModal();
+          }
         }
       }
       updateCamera(Math.min(0.05, Math.max(0, rawDelta)), speed);
+      if (inFall()) {
+        if (mode === 'falling') {
+          const dt = Math.min(.12, Math.max(0,rawDelta));
+          fallTime += dt; position.x += fallDX*dt; position.z += fallDZ*dt;
+          if (fallTime >= (motionPreference.matches ? .12 : 1.15)) {
+            setMode('fallen'); respawnButton?.focus();
+          }
+        }
+        camera.position.y -= 4.9*fallTime*fallTime;
+        camera.updateMatrixWorld();
+      }
       const place = describePlace(position.x, position.z), indoor = place.indoor;
       // Clouds keep the same pace across frame rates. A preference change freezes the current view.
       const landscapeDelta = motionPreference.matches || mode === 'reading' ? 0 : Math.min(.25, Math.max(0, rawDelta));
