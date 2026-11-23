@@ -1,0 +1,16 @@
+---
+import { render } from 'astro:content';
+import { getBlogPosts, postSlug } from '../../utils/posts';
+
+export async function getStaticPaths() {
+  const paths = await Promise.all([false, true].map(async isEn => (await getBlogPosts(isEn)).map(post => ({
+    params: { slug: (isEn ? 'en/' : 'zh/') + postSlug(post) },
+    props: { post, isEn },
+  }))));
+  return paths.flat();
+}
+
+const { post, isEn } = Astro.props;
+const { Content } = await render(post);
+---
+<div class="article-body">{post.body?.trim() ? <Content /> : <p>{isEn ? 'The original manuscript contains only the title.' : '这篇原稿目前仅有篇名。'}</p>}</div>

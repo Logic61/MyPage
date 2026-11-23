@@ -1,0 +1,216 @@
+html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) body { margin: 0; overflow: hidden; height: 100%; background: #18292d; }
+.mountain-world { --mw-paper: #f2eddf; --mw-ink: #272c29; --mw-muted: #7b7e70; --mw-gold: #ddbf83; --mw-rule: rgba(240,235,216,.23); position: fixed; inset: 0; overflow: hidden; color: #f2eedf; font-family: var(--font-serif, Georgia, serif); isolation: isolate; background: #18292d; }
+.mountain-world *, .mountain-world *::before, .mountain-world *::after { box-sizing: border-box; }
+.mountain-world [hidden] { display: none !important; }
+.mountain-world button, .mountain-world input, .mountain-world select { font: inherit; }
+.mountain-world button, .mountain-world a { -webkit-tap-highlight-color: transparent; }
+.mountain-world button { cursor: pointer; }
+.mountain-world button:disabled { cursor: default; opacity: .38; }
+.mountain-world button:focus-visible, .mountain-world a:focus-visible, .mountain-world input:focus-visible, .mountain-world select:focus-visible, .mountain-world canvas:focus-visible { outline: 2px solid var(--mw-gold); outline-offset: 5px; }
+.mountain-world a { color: inherit; text-decoration: none; }
+.mountain-world svg { flex: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.mw-stage, #mountain-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+#mountain-canvas { touch-action: none; outline: none; }
+.mw-vignette { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg,rgba(10,21,26,.32),transparent 18%,transparent 76%,rgba(10,21,26,.38)),radial-gradient(ellipse at center,transparent 58%,rgba(9,20,24,.12)); }
+.mw-header { position: absolute; z-index: 5; top: max(30px,env(safe-area-inset-top)); left: max(38px,env(safe-area-inset-left)); right: max(38px,env(safe-area-inset-right)); display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; pointer-events: none; }
+.mw-header a, .mw-header button { pointer-events: auto; }
+.mw-brand { display: inline-flex; align-items: center; gap: 14px; text-shadow: 0 2px 18px #132227; }
+.mw-seal { border: 1px solid rgba(218,174,120,.65); color: #e7c68d; font-size: 16px; line-height: 1.22; padding: 6px 6px 5px; position: relative; }
+.mw-seal::after { content: ''; position: absolute; inset: 2px; border: 1px solid rgba(218,174,120,.27); }
+.mw-brand-type { display: flex; flex-direction: column; gap: 5px; }
+.mw-brand-type strong { font-size: clamp(20px,1.6vw,26px); letter-spacing: .23em; font-weight: 400; }
+.mw-brand-type > span { font-family: var(--font-sans,sans-serif); letter-spacing: .26em; font-size: 10px; opacity: .65; }
+.mw-tools { display: flex; align-items: center; gap: 12px; padding: 3px 0; }
+.mw-tools svg { width: 21px; height: 21px; }
+.mw-directory-button { display: flex; align-items: center; gap: 9px; padding: 9px 16px 9px 11px; font-size: 15px; letter-spacing: .1em; border-right: 1px solid var(--mw-rule); }
+.mw-tool-button { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; color: inherit; min-width: 39px; min-height: 40px; transition: color .2s; }
+.mw-lock-button { display: none; align-items: center; gap: 8px; min-height: 40px; padding: 7px 12px; border: 1px solid rgba(221,191,131,.35); border-radius: 3px; color: #e9d4ac; background: rgba(20,34,35,.7); font-size: 14px; white-space: nowrap; }
+.mw-lock-button svg { width: 18px; height: 18px; }
+.mountain-world[data-state="ready"][data-mode="exploring"][data-input-mode="pointer"] .mw-lock-button { display: inline-flex; }
+.mw-tools button:hover, .mw-tools a:hover { color: var(--mw-gold); }
+.mw-language { padding: 10px 2px 10px 7px; font-size: 13px; font-family: var(--font-sans,sans-serif); letter-spacing: .08em; }
+.mw-sound-waves { display: none; }
+[data-world-action="sound"][aria-pressed="true"] .mw-sound-waves { display: block; }
+[data-world-action="sound"][aria-pressed="true"] .mw-sound-cross { display: none; }
+.mw-loading { position: absolute; z-index: 3; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #18292d; transition: opacity .6s,visibility .6s; }
+.mw-loading p { font-size: 28px; font-weight: 400; letter-spacing: .3em; margin: 15px 0 2px; }
+.mw-loading > span:last-child { font-size: 14px; letter-spacing: .1em; opacity: .58; }
+.mw-loading-orbit { width: 33px; height: 33px; border: 1px solid rgba(221,191,131,.17); border-top-color: var(--mw-gold); border-radius: 50%; animation: mw-orbit 2.1s linear infinite; }
+@keyframes mw-orbit { to { transform: rotate(360deg); } }
+.mountain-world[data-state="ready"] .mw-loading { opacity: 0; visibility: hidden; pointer-events: none; }
+.mw-hud { position: absolute; z-index: 4; left: max(38px,env(safe-area-inset-left)); right: max(38px,env(safe-area-inset-right)); bottom: max(27px,env(safe-area-inset-bottom)); display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; pointer-events: none; transition: opacity .5s; }
+.mountain-world[data-state="loading"] .mw-hud, .mountain-world[data-state="failed"] .mw-hud { opacity: 0; pointer-events: none; visibility: hidden; }
+.mw-place { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; text-shadow: 0 2px 12px rgba(0,0,0,.4); }
+.mw-place-overline { font-family: var(--font-sans,sans-serif); font-size: 10px; letter-spacing: .26em; opacity: .52; }
+.mw-place strong { font-weight: 400; font-size: 24px; letter-spacing: .16em; }
+.mw-place-note { font-size: 13px; letter-spacing: .05em; opacity: .63; }
+.mw-hint { display: flex; align-items: center; gap: 11px; font-size: 12px; color: rgba(243,238,221,.69); font-family: var(--font-sans,sans-serif); margin-bottom: 2px; }
+.mw-hint p { display: flex; gap: 14px; align-items: center; margin: 0; flex-wrap: wrap; justify-content: center; }
+.mw-hint p span { white-space: nowrap; }
+.mountain-world kbd { font-family: var(--font-sans,sans-serif); font-size: 11px; border: 1px solid rgba(234,231,211,.25); border-radius: 3px; padding: 3px 5px; margin-right: 4px; line-height: 1; background: rgba(26,40,41,.3); color: #eee9d9; }
+.mw-hint button { font-size: 19px; padding: 5px; color: inherit; background: transparent; border: 0; pointer-events: auto; }
+.mw-hint-touch { display: none !important; }
+.mw-map-button { pointer-events: auto; flex: 0 0 auto; display: flex; align-items: center; gap: 10px; color: inherit; background: transparent; border: 0; padding: 5px 0 5px 12px; font-size: 14px; letter-spacing: .08em; }
+.mw-map-button svg { width: 35px; height: 35px; stroke-width: 1; color: #d4c39c; }
+.mw-map-button:hover { color: var(--mw-gold); }
+.mw-interact { position: absolute; z-index: 6; left: 50%; top: 69%; transform: translate(-50%,-100%); display: flex; align-items: center; gap: 8px; white-space: nowrap; padding: 10px 16px 10px 11px; background: rgba(21,34,35,.88); border: 1px solid rgba(232,200,144,.45); border-radius: 3px; color: #f4ebd5; box-shadow: 0 5px 22px rgba(8,17,19,.22); font-size: 15px; letter-spacing: .06em; backdrop-filter: blur(8px); }
+.mw-interact::after { content: ''; position: absolute; left: 50%; bottom: -6px; width: 9px; height: 9px; transform: rotate(45deg); background: #263333; border-right: 1px solid rgba(232,200,144,.45); border-bottom: 1px solid rgba(232,200,144,.45); }
+.mw-interact kbd { font-size: 12px; padding: 5px 7px; margin: 0; }
+.mw-interact-touch { display: none; font-size: 11px; opacity: .62; }
+.mw-toast { position: absolute; z-index: 7; left: 50%; bottom: 125px; transform: translateX(-50%); max-width: min(90%,500px); padding: 11px 18px; border: 1px solid var(--mw-rule); color: #eee7d6; background: rgba(22,35,38,.9); font-size: 14px; text-align: center; border-radius: 3px; pointer-events: none; }
+.mw-fallback { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; padding: 9vw; background: #17272b; }
+.mw-fallback::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg,rgba(16,31,35,.92),rgba(16,31,35,.66) 40%,rgba(16,31,35,.15)); }
+.mw-fallback img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .76; }
+.mw-fallback-copy { position: relative; z-index: 1; max-width: 480px; }
+.mw-eyebrow { font-size: 12px; letter-spacing: .2em; font-family: var(--font-sans,sans-serif); }
+.mw-fallback h1 { font-size: clamp(36px,5vw,68px); font-weight: 400; letter-spacing: .15em; margin: 20px 0 24px; line-height: 1.4; }
+.mw-fallback-copy > p:not(.mw-eyebrow) { color: #c5ccbf; font-size: 16px; line-height: 1.9; }
+.mw-fallback nav { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 30px; }
+.mw-fallback nav a { padding-bottom: 5px; border-bottom: 1px solid #bcaa81; font-size: 16px; }
+.mw-sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
+
+.mountain-world.mw-reading .mw-hud, .mountain-world.mw-reading .mw-interact { visibility: hidden; }
+
+@media (max-width: 900px) {
+  .mw-hint { position: absolute; bottom: 88px; left: 50%; width: max-content; max-width: 100%; transform: translateX(-50%); background: rgba(19,35,37,.68); border: 1px solid rgba(239,228,200,.15); border-radius: 3px; padding: 10px 12px; }
+  .mw-hint p { gap: 9px; font-size: 11px; }
+  .mw-header { left: 23px; right: 23px; top: 23px; }
+  .mw-hud { left: 23px; right: 23px; bottom: 23px; }
+}
+@media (max-width: 600px) {
+  .mw-header { left: max(18px,env(safe-area-inset-left)); right: max(15px,env(safe-area-inset-right)); top: max(20px,env(safe-area-inset-top)); gap: 10px; }
+  .mw-brand { gap: 9px; }
+  .mw-brand-type strong { font-size: 20px; letter-spacing: .12em; }
+  .mountain-world[data-language="en"] .mw-brand-type strong { font-size: 16px; letter-spacing: .01em; }
+  .mw-brand-type > span { font-size: 8px; letter-spacing: .15em; }
+  .mw-seal { font-size: 13px; padding: 5px; }
+  .mw-tools { gap: 1px; }
+  .mw-tools svg { width: 19px; height: 19px; }
+  .mw-directory-button { padding: 8px 9px; border: 0; }
+  .mw-directory-button > span { display: none; }
+  .mw-tool-button { min-width: 32px; min-height: 37px; }
+  .mw-language { font-size: 11px; padding-left: 6px; }
+  .mw-hud { left: max(20px,env(safe-area-inset-left)); right: max(20px,env(safe-area-inset-right)); bottom: max(24px,env(safe-area-inset-bottom)); }
+  .mw-place { gap: 6px; }
+  .mw-place strong { font-size: 22px; }
+  .mw-place-overline { font-size: 9px; }
+  .mw-place-note { font-size: 11px; }
+  .mw-place { flex: 1 1 0; min-width: 0; }
+  .mw-place strong { line-height: 1.22; overflow-wrap: break-word; }
+  .mw-map-button { flex-direction: column; gap: 5px; font-size: 11px; }
+  .mw-map-button svg { width: 31px; height: 31px; }
+  .mw-hint { bottom: 94px; width: max-content; max-width: calc(100vw - 32px); padding: 7px 9px 7px 12px; gap: 6px; }
+  .mw-hint-desktop { display: none !important; }
+  .mw-hint-touch { display: block !important; line-height: 1.5; }
+  .mw-toast { bottom: 190px; width: max-content; max-width: 88%; }
+  .mw-interact { font-size: 14px; padding: 10px 13px; }
+  .mw-interact kbd { display: none; }
+  .mw-interact-touch { display: inline; }
+  .mw-fallback { padding: 24px; }
+  .mw-fallback-copy { max-width: 340px; }
+  .mw-fallback-copy > p:not(.mw-eyebrow) { font-size: 15px; }
+}
+@media (pointer: coarse) {
+  .mw-hint-desktop { display: none !important; }
+  .mw-hint-touch { display: block !important; }
+  .mw-interact kbd { display: none; }
+  .mw-interact-touch { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mountain-world *, .mountain-world *::before, .mountain-world *::after { transition-duration: 0s !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
+}
+
+/* First-person view: a small centre cue, quiet controls, and an explicit pause. */
+.mw-entry { position: absolute; z-index: 4; inset: 0; display: flex; align-items: flex-end; padding: 90px max(5vw,30px) max(5vh,28px); pointer-events: none; background: linear-gradient(20deg,rgba(13,29,28,.94),rgba(13,29,28,.74) 16%,rgba(13,29,28,.15) 38%,transparent 56%); }
+.mw-entry-card { pointer-events: auto; width: min(420px,100%); color: #faf2de; text-shadow: 0 1px 6px #19312c; }
+.mountain-world[data-mode="paused"][data-touch="false"] .mw-entry-card { pointer-events: none; }
+.mw-entry-card :is(button, a, details) { pointer-events: auto; }
+.mw-entry h1 { font-size: clamp(28px,2.7vw,42px); font-weight: 400; line-height: 1.7; letter-spacing: .07em; margin: 0 0 12px; text-wrap: balance; }
+.mw-entry-copy { font-size: 15px; line-height: 1.95; color: #ede8d8; margin: 0; max-width: 32em; }
+.mw-entry-actions { display: flex; align-items: center; gap: 23px; margin: 27px 0 23px; }
+.mw-enter-button { display:inline-flex; align-items:center; gap:.8em; min-height:46px; padding:4px 7px 4px 0; background:transparent; color:#fff1cc; border:0; border-bottom:1px solid #cfad70; font:inherit; font-size:20px; letter-spacing:.1em; text-shadow:0 1px 5px #172a25; }
+.mw-gate-glyph { display:inline-grid; width:29px; height:29px; place-items:center; color:#f5d9a0; outline:1px solid #c4a577; outline-offset:-3px; border-radius:50%; font:21px/1 Georgia,serif; transition:transform .2s; }
+.mw-enter-button:hover .mw-gate-glyph { transform:translateX(3px); }
+.mw-enter-button:hover, .mw-enter-button:focus-visible { color:#fff9e9; border-bottom-color:#fff0bd; }
+.mw-read-button { border: 0; border-bottom: 1px solid rgba(225,218,196,.35); background: none; color: #dedfcf; padding: 8px 0; font-size: 14px; }
+.mw-read-button:hover { color: #e8c78c; }
+.mw-entry-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 11px 15px; margin: 0; color: #d5dacb; font: 12px/1.8 var(--font-sans,sans-serif); }
+.mw-entry-controls > span { white-space: nowrap; }
+.mw-entry-controls kbd { font-size: 10px; border-color: rgba(220,222,207,.2); color: #cdd4c6; }
+.mw-settings { margin-top: 21px; border-top: 1px solid rgba(222,215,190,.14); padding-top: 15px; color: #b7c2b7; font: 13px/1.7 var(--font-sans,sans-serif); }
+.mw-settings summary { cursor: pointer; width: fit-content; padding-right: 6px; }
+.mw-settings-fields { display: grid; gap: 13px; padding-top: 17px; }
+.mw-settings label { display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.mw-settings select { background: #263c3b; color: #e2dfce; border: 1px solid #53635a; border-radius: 0; padding: 5px 25px 5px 9px; min-width: 112px; }
+.mw-settings input[type="range"] { max-width: 140px; width: 42%; accent-color: #d2bb8d; }
+.mw-settings input[type="checkbox"] { accent-color: #d2bb8d; width: 16px; height: 16px; margin-right: 0; }
+.mw-reticle { position: absolute; z-index: 3; left: 50%; top: 50%; width: 17px; height: 17px; transform: translate(-50%,-50%); display: none; place-items: center; border: 1px solid transparent; border-radius: 50%; pointer-events: none; transition: border-color .18s,transform .18s; }
+.mountain-world[data-state="ready"][data-mode="exploring"]:not([data-seated]):is([data-input-mode="locked"],[data-input-mode="drag"],[data-input-mode="touch"]) .mw-reticle { display: grid; }
+.mountain-world[data-mode="exploring"]:is([data-input-mode="locked"],[data-input-mode="drag"]) #mountain-canvas { cursor: none; }
+.mountain-world[data-mode="exploring"][data-input-mode="pointer"] #mountain-canvas { cursor: default; }
+.mountain-world[data-mode="exploring"][data-input-mode="pointer"][data-aimed="true"] #mountain-canvas { cursor: pointer; }
+.mountain-world[data-mode="exploring"][data-input-mode="pending"] #mountain-canvas { cursor: progress; }
+.mountain-world[data-input-mode="pointer"] .mw-interact { pointer-events: none; transform: translate(-50%,0); }
+.mountain-world[data-input-mode="pointer"] .mw-interact::after { top: -6px; bottom: auto; border: 0; border-left: 1px solid rgba(232,200,144,.45); border-top: 1px solid rgba(232,200,144,.45); }
+.mountain-world:is([data-input-mode="pending"],[data-input-mode="none"]) .mw-interact { visibility: hidden; pointer-events: none; }
+.mw-look-pointer, .mw-look-pending { display: none; }
+.mountain-world:is([data-input-mode="pointer"],[data-input-mode="drag"]) .mw-look-pointer,
+.mountain-world[data-input-mode="pending"] .mw-look-pending { display: inline; }
+.mountain-world:is([data-input-mode="pointer"],[data-input-mode="drag"],[data-input-mode="pending"]) .mw-look-locked { display: none; }
+.mw-reticle > span { width: 3px; height: 3px; border-radius: 50%; background: rgba(247,241,218,.8); box-shadow: 0 0 2px 1px rgba(19,30,28,.5); }
+.mountain-world[data-aimed="true"] .mw-reticle { border-color: rgba(232,201,144,.7); transform: translate(-50%,-50%) scale(1.12); }
+.mountain-world[data-aimed="true"] .mw-reticle > span { background: #ffe1a4; }
+.mw-thumbstick { display: none; position: absolute; z-index: 5; left: max(27px,env(safe-area-inset-left)); bottom: max(100px,calc(env(safe-area-inset-bottom) + 80px)); width: 110px; height: 110px; border-radius: 50%; touch-action: none; user-select: none; }
+.mw-thumbstick-ring { position: absolute; inset: 8px; border: 1px solid rgba(235,228,202,.32); border-radius: 50%; background: rgba(20,35,35,.25); }
+.mw-thumbstick-knob { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-50%,-50%); border-radius: 50%; background: rgba(226,214,185,.19); border: 1px solid rgba(240,227,192,.5); pointer-events: none; }
+.mountain-world .mw-interact { top: calc(50% + 42px); transform: translate(-50%,0); padding: 9px 14px 9px 10px; background: rgba(21,34,35,.76); border-color: rgba(225,204,161,.36); font-size: 14px; }
+.mountain-world .mw-interact::after { display: none; }
+.mountain-world:not([data-mode="exploring"]) .mw-reticle,
+.mountain-world:not([data-mode="exploring"]) .mw-thumbstick,
+.mountain-world:not([data-mode="exploring"]) .mw-interact,
+.mountain-world:not([data-state="ready"]) .mw-entry,
+.mountain-world:not([data-state="ready"]) .mw-reticle,
+.mountain-world:not([data-state="ready"]) .mw-thumbstick { display: none; }
+.mountain-world[data-mode="welcome"] .mw-hud,
+.mountain-world[data-mode="paused"] .mw-hud { opacity: 0; visibility: hidden; }
+.mountain-world[data-mode="transition"] .mw-hint { opacity: 0; }
+.mountain-world[data-state="ready"][data-touch="true"][data-mode="exploring"]:not([data-seated]) .mw-thumbstick { display: block; }
+.mountain-world[data-touch="true"] .mw-hint-desktop { display: none !important; }
+.mountain-world[data-touch="true"] .mw-hint-touch { display: block !important; }
+.mountain-world[data-touch="false"] .mw-hint-touch { display: none !important; }
+.mountain-world[data-touch="false"] .mw-hint-desktop { display: flex !important; }
+.mountain-world[data-touch="true"] .mw-hint { bottom: 135px; }
+@media (max-width: 600px) {
+  .mw-entry { padding: 80px 24px max(22px,env(safe-area-inset-bottom)); align-items: flex-end; background: linear-gradient(0deg,rgba(12,30,28,.96),rgba(12,30,28,.82) 23%,rgba(12,30,28,.22) 39%,transparent 58%); }
+  .mw-entry-card { padding: 2px; max-height: calc(100dvh - 135px); overflow-y: auto; }
+  .mw-entry h1 { font-size: 25px; letter-spacing: .03em; }
+  .mw-entry-copy { font-size: 14px; }
+  .mw-entry-actions { margin: 23px 0 19px; gap: 18px; }
+  .mw-enter-button { font-size: 17px; padding: 4px 2px 4px 0; }
+  .mw-entry-controls { font-size: 11px; }
+  .mw-settings { margin-top: 16px; padding-top: 12px; font-size: 12px; }
+  .mw-settings input[type="range"] { width: 45%; }
+  .mountain-world[data-mode="exploring"] .mw-brand-type > span { display: none; }
+  .mountain-world[data-touch="true"] .mw-hint { bottom: 130px; left: auto; right: 0; transform: none; max-width: 52vw; }
+  .mountain-world .mw-interact { font-size: 14px; min-height: 44px; padding: 10px 14px; }
+  .mw-tools { gap: 0; }
+  .mw-lock-button { padding: 7px 9px; }
+  .mw-lock-button span { display: none; }
+  .mountain-world[data-input-mode="pointer"] .mw-brand-type { display: none; }
+  .mw-toast { bottom: 220px; }
+}
+@media (max-height: 620px) and (min-width: 601px) {
+  .mw-entry { padding-top: 95px; padding-bottom: 24px; }
+  .mw-entry-card { padding: 21px 28px; max-height: calc(100dvh - 115px); overflow-y: auto; }
+  .mw-entry h1 { font-size: 26px; line-height: 1.5; }
+  .mw-entry-actions { margin: 17px 0; }
+  .mw-settings { margin-top: 15px; padding-top: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mw-enter-button, .mw-reticle { transition: none; }
+  .mw-bob-option { display: none !important; }
+}
+.mw-stand { position:absolute; z-index:5; bottom:max(65px,env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:.7em; padding:10px 20px; min-height:44px; color:#f1e5c6; background:#223833ed; border:1px solid #ab9468; border-radius:2px; letter-spacing:.1em; }
+.mw-stand kbd { font:11px var(--font-sans,sans-serif); border:1px solid #a8997c; padding:2px 4px; }
+.mountain-world:not([data-mode="exploring"]) .mw-stand, .mountain-world[data-seated="true"] :is(.mw-hint,.mw-place-note), .mountain-world[data-touch="true"] .mw-stand kbd { display:none; }
+.mountain-world[data-seated="true"][data-mode="exploring"] .mw-stand { display:flex; }

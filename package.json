@@ -10,7 +10,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "export:meridian": "node scripts/export-meridian.mjs",
-    "astro": "astro"
+    "astro": "astro",
+    "check:world": "tsc -p tsconfig.world.json",
+    "test:world": "node --experimental-strip-types --test tests/world-*.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/eb-garamond": "^5.3.0",
@@ -27,6 +29,8 @@
     "@iconify-json/mdi": "^1.2.3",
     "@tailwindcss/typography": "^0.5.19",
     "cheerio": "1.2.0",
-    "esbuild": "0.27.4"
+    "esbuild": "0.27.4",
+    "@types/three": "^0.180.0",
+    "typescript": "^5.9.3"
   }
 }

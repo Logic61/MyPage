@@ -1,0 +1,10 @@
+---
+interface Props { name: 'blog' | 'cv' | 'projects' | 'map'; }
+const {name}=Astro.props;
+---
+<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  {name==='blog' && <><path d="M3.5 7.7c4.3-1.1 8.4-.1 12.5 2.1 4.1-2.2 8.2-3.2 12.5-2.1v16c-4.8-.8-8.3 0-12.5 2.1-4.2-2.1-7.7-2.9-12.5-2.1z"/><path d="M16 10v15M7 11.2l5.7 1.4M7 15.1l5.7 1.4M19.3 12.6l5.7-1.4M19.3 16.5l5.7-1.4"/></>}
+  {name==='projects' && <><path d="m4.3 14.8 13.5-7 3.6 7-13.6 6.8zM17 7l4.6-2.4 4.9 9.2-4.7 2.4M4.8 16.1 2.9 17l1.6 3 2-1M15.8 18.4v3.1M15.9 21.5l-5.7 6.6m5.7-6.6 5.7 6.6m-5.7-6.6v6.6"/><circle cx="15.9" cy="17" r="2.3"/></>}
+  {name==='cv' && <><path d="M7 25c4.4-8.2 7.9-12.8 16.3-20.2M8.7 21.5C6 12.4 14.1 5.1 27.5 3c-.9 6-3.1 10.1-7.2 14.1l-5.6.9 2.6 1.4c-2.5 2.4-5.2 3.4-8.6 3M3.5 28h21"/></>}
+  {name==='map' && <><path d="m3 8 8.6-3 8.6 3 8.8-3v19l-8.8 3-8.6-3L3 27zm8.6-3v19m8.6-16v19"/></>}
+</svg>
