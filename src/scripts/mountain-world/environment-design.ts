@@ -390,7 +390,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     disturbWater(x: number, z: number, strength: number) {
       if (poolWaves.disturb(x, z, strength)) lotus.disturb(x, z, Math.min(1, strength));
     },
-    update(time: number, delta = 0, reducedMotion = false) {
+    update(time: number, delta: number, reducedMotion: boolean, eye: THREE.Vector3) {
+      halls.updateGateLight(time, eye, reducedMotion);
       poolWaves.update(time, delta, reducedMotion);
       lotus.update(delta, reducedMotion);
     },

@@ -1,5 +1,7 @@
 # Mountain study artwork
 
+The entrance gate carries two vertical inscriptions in [Zhi Mang Xing](https://github.com/googlefonts/zhimangxing) (SIL Open Font License). `gate-couplet-cut.webp` contains just the fourteen rasterized characters and their carved edges. Each panel samples one half of the image for both the cut and its celadon glow.
+
 `mountain-silk-landscape.webp` is an original image generated for this project's circular landscape screen on 2026-11-22 using ChatGPT's built-in `imagegen` tool. It is a decorative painting texture, not a photograph, scan of a historical work, or rendering of the finished room. No reference image was supplied.
 
 The generated 1254 × 1254 PNG was converted to lossless WebP for delivery (2,503,137 → 1,656,420 bytes). Decoded RGB pixels were checked to be identical. The original generated PNG remains in the image-generation output, outside the repository. The application uses this single WebP as an sRGB, `flipY=true` albedo map on a non-emissive PBR silk material. A procedural Canvas landscape remains visible if local image loading fails.

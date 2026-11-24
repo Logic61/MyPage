@@ -34,7 +34,7 @@ export interface Environment {
   roofOccluders: THREE.Object3D[];
   assetsReady: Promise<void>;
   disturbWater: (x: number, z: number, strength: number) => void;
-  update: (time: number, delta: number, indoor: boolean, reducedMotion: boolean) => void;
+  update: (time: number, delta: number, indoor: boolean, reducedMotion: boolean, eye: THREE.Vector3) => void;
   dispose: () => void;
 }
 export interface Furnishings {

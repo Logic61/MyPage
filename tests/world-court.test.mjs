@@ -21,7 +21,7 @@ function loadModule(file, imports) {
   vm.runInNewContext(code,{
     exports,require:id=>{ assert.ok(id in imports,id); return imports[id]; },
     document:{ createElement:()=>({getContext:()=>ink}) },
-    Image:class { set src(_url) { this.onerror(); } },
+    Image:class { set src(_url) { this.onerror?.(); } },
   });
   return exports;
 }
@@ -50,6 +50,22 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     assert.deepEqual(maps.map(tex => [...tex.image.data]), [[255,255,255,255],[128,128,255,255],[255,255,255,255]]);
     assert.deepEqual(maps.map(tex => tex.colorSpace), [THREE.SRGBColorSpace, THREE.NoColorSpace, THREE.NoColorSpace]);
     await Promise.all([site.ready,furnishings.assetsReady]);
+    const first = scene.getObjectByName('青山流云皆入境'), second = scene.getObjectByName('旧忆新知尽成篇');
+    assert.ok(first.position.x > 0 && second.position.x < 0);
+    assert.equal(first.geometry.attributes.uv.getX(0), .5);
+    assert.equal(second.geometry.attributes.uv.getX(0), 0);
+    const eye = new THREE.Vector3(0, 1.98, 34);
+    site.update(0, 0, false, eye);
+    const farLight = first.material.emissiveIntensity;
+    eye.z = 15;
+    site.update(1.75, 0, false, eye);
+    const peak = first.material.emissiveIntensity;
+    site.update(5.25, 0, false, eye);
+    assert.ok(farLight < first.material.emissiveIntensity && first.material.emissiveIntensity < peak);
+    site.update(1.75, 0, true, eye);
+    const stillLight = first.material.emissiveIntensity;
+    site.update(5.25, 0, true, eye);
+    assert.equal(first.material.emissiveIntensity, stillLight);
     assert.equal(cedar.version, version, 'Photographs must keep the precompiled colour, normal and roughness variant');
     assert.notEqual(cedar.map, maps[0]); assert.notEqual(cedar.normalMap, maps[1]); assert.notEqual(cedar.roughnessMap, maps[2]);
     scene.updateMatrixWorld(true);

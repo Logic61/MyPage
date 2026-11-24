@@ -917,7 +917,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       // Clouds keep the same pace across frame rates. A preference change freezes the current view.
       const landscapeDelta = motionPreference.matches ? 0 : Math.min(.25, Math.max(0, rawDelta));
       landscapeTime += landscapeDelta;
-      environment.update(landscapeTime, landscapeDelta, indoor, motionPreference.matches);
+      environment.update(landscapeTime, landscapeDelta, indoor, motionPreference.matches, camera.position);
       backdrop.update(landscapeTime);
       const highlighted = elapsed < selectedUntil ? selectedId : mode === 'exploring' ? aimed?.id ?? null : null;
       furniture.update(elapsed, delta, highlighted);

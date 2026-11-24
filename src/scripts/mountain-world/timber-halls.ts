@@ -27,6 +27,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   const lacquer = new THREE.MeshStandardMaterial({ name: 'Cinnabar stained cedar', color: '#d88c64', roughness: .69 });
   const cedar = new THREE.MeshStandardMaterial({ name: 'Oiled amber cedar', color: '#d2a475', roughness: .76 });
   const jujube = new THREE.MeshStandardMaterial({ name: 'Turned and oiled jujube wood', color: '#cc966b', roughness: .41 });
+  const agedWood = new THREE.MeshStandardMaterial({ name: 'Weathered gate tablets', color: '#73513d', roughness: .76 });
   const mineral = new THREE.MeshStandardMaterial({ name: 'Deep teal beam ground', color: '#414d45', roughness: .80 });
   const gold = new THREE.MeshStandardMaterial({ name: 'Aged bronze leaf', color: '#d7ad62', metalness: .36, roughness: .46 });
   const glazed = new THREE.MeshStandardMaterial({ name: 'Ash-blue fired pantiles', color: '#b2b7c6', vertexColors: true, roughness: .75, metalness: .045 });
@@ -129,7 +130,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   const surfaceImages = Promise.all([
     surfaceMap('honed-limestone.webp', [m.stone, m.sideStone]),
     surfaceMap('flagstone-normal.webp', [m.stone, m.sideStone], 'normalMap'),
-    surfaceMap('lacquer-grain.webp', [lacquer,cedar,jujube]),
+    surfaceMap('lacquer-grain.webp', [lacquer,cedar,jujube,agedWood]),
     surfaceMap('timber-normal.webp', [lacquer,cedar], 'normalMap'),
     surfaceMap('timber-rough.webp', [lacquer,cedar], 'roughnessMap'),
     surfaceMap('limewash-color.webp', [m.plaster,m.archivePlaster]),
@@ -352,11 +353,37 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   }
   // Cross the threshold as soon as the bridge opens out onto the main island.
   const gateZ=13.22;
+  // Viewed from the bridge, the first line is on the right and both read downwards.
+  const gateLines = ['旧忆新知尽成篇', '青山流云皆入境'];
+  const carving = drawCanvas(240, 648);
+  carving.ctx.font = '82px KaiTi, STKaiti, "Courtyard Lettering", serif';
+  carving.ctx.textAlign = 'center'; carving.ctx.textBaseline = 'middle';
+  carving.ctx.fillStyle = '#ddd';
+  gateLines.forEach((line, column) => [...line].forEach((glyph, row) =>
+    carving.ctx.fillText(glyph, column * 120 + 60, 53 + row * 90)));
+  const cut = new THREE.MeshStandardMaterial({
+    name: 'Incised gate calligraphy', map: carving.texture, color: '#bed2b9',
+    emissiveMap: carving.texture, emissive: '#9ae0d3', emissiveIntensity: .04,
+    roughness: .88, transparent: true, depthWrite: false,
+  });
+  const engraved = new Image();
+  engraved.onload = () => {
+    if (!disposed) { carving.texture.image = engraved; carving.texture.needsUpdate = true; }
+  };
+  engraved.src = assetRoot + 'gate-couplet-cut.webp';
   for (const x of [-2.00,2.00]) {
     for (const side of [-1,1]) {
       const z=gateZ+side*.43;
       post(x,z,2.76,.16); brackets(x,2.71,z,.89,side<0 ? Math.PI : 0);
     }
+    const column = x < 0 ? 0 : 1, y = 1.53, z = gateZ + .59;
+    box(agedWood, 'Carved gate tablet', x, y, z, .373, 1.75, .078);
+    box(agedWood, 'Raised tablet field', x, y, z + .042, .348, 1.716, .024);
+    const face = new THREE.PlaneGeometry(.318, 1.66);
+    const uv = face.attributes.uv;
+    for (let i = 0; i < uv.count; i++) uv.setX(i, (column + uv.getX(i)) / 2);
+    const letters = part(face, cut, gateLines[column], x, y, z + .055);
+    letters.castShadow = false;
   }
   for(const side of [-1,1]) paintedBeam(0,3.00,gateZ+side*.45,4.58,.28,.27);
   group.add(tiledRoof({ name:'Southern mountain gate', eave:rectangularRing(0,gateZ,2.99,1.21),
@@ -392,5 +419,14 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     turned('Stone lantern cap',m.stone,lx,1.47,lz,[[.33,0],[.35,.055],[.24,.11],[.12,.22],[.064,.24],[.073,.31],[.012,.37]],8);
     obstacle(lx,lz,.27,.27);
   }
-  return { group, ready: Promise.all([ready,surfaceImages]).then(() => {}), dispose() { disposed = true; textures.forEach(texture => texture.dispose()); } };
+  return {
+    group, ready: Promise.all([ready, surfaceImages]).then(() => {}),
+    updateGateLight(time: number, eye: THREE.Vector3, reducedMotion: boolean) {
+      const distance = Math.hypot(eye.x, eye.z - gateZ);
+      const near = 1 - THREE.MathUtils.smoothstep(distance, 2, 11);
+      const breath = reducedMotion ? 0 : .075 * Math.sin(time * Math.PI / 3.5);
+      cut.emissiveIntensity = .04 + near * (.45 + breath);
+    },
+    dispose() { disposed = true; textures.forEach(texture => texture.dispose()); },
+  };
 }
