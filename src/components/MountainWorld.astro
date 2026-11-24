@@ -3,6 +3,7 @@ import { Icon } from 'astro-icon/components';
 import Layout from '../layouts/Layout.astro';
 import { tracks } from '../scripts/mountain-world/music';
 import CourtyardFolio from './CourtyardFolio.astro';
+import CourtyardWelcome from './CourtyardWelcome.astro';
 import '../styles/mountain-world.css';
 import '../styles/mountain-folio.css';
 
@@ -79,6 +80,7 @@ const marks = [
           <label><span>{isEn ? 'Picture' : '画面'}</span><select data-world-quality><option value="detail">{isEn ? 'Detailed' : '细致'}</option><option value="smooth">{isEn ? 'Smooth' : '流畅'}</option></select></label>
           <label><span>{isEn ? 'Look sensitivity' : '视角灵敏度'}</span><input type="range" min="0.4" max="1.8" step="0.1" value="1" data-world-sensitivity /></label>
           <label class="mw-bob-option"><span>{isEn ? 'Gentle walking motion' : '轻微行走起伏'}</span><input type="checkbox" data-world-bob /></label>
+          <label><span>{isEn ? 'Show guide labels' : '显示导览标签'}</span><input type="checkbox" data-world-guide-labels checked /></label>
         <label><span>{isEn ? 'Background track' : '背景曲目'}</span>
           <select data-world-track>
             <option value="shuffle">{isEn ? 'Shuffle' : '随机播放'}</option>
@@ -132,6 +134,7 @@ const marks = [
       </div>
     </dialog>
     <CourtyardFolio {isEn}/>
+    <CourtyardWelcome {isEn}/>
     <script is:inline type="application/json" id="mountain-world-config" set:html={config}></script>
   </div>
   <noscript><style is:inline>[data-world-load]{display:none!important}</style></noscript>
@@ -139,6 +142,7 @@ const marks = [
     import { prepareSurfacePixels } from '../scripts/mountain-world/prepare-surfaces';
     import { createAmbience } from '../scripts/mountain-world/music';
     import { createCourtyardMouseLock } from '../scripts/mountain-world/pointer-lock';
+    import { hasSeenWelcome, loadWelcomeImages } from '../scripts/mountain-world/welcome-visit';
     import { prepareEntryArt } from '../scripts/mountain-world/entry-art';
     const courtyard = document.querySelector<HTMLElement>('[data-mountain-world]');
     courtyard?.querySelector<HTMLButtonElement>('[data-world-load]')?.addEventListener('click', async event => {
@@ -155,7 +159,13 @@ const marks = [
       } catch {}
       if (sound) ambience.toggle();
       // Mouse lock and audio playback both use the original entrance gesture.
-      if (!matchMedia('(pointer: coarse)').matches && canvas.requestPointerLock) mouseLock.start();
+      // First-time visitors use their next click to leave the guide and capture the mouse.
+      if (hasSeenWelcome()) {
+        if (!matchMedia('(pointer: coarse)').matches && canvas.requestPointerLock) mouseLock.start();
+      } else {
+        const firstPage = courtyard.querySelector<HTMLElement>('[data-welcome-page="1"]')!;
+        loadWelcomeImages(firstPage, 'low');
+      }
       const releaseLock = () => { if (document.pointerLockElement === canvas) document.exitPointerLock(); };
       const pending = new AbortController();
       const surfaces = new AbortController();

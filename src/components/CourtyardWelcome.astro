@@ -1,0 +1,67 @@
+---
+import '../styles/courtyard-welcome.css';
+
+interface Props { isEn: boolean; }
+const { isEn } = Astro.props;
+const t = (zh: string, en: string) => isEn ? en : zh;
+const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+const photo = (name: string) => `${base}/world/guide-${name}${isEn ? '-en' : ''}.webp`;
+---
+
+<dialog class="mw-welcome" data-world-welcome aria-labelledby="mw-welcome-title">
+  <header class="welcome-head">
+    <h2 id="mw-welcome-title">{t('欢迎', 'Welcome')}</h2>
+    <button type="button" class="welcome-close" data-welcome-close aria-label={t('关闭欢迎页', 'Close the welcome guide')} title={t('关闭', 'Close')}>
+      <span aria-hidden="true">×</span>
+    </button>
+  </header>
+
+  <div class="welcome-scroll" data-welcome-scroll>
+    <section data-welcome-page="1" aria-labelledby="mw-welcome-labels">
+      <figure class="welcome-first">
+        <img data-src={photo('aim')} decoding="async" width="1000" height="500"
+          alt={t('云庭实景中，画面中央的准心对准了书架前的「博客」标签。', 'The centre dot is aimed at the Writing label in front of the courtyard bookshelves.')} />
+        <figcaption>
+          <h3 id="mw-welcome-labels" data-welcome-heading tabindex="-1">{t('点选庭中标签', 'Open a guide label')}</h3>
+          <p class="welcome-mouse">{isEn ? <>Move the mouse until the centre dot rests on Writing, CV or Projects, then <strong>left-click</strong> to open it.</> : <>将画面中央的准心对准<span class="welcome-term">「博客」</span><span class="welcome-term">「简历」</span>或<span class="welcome-term">「项目」</span>标签，按<strong class="welcome-term">鼠标左键</strong>打开。</>}</p>
+          <p class="welcome-touch">{t('拖动画面环顾四周，轻点「博客」「简历」或「项目」标签，即可打开。', 'Drag to look around, then tap Writing, CV or Projects to open it.')}</p>
+          <p class="welcome-note">{isEn ? 'To hide the labels, open Settings in the upper right and turn off “Show guide labels”.' : <>想隐藏标签，可在右上角<span class="welcome-term">「设置」</span>里关掉<span class="welcome-term">「显示导览标签」</span>。</>}</p>
+        </figcaption>
+      </figure>
+    </section>
+
+    <section data-welcome-page="2" aria-label={t('更多访问方式', 'More ways to read')} hidden>
+      <div class="welcome-pair">
+        <figure>
+          <img data-src={photo('near')} decoding="async" width="900" height="450"
+            alt={t('走近书架后，画面中出现「取一卷书」的交互提示。', 'Up close, the bookshelf displays a Browse the library prompt.')} />
+          <figcaption>
+            <h3 data-welcome-heading tabindex="-1">{t('走近书架', 'Walk up to the shelves')}</h3>
+            <p class="welcome-mouse">{isEn ? <>Face the bookshelf. When “Browse the library” appears, press <kbd>E</kbd> to read.</> : <>走到书架跟前，面向书架，出现「取一卷书」时，按 <kbd>E</kbd> 打开。</>}</p>
+            <p class="welcome-touch">{t('用摇杆走近书架，面向它，轻点出现的「取一卷书」提示。', 'Use the stick to walk up to the bookshelf. Face it and tap “Browse the library”.')}</p>
+          </figcaption>
+        </figure>
+        <figure>
+          <img data-src={photo('directory')} decoding="async" width="900" height="450"
+            alt={t('暂停后的云庭画面，右上角工具栏里可见「目录」按钮。', 'The paused courtyard with the Directory button in its upper-right toolbar.')} />
+          <figcaption>
+            <h3>{t('从目录翻阅', 'Browse the directory')}</h3>
+            <p class="welcome-mouse">{isEn ? <>Press <kbd>Esc</kbd> to pause, then click Directory in the upper right to browse the articles.</> : <>按 <kbd>Esc</kbd> 暂停，再点击右上角「目录」，就能从文章列表中选读。</>}</p>
+            <p class="welcome-touch">{t('轻点右上角的三横线「目录」，就能从文章列表中选读。', 'Tap the three-line Directory button in the upper right to browse the articles.')}</p>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+  </div>
+
+  <footer class="welcome-foot">
+    <span class="welcome-progress" role="status" aria-live="polite" aria-atomic="true">
+      <span class="mw-sr-only">{t('欢迎页页码', 'Guide page')} </span><span data-welcome-progress>1 / 2</span>
+    </span>
+    <div class="welcome-controls">
+      <button type="button" class="welcome-back" data-welcome-back hidden>{t('上一页', 'Back')}</button>
+      <button type="button" class="welcome-forward" data-welcome-next>{t('下一页', 'Next')} <span aria-hidden="true">→</span></button>
+      <button type="button" class="welcome-forward" data-welcome-done hidden>{t('开始探索', 'Start exploring')} <span aria-hidden="true">→</span></button>
+    </div>
+  </footer>
+</dialog>

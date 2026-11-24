@@ -16,9 +16,10 @@ import { walkRiseAt } from './hall-terrace';
 import { COURTYARD_POOL, poolDepthAt, poolFloorAt, POOL_WATER_Y } from './water-court';
 import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from './look-controls';
 import { createCourtyardMouseLock } from './pointer-lock';
+import { createWelcomeGuide } from './welcome-guide';
 import type { Interaction, WorldConfig } from './types';
 
-type Mode = 'welcome' | 'exploring' | 'paused' | 'reading' | 'transition' | 'falling' | 'fallen';
+type Mode = 'welcome' | 'guide' | 'exploring' | 'paused' | 'reading' | 'transition' | 'falling' | 'fallen';
 type InputMode = 'none' | 'pending' | 'locked' | 'pointer' | 'drag' | 'touch';
 
 // A free cursor can turn the camera inside the outer 15% of each edge.
@@ -236,7 +237,9 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     const qualitySelect = root.querySelector<HTMLSelectElement>('[data-world-quality]')!;
     const sensitivityInput = root.querySelector<HTMLInputElement>('[data-world-sensitivity]')!;
     const bobInput = root.querySelector<HTMLInputElement>('[data-world-bob]')!;
+    const guideLabelsInput = root.querySelector<HTMLInputElement>('[data-world-guide-labels]')!;
     qualitySelect.value = coarse ? 'smooth' : 'detail';
+    guideLabelsInput.checked = true;
     try {
       const saved = JSON.parse(sessionStorage.getItem(stateKey) || 'null');
       if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.z) && navigation.canWalk(saved.x, saved.z)) {
@@ -247,14 +250,18 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
         const inside = navigation.nearest({ x: 0, z: -4.6 }, 2);
         if (inside && navigation.canWalk(inside.x, inside.z)) position.set(inside.x, FLOOR_HEIGHT, inside.z);
       }
+    } catch { /* Session storage is optional. */ }
+    try {
       const preferences = JSON.parse(localStorage.getItem('mountain-first-person:preferences') || 'null');
       if (preferences) {
         if (preferences.quality === 'detail' || preferences.quality === 'smooth') qualitySelect.value = preferences.quality;
         if (Number.isFinite(preferences.sensitivity)) sensitivity = THREE.MathUtils.clamp(preferences.sensitivity, 0.4, 1.8);
         headBob = !reducedMotion && preferences.headBob === true;
+        guideLabelsInput.checked = preferences.guideLabels !== false;
       }
     } catch { /* Storage is optional. */ }
     sensitivityInput.value = String(sensitivity); bobInput.checked = headBob;
+    ui.setWaymarksVisible(guideLabelsInput.checked);
     pipeline.setQuality(qualitySelect.value as RenderQuality);
     root.addEventListener('mountain-mouse-fallback', () => {
       if (mode !== 'exploring' || ui.isOpen() || document.pointerLockElement === canvas) return;
@@ -334,7 +341,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     }
     function setMode(value: Mode) {
       if (mode !== value) resetFrameWindow();
-      if (mode === 'reading' && value !== mode) {
+      if ((mode === 'reading' || mode === 'guide') && value !== mode) {
         previousFrame = performance.now();
         requestFrame();
       }
@@ -354,7 +361,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     }
     function unlock() { if (document.pointerLockElement === canvas) document.exitPointerLock(); }
     function pause() {
-      if (mode === 'reading' || mode === 'welcome' || inFall()) return;
+      if (mode === 'reading' || mode === 'guide' || mode === 'welcome' || inFall()) return;
       window.clearTimeout(interactionTimer); cancelRoute(); setMode('paused'); unlock(); save();
       enterButton.focus({ preventScroll: true });
     }
@@ -370,8 +377,31 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       // Keep the native request in the click handler's user activation.
       pointerLock.start();
     }
+    function startArrival() {
+      root.dataset.arriving = 'true';
+      introTimer = window.setTimeout(() => {
+        delete root.dataset.arriving; hint.hidden = false;
+        hintTimer = window.setTimeout(() => { hint.hidden = true; }, 5000);
+      }, motionPreference.matches ? 0 : 950);
+    }
+    const welcome = createWelcomeGuide(root.querySelector<HTMLDialogElement>('[data-world-welcome]')!, signal, requestMouse => {
+      if (!alive || mode !== 'guide') return;
+      if (requestMouse && !document.hidden) {
+        setMode('exploring');
+        requestLock();
+        startArrival();
+      } else {
+        setMode('paused');
+        enterButton.focus({ preventScroll: true });
+      }
+    });
+    function showWelcome() {
+      if (document.hidden || root.dataset.state !== 'ready' || !welcome.showIfNew()) return false;
+      setMode('guide'); unlock();
+      return true;
+    }
     function enter() {
-      if (ui.isOpen()) return;
+      if (ui.isOpen() || mode === 'guide' || showWelcome()) return;
       setMode('exploring');
       requestLock();
     }
@@ -552,7 +582,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       }
     }, {signal});
     function savePreferences() {
-      try { localStorage.setItem('mountain-first-person:preferences', JSON.stringify({ quality: qualitySelect.value, sensitivity, headBob })); } catch {}
+      try { localStorage.setItem('mountain-first-person:preferences', JSON.stringify({ quality: qualitySelect.value, sensitivity, headBob, guideLabels: guideLabelsInput.checked })); } catch {}
     }
     qualitySelect.addEventListener('change', () => {
       pipeline.setQuality(qualitySelect.value as RenderQuality); qualityAdjustments = 0; resetFrameWindow(); savePreferences();
@@ -560,6 +590,10 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     }, { signal });
     sensitivityInput.addEventListener('input', () => { sensitivity = Number(sensitivityInput.value); savePreferences(); }, { signal });
     bobInput.addEventListener('change', () => { headBob = bobInput.checked && !reducedMotion; savePreferences(); }, { signal });
+    guideLabelsInput.addEventListener('change', () => {
+      ui.setWaymarksVisible(guideLabelsInput.checked);
+      savePreferences();
+    }, { signal });
     settingsButton.addEventListener('click', () => {
       if (mode !== 'exploring' && mode !== 'paused') return;
       resumeAfterSettings = mode === 'exploring';
@@ -698,7 +732,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       if (event.detail === 0) tryJumpOrVault();
     }, { signal });
     window.addEventListener('keydown', event => {
-      if (settings.open) return;
+      if (settings.open || mode === 'guide') return;
       if (event.code === 'KeyH' && mode === 'exploring' && !hint.hidden) { hint.hidden = true; return; }
       if (ui.isOpen() || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.ctrlKey || event.metaKey || event.altKey) return;
       if (event.code === 'Escape' && mode === 'exploring' && seatedAt && (document.pointerLockElement === canvas || performance.now() - lastSeatUnlock < 180)) {
@@ -766,20 +800,16 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     hadPointerLock = document.pointerLockElement === canvas;
     dragLook = !hadPointerLock;
     setMode(ui.isOpen() ? 'reading' : document.hidden ? 'paused' : 'exploring');
-    if (!ui.isOpen() && !document.hidden) {
+    if (!ui.isOpen() && !document.hidden && !showWelcome()) {
       canvas.focus({ preventScroll: true });
       if (hadPointerLock) beginLockedLook();
-      root.dataset.arriving = 'true';
-      introTimer = window.setTimeout(() => {
-        delete root.dataset.arriving; hint.hidden = false;
-        hintTimer = window.setTimeout(() => { hint.hidden = true; }, 5000);
-      }, motionPreference.matches ? 0 : 950);
+      startArrival();
     } else { unlock(); }
 
     function tick(now: number) {
       frame = 0;
       if (!alive) return;
-      if (mode === 'reading') {
+      if (mode === 'reading' || mode === 'guide') {
         // Keep the last courtyard image behind the reader. A resize may repaint
         // it once, but a long article should not keep the GPU or scene clock busy.
         if (!document.hidden) pipeline.render(0);

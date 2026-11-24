@@ -22,6 +22,22 @@ function setup(width, height) {
 const target = (kind, x, y, z, id = kind) => ({ id, kind, position: new Vector3(x, y, z) });
 const centre = el => el.style.transform.match(/translate3d\((-?\d+)px,(-?\d+)px/).slice(1).map(Number);
 
+test('hiding guide labels clears a centred shortcut and restores projection when enabled again', () => {
+  const { buttons, camera, hud } = setup(1200, 800);
+  const focal = 400 / Math.tan(Math.PI / 6);
+  const book = target('books', 0, 1.98 - .67 - 16 * 5 / focal, -5);
+  hud.update(camera, [book]);
+  assert.equal(hud.atCentre(), book);
+  hud.setVisible(false);
+  assert.equal(hud.atCentre(), undefined);
+  hud.update(camera, [book]);
+  assert.ok(buttons.every(el => el.hidden && !el.hasAttribute('data-centred')));
+  hud.setVisible(true);
+  hud.update(camera, [book]);
+  assert.equal(buttons[0].hidden, false);
+  assert.equal(hud.atCentre(), book);
+});
+
 test('collocated main signs remain legible on a short phone and become directional bearings when turning away', () => {
   const { buttons, camera, hud } = setup(390, 667);
   const items = [target('books', -.1, 1.5, -14), target('about', .12, 1.5, -15), target('projects', .18, 1.5, -14), target('bench', 0, 1, -15)];

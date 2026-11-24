@@ -52,6 +52,7 @@ export interface WorldConfig {
   base: string;
 }
 export interface WorldUI {
+  setWaymarksVisible: (visible: boolean) => void;
   updateWaymarks: (camera: THREE.PerspectiveCamera, items: Interaction[], aimed?: string) => void;
   useCentredWaymark: () => void;
   setSound: (enabled: boolean) => void;

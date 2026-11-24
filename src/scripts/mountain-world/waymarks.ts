@@ -14,8 +14,20 @@ export function createWaymarks(root: HTMLElement) {
   const view = new Vector3();
   const occupied: { x: number; y: number; half: number }[] = [];
   let centred: Interaction | undefined;
+  let visible = true;
+
+  function setVisible(value: boolean) {
+    visible = value;
+    if (visible) return;
+    centred = undefined;
+    for (const { el } of marks) {
+      el.hidden = true;
+      el.toggleAttribute('data-centred', false);
+    }
+  }
 
   function update(camera: PerspectiveCamera, items: Interaction[], aimed?: string) {
+    if (!visible) return;
     const w = root.clientWidth, h = root.clientHeight, compact = w < 680;
     const minY = compact ? 96 : 92;
     const maxY = Math.max(minY + 64, h - (compact ? 156 : 116));
@@ -76,5 +88,5 @@ export function createWaymarks(root: HTMLElement) {
       el.toggleAttribute('data-centred', underReticle);
     }
   }
-  return { update, atCentre: () => centred };
+  return { setVisible, update, atCentre: () => centred };
 }

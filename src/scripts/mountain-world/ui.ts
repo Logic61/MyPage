@@ -106,6 +106,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
 
   return {
     setSound,
+    setWaymarksVisible: waymarks.setVisible,
     updateWaymarks: waymarks.update,
     useCentredWaymark() {
       const item = waymarks.atCentre();

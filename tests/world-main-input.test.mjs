@@ -28,9 +28,10 @@ function deferred() {
 
 async function world({ coarse = false, legacy = false, unavailable = false, bench = false, reduced = false,
   assetsReady = Promise.resolve(), backdropReady = Promise.resolve(), compileReady = Promise.resolve(),
-  expectReady = true, expectFailure = false, hash = '', session = {}, furnished = true,
+  expectReady = true, expectFailure = false, firstVisit = false, hash = '', session = {}, local = {}, furnished = true,
   canWalk = () => true, nearest = point => point, hasFloor = () => true, findVault = () => null } = {}) {
   let now = 100, nextId = 0, readerOpen = false, actions, camera, exitRequests = 0;
+  let closeWelcome, welcomePending = firstVisit;
   const frames = new Map(), timers = new Map(), requests = [], activated = [], errors = [], toasts = [];
   const motionPreference = { matches: reduced };
   const lifecycle = { compiles: 0, renders: 0, ready: 0, backdropUpdates: 0, landscapeTime: 0, environmentUpdates: [], waterContacts: [], disposed: {} };
@@ -68,8 +69,8 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   document.getElementById = () => ({ textContent: JSON.stringify({ isEn: true, prefix: '', base: '/', posts: [] }) });
   document.exitPointerLock = () => { exitRequests++; };
   const controls = {};
-  for (const name of ['arrival', 'track', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'jump', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob']) {
-    controls[name] = name === 'quality' ? new Select() : ['sensitivity', 'bob'].includes(name) ? new Input() : new Element();
+  for (const name of ['arrival', 'track', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'jump', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob', 'guide-labels']) {
+    controls[name] = name === 'quality' ? new Select() : ['sensitivity', 'bob', 'guide-labels'].includes(name) ? new Input() : new Element();
     root.children.set(`[data-world-${name}]`, controls[name]);
   }
   controls.enter.children.set('[data-world-enter-label]', new Element());
@@ -84,7 +85,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   window.setTimeout = (callback, delay) => { const id = ++nextId; timers.set(id, { callback, at: now + delay }); return id; };
   window.clearTimeout = id => timers.delete(id);
   const storage = (initial = {}) => { const data = new Map(Object.entries(initial)); return { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }; };
-  const sessionStore = storage(session);
+  const sessionStore = storage(session), localStore = storage(local);
   const items = [], meshes = new THREE.Group();
   for (const [id, x] of furnished ? [['centre', 0], ['side', .75]] : []) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(.25, .6, .1), new THREE.MeshStandardMaterial());
@@ -94,6 +95,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   }
   const ui = {
     setSound() {}, updateWaymarks() {}, useCentredWaymark() {},
+    setWaymarksVisible(visible) { this.guideLabels = visible; },
     interaction: null, screen: undefined,
     setInteraction(item, screen) { this.interaction = item; this.screen = screen; },
     setLocation(name, nameEn) { this.location = { name, nameEn }; }, showToast(message) { toasts.push(message); },
@@ -103,6 +105,12 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     setFailed(message) { root.dataset.state = 'failed'; errors.push(message); }, dispose() { disposed('ui'); },
   };
   const modules = {
+    './welcome-guide': { createWelcomeGuide(_dialog, _signal, resume) {
+      closeWelcome = resume;
+      return { showIfNew() {
+        const show = welcomePending; welcomePending = false; return show;
+      } };
+    } },
     three: { ...THREE, WebGLRenderer: class { debug = {}; compileAsync() { lifecycle.compiles++; return compileReady; } dispose() { disposed('renderer'); } } },
     './music': music, './look-controls': lookControls, './pointer-lock': pointerLock, './first-person': firstPerson,
     './aerial-motion': aerialMotion,
@@ -140,7 +148,7 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     requestAnimationFrame(callback) { const id = ++nextId; frames.set(id, callback); return id; },
     cancelAnimationFrame: id => frames.delete(id),
     ResizeObserver: class { observe() {} disconnect() { disposed('resize'); } }, AbortController,
-    sessionStorage: sessionStore, localStorage: storage(), location: { hash },
+    sessionStorage: sessionStore, localStorage: localStore, location: { hash },
     console: { ...console, error: (...values) => errors.push(values.join(' ')) },
   });
   function step(milliseconds = 16) {
@@ -185,12 +193,37 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   }
   if (expectReady) {
     assert.equal(root.dataset.state, 'ready');
-    assert.equal(root.dataset.inputMode, coarse ? 'touch' : 'pointer');
+    assert.equal(root.dataset.inputMode, firstVisit ? 'none' : coarse ? 'touch' : 'pointer');
   }
-  return { root, canvas, document, window, controls, ui, requests, activated, toasts, camera, lifecycle, errors, sessionStore, motionPreference,
-    actions, step, emit, pointer, point, key, click, enter, fail, lock, unlock, reader,
+  return { root, canvas, document, window, controls, ui, requests, activated, toasts, camera, lifecycle, errors, sessionStore, localStore, motionPreference,
+    actions, step, emit, pointer, point, key, click, enter, fail, lock, unlock, reader, closeWelcome,
     exitRequests: () => exitRequests, pendingTimers: () => timers.size, pendingFrames: () => frames.size };
 }
+
+test('first-visit guide suspends scene input and rendering, then resumes on the dismissal gesture', async () => {
+  const h = await world({ firstVisit: true });
+  assert.equal(h.root.dataset.mode, 'guide');
+  h.key('KeyE'); h.enter(); h.step();
+  assert.deepEqual(h.activated, []);
+  assert.equal(h.requests.length, 0);
+  assert.equal(h.pendingFrames(), 0);
+  h.closeWelcome(true);
+  assert.equal(h.root.dataset.mode, 'exploring');
+  assert.equal(h.requests.length, 1);
+  assert.equal(h.pendingFrames(), 1);
+  await h.lock();
+  assert.equal(h.root.dataset.inputMode, 'locked');
+});
+
+test('Escape in the welcome guide leaves the directory accessible in the pause menu', async () => {
+  const h = await world({ firstVisit: true });
+  h.closeWelcome(false);
+  assert.equal(h.root.dataset.mode, 'paused');
+  assert.equal(h.requests.length, 0);
+  h.enter();
+  assert.equal(h.requests.length, 1);
+  assert.equal(h.root.dataset.mode, 'exploring');
+});
 
 test('a failed lock uses the visible mouse ray for hover, click, and E; leaving the canvas clears it', async () => {
   const h = await world(); h.enter();
@@ -229,6 +262,24 @@ test('the explicit lock button waits for native success, then centre aim ignores
   h.unlock();
   assert.equal(h.root.dataset.mode, 'paused'); assert.equal(h.root.dataset.inputMode, 'none');
   h.key('KeyE'); assert.deepEqual(h.activated, ['centre']);
+});
+
+test('guide labels default on, remember changes between visits and leave nearby E interactions available', async () => {
+  const key = 'mountain-first-person:preferences';
+  const first = await world({ local: { [key]: JSON.stringify({ quality: 'smooth', sensitivity: 1.3 }) } });
+  const option = first.controls['guide-labels'];
+  assert.equal(option.checked, true);
+  assert.equal(first.ui.guideLabels, true);
+  option.checked = false;
+  first.emit(option, 'change');
+  assert.equal(first.ui.guideLabels, false);
+  const saved = first.localStore.getItem(key);
+  assert.deepEqual(JSON.parse(saved), { quality: 'smooth', sensitivity: 1.3, headBob: false, guideLabels: false });
+  const next = await world({ local: { [key]: saved } });
+  assert.equal(next.controls['guide-labels'].checked, false);
+  assert.equal(next.ui.guideLabels, false);
+  await next.lock(); next.step(); next.key('KeyE');
+  assert.deepEqual(next.activated, ['centre']);
 });
 
 test('fallback dragging has centre aim only during a real drag and never activates on release', async () => {
