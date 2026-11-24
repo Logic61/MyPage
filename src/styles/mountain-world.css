@@ -108,8 +108,6 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
   .mw-hint-touch { display: block !important; line-height: 1.5; }
   .mw-toast { bottom: 190px; width: max-content; max-width: 88%; }
   .mw-interact { font-size: 14px; padding: 10px 13px; }
-  .mw-interact kbd { display: none; }
-  .mw-interact-touch { display: inline; }
   .mw-fallback { padding: 24px; }
   .mw-fallback-copy { max-width: 340px; }
   .mw-fallback-copy > p:not(.mw-eyebrow) { font-size: 15px; }
@@ -117,9 +115,9 @@ html.spatial-home:has(.mountain-world), html.spatial-home:has(.mountain-world) b
 @media (pointer: coarse) {
   .mw-hint-desktop { display: none !important; }
   .mw-hint-touch { display: block !important; }
-  .mw-interact kbd { display: none; }
-  .mw-interact-touch { display: inline; }
 }
+.mountain-world[data-touch="true"] .mw-interact kbd { display: none; }
+.mountain-world[data-touch="true"] .mw-interact-touch { display: inline; }
 @media (prefers-reduced-motion: reduce) {
   .mountain-world *, .mountain-world *::before, .mountain-world *::after { transition-duration: 0s !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }
 }
@@ -302,8 +300,7 @@ dialog.mw-settings { position: fixed; inset: max(66px,10vh) max(16px,4vw) auto a
 .mw-immersive-option { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 4px; pointer-events: auto; cursor: pointer; white-space: nowrap; }
 .mw-immersive-option input { accent-color: var(--mw-gold); width: 14px; height: 14px; }
 .mw-immersive-option svg, .mw-interact > svg, .mw-stand > svg { display: none; }
-.mountain-world[data-immersive="true"]:is([data-mode="exploring"],[data-mode="transition"],[data-mode="falling"]) :is(.mw-header,.mw-hud,.mw-waymarks,.mw-interact,.mw-stand,.mw-toast,.mw-jump) { display: none; }
-.mountain-world[data-immersive="true"][data-state="ready"][data-mode="exploring"] .mw-reticle { visibility: hidden; }
+.mountain-world[data-immersive="true"]:is([data-mode="exploring"],[data-mode="transition"],[data-mode="falling"]) :is(.mw-header,.mw-hud,.mw-waymarks,.mw-stand,.mw-toast,.mw-jump) { display: none; }
 @media (max-width: 740px) {
   .mw-immersive-option { position: relative; min-width: 36px; justify-content: center; }
   .mw-immersive-option svg { display: block; }
@@ -313,7 +310,7 @@ dialog.mw-settings { position: fixed; inset: max(66px,10vh) max(16px,4vw) auto a
 }
 /* Touch has no Escape key. Keep an icon to leave immersion and the physical action buttons. */
 .mountain-world[data-immersive="true"][data-mode="exploring"][data-touch="true"] .mw-header { display: flex; justify-content: flex-end; }
-.mountain-world[data-immersive="true"][data-mode="exploring"][data-touch="true"] :is(.mw-brand,.mw-tools > :not(.mw-immersive-option),.mw-immersive-option span,.mw-jump span,.mw-jump kbd,.mw-interact span,.mw-interact kbd,.mw-stand span,.mw-stand kbd) { display: none; }
+.mountain-world[data-immersive="true"][data-mode="exploring"][data-touch="true"] :is(.mw-brand,.mw-tools > :not(.mw-immersive-option),.mw-immersive-option span,.mw-jump span,.mw-jump kbd,.mw-interact-touch,.mw-stand span,.mw-stand kbd) { display: none; }
 .mountain-world[data-immersive="true"][data-mode="exploring"][data-touch="true"] .mw-immersive-option svg { display: block; }
 .mountain-world[data-immersive="true"][data-mode="exploring"][data-touch="true"] .mw-immersive-option input { position:absolute; width:1px; height:1px; clip-path:inset(50%); }
 .mountain-world[data-immersive="true"][data-mode="exploring"][data-touch="true"] :is(.mw-interact,.mw-stand):not([hidden]),
