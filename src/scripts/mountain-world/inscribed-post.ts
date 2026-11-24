@@ -14,9 +14,13 @@ export function inscribedPost(line: GateLine, radius: number, height: number) {
     const u = vertices[i] / 1194, v = 1 - vertices[i + 1] / 2110;
     const depth = vertices[i + 2] / 255;
     const angle = (u - .5) * 2 * Math.PI;
-    const r = radius * (1 - .07 * v) - .007 * depth;
-    positions.push(r * Math.sin(angle), (v - .5) * height, r * Math.cos(angle));
-    uv.push(u, v);
+    // Raise the shoulders and foot of the shaft without stretching the brush strokes.
+    const carvedHeight = 2.11;
+    const aboveFoot = v === 0 || v === 1 ? v * height : v * carvedHeight + .30 * (height - carvedHeight);
+    const woodV = aboveFoot / height;
+    const r = radius * (1 - .07 * woodV) - .007 * depth;
+    positions.push(r * Math.sin(angle), aboveFoot - height / 2, r * Math.cos(angle));
+    uv.push(u, woodV);
     lightUV.push((column + THREE.MathUtils.clamp((vertices[i] + .5 - 453) / 288, 0, 1)) / 2,
       1 - (vertices[i + 1] + .5) / 2111);
     colours.push(1 - .72 * depth, 1 - .62 * depth, 1 - .5 * depth);

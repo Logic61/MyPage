@@ -2,7 +2,7 @@
 
 The bridge-facing entrance posts carry two vertical inscriptions in [Zhi Mang Xing](https://github.com/googlefonts/zhimangxing) (SIL Open Font License). The cedar shafts and their V-cut strokes share one continuous surface per post. To regenerate the mesh, run `python scripts/sculpt-gate-posts.py path/to/ZhiMangXing-Regular.ttf`. The depth reaches 7 mm in the broad strokes and tapers to zero at the brush tips.
 
-The same script paints the gold-lettered 留云阁 and 摘星留云 nameboards and bakes the pillar light mask from the original glyph outlines. The mask uses a second set of texture coordinates, independent of the cedar grain.
+The same script paints the gold-lettered 留云阁 and 摘星留云 nameboards and bakes the pillar light mask from the original glyph outlines. The mask uses a second set of texture coordinates, independent of the cedar grain. The entrance tablet uses the [generated cedar carving](../../docs/design/cloud-court/cloudrest-nameboard.webp) as its wood face. Its outer contour also defines the solid silhouette in the scene.
 
 `mountain-silk-landscape.webp` is an original image generated for this project's circular landscape screen on 2026-11-22 using ChatGPT's built-in `imagegen` tool. It is a decorative painting texture, not a photograph, scan of a historical work, or rendering of the finished room. No reference image was supplied.
 

@@ -5,6 +5,7 @@ import { hexagonalRing, rectangularRing, tiledRoof } from './tiled-roof';
 import { NORTH_HALL_RISE } from './hall-terrace';
 import { buildGoSetting } from './go-pavilion';
 import { inscribedPost, type GateLine } from './inscribed-post';
+import gateTabletProfile from '../../assets/cloudrest-nameboard-profile.json';
 
 interface Materials {
   timber: THREE.Material;
@@ -166,18 +167,36 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
       box(gold, 'Fine ochre fillet', x, y - height / 2 + .023, z + sign * depth / 2, width, .018, .026);
     }
   }
-  function plaque(title: string, translation: string, artwork: string, x: number, y: number, z: number, w: number, h: number) {
-    box(m.timber, 'Carved plaque backing', x, y, z, w + .13, h + .12, .14);
-    box(gold, 'Recessed bronze tablet rim', x, y, z + .068, w + .056, h + .054, .019);
-    box(mineral, 'Lacquered tablet bevel', x, y, z + .082, w + .031, h + .03, .025);
+  function plaqueFace(title: string, translation: string, artwork: string, geometry: THREE.BufferGeometry, x: number, y: number, z: number) {
     const plate = drawCanvas(768, 224), ctx = plate.ctx;
     ctx.fillStyle = '#20322e'; ctx.fillRect(0, 0, 768, 224);
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#dfc286';
     ctx.font = en ? '72px Georgia, serif' : '154px KaiTi, STKaiti, serif';
     ctx.fillText(en ? translation : title, 384, 112, 665);
     const face = new THREE.MeshStandardMaterial({ map: plate.texture, roughness: .74 });
-    part(new THREE.PlaneGeometry(w, h), face, title, x, y, z + .096);
+    part(geometry, face, title, x, y, z);
     return surfaceMap(artwork, [face]);
+  }
+  function plaque(title: string, translation: string, artwork: string, x: number, y: number, z: number, w: number, h: number) {
+    box(m.timber, 'Carved plaque backing', x, y, z, w + .13, h + .12, .14);
+    box(gold, 'Recessed bronze tablet rim', x, y, z + .068, w + .056, h + .054, .019);
+    box(mineral, 'Lacquered tablet bevel', x, y, z + .082, w + .031, h + .03, .025);
+    return plaqueFace(title, translation, artwork, new THREE.PlaneGeometry(w, h), x, y, z + .096);
+  }
+  function entranceTablet() {
+    const width = 2.62, height = .545;
+    const shape = new THREE.Shape(gateTabletProfile.map(([u, v]) =>
+      new THREE.Vector2((u - .5) * width, (.5 - v) * height)));
+    const solid = new THREE.ExtrudeGeometry(shape, { depth: .095, bevelSize: .004, bevelThickness: .004, bevelSegments: 2 });
+    const { position, normal, uv } = solid.attributes;
+    for (let i = 0; i < position.count; i++) {
+      const u = THREE.MathUtils.clamp(position.getX(i) / width + .5, 0, 1);
+      const v = THREE.MathUtils.clamp(position.getY(i) / height + .5, 0, 1);
+      // The reverse exposes the same heartwood, without the face inscription.
+      if (normal.getZ(i) < -.7) uv.setXY(i, .20 + .045 * u, .42 + .13 * v);
+      else uv.setXY(i, u, v);
+    }
+    return solid;
   }
   function lantern(x: number, top: number, z: number, s: number) {
     const profiles = [[.13, -.63], [.23, -.60], [.275, -.48], [.268, -.27], [.205, -.17], [.126, -.15]];
@@ -366,22 +385,23 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
       ridge:rectangularRing(sign*7.28,.95,.025,5.93),height:3.10,rise:.59,lift:.21},roofMaterials));
   }
   // Cross the threshold as soon as the bridge opens out onto the main island.
-  const gateZ=13.22;
+  const gateZ=13.22, gateLift=.90;
   // Viewed from the bridge, the first line is on the right and both read downwards.
   for (const x of [-2.00,2.00]) {
     for (const side of [-1,1]) {
       const z=gateZ+side*.43;
       const line = x > 0 ? '青山流云皆入境' : '旧忆新知尽成篇';
-      post(x,z,2.76,.19,side > 0 ? line : undefined);
-      brackets(x,2.71,z,.89,side<0 ? Math.PI : 0);
+      post(x,z,2.76+gateLift,.19,side > 0 ? line : undefined);
+      brackets(x,2.71+gateLift,z,.89,side<0 ? Math.PI : 0);
     }
   }
-  for(const side of [-1,1]) paintedBeam(0,3.00,gateZ+side*.45,4.58,.28,.27);
+  for(const side of [-1,1]) paintedBeam(0,3.00+gateLift,gateZ+side*.45,4.58,.28,.27);
   group.add(tiledRoof({ name:'Southern mountain gate', eave:rectangularRing(0,gateZ,2.99,1.21),
-    ridge:rectangularRing(0,gateZ,1.92,.018),height:3.20,rise:.89,lift:.50,tileWidth:.18,gildedVerge:true },roofMaterials));
-  ridgeCrest(0,gateZ,4.15,1.94,.72);
-  const gateBoard = plaque('留云阁','Cloudrest Pavilion','cloudrest-nameboard.webp',0,2.80,gateZ+.63,2.20,.61);
-  for (const side of [-1,1]) lantern(side*2,2.99,gateZ+.67,.58);
+    ridge:rectangularRing(0,gateZ,1.92,.018),height:3.20+gateLift,rise:.89,lift:.50,tileWidth:.18,gildedVerge:true },roofMaterials));
+  ridgeCrest(0,gateZ,4.15+gateLift,1.94,.72);
+  const gateBoard = plaqueFace('留云阁','Cloudrest Pavilion','cloudrest-cedar-tablet.webp',
+    entranceTablet(),0,2.85+gateLift,gateZ+.588);
+  for (const side of [-1,1]) lantern(side*2,2.99+gateLift,gateZ+.67,.58);
 
   for (const px of [-10.18,10.18]) {
     const pz = 4.92;

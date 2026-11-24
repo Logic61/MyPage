@@ -31,7 +31,8 @@ const stoneRail = loadModule('stone-balustrade',{three});
 const goSetting = loadModule('go-pavilion',{three,'./environment-geometry':shapes});
 const gateData = JSON.parse(fs.readFileSync(new URL('../src/assets/gate-posts.json',import.meta.url),'utf8'));
 const gatePost = loadModule('inscribed-post',{three,'../../assets/gate-posts.json':{default:gateData}});
-const halls = loadModule('timber-halls',{three,'./environment-geometry':shapes,'./tiled-roof':roof,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./go-pavilion':goSetting,'./inscribed-post':gatePost});
+const tabletProfile = JSON.parse(fs.readFileSync(new URL('../src/assets/cloudrest-nameboard-profile.json',import.meta.url),'utf8'));
+const halls = loadModule('timber-halls',{three,'./environment-geometry':shapes,'./tiled-roof':roof,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./go-pavilion':goSetting,'./inscribed-post':gatePost,'../../assets/cloudrest-nameboard-profile.json':{default:tabletProfile}});
 const waterCourt = loadModule('water-court',{});
 const lotus = loadModule('lotus-pond',{three,'./environment-geometry':shapes,'./water-court':waterCourt});
 const paving = loadModule('courtyard-paving',{three,'./environment-geometry':shapes});
@@ -54,7 +55,9 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     await Promise.all([site.ready,furnishings.assetsReady]);
     const first = scene.getObjectByName('青山流云皆入境'), second = scene.getObjectByName('旧忆新知尽成篇');
     assert.ok(first.position.x > 0 && second.position.x < 0);
-    assert.ok(scene.getObjectByName('留云阁').geometry.parameters.width > 2);
+    const tablet = new THREE.Box3().setFromObject(scene.getObjectByName('留云阁'),true);
+    assert.ok(tablet.max.x - tablet.min.x > 2.6 && tablet.max.z - tablet.min.z > .09);
+    assert.ok(tablet.min.y - .29 > 3.17, 'The tablet clears the bridge paving by over 3.17 metres');
     assert.ok(scene.getObjectByName('摘星留云').geometry.parameters.width > 3);
     for (const pillar of [first, second]) {
       assert.equal(pillar.material.map, cedar.map);
@@ -67,11 +70,12 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
         assert.ok(strokeUV.getX(i) >= start && strokeUV.getX(i) <= start + .5);
       const surface = pillar.geometry.attributes.position;
       pillar.updateWorldMatrix(true, false);
+      const height = 2 * (pillar.position.y - .65);
       let deepest = 0, sample;
       for (let i = 0; i < surface.count; i++) {
         const v = new THREE.Vector3().fromBufferAttribute(surface, i);
-        if (Math.abs(v.y) >= 1.05) continue;
-        const depth = .19 * (1 - .07 * (v.y / 2.11 + .5)) - Math.hypot(v.x, v.z);
+        if (Math.abs(v.y) >= height / 2 - .001) continue;
+        const depth = .19 * (1 - .07 * (v.y / height + .5)) - Math.hypot(v.x, v.z);
         assert.ok(depth >= -1e-6, 'The shaft has no raised lettering');
         if (depth > deepest) { deepest = depth; sample = v; }
       }
@@ -266,6 +270,10 @@ test('entrance, hall and mirror-paired roofs share the built courtyard axis',asy
     }
     const [portal] = bounds('Southern mountain gate');
     assert.ok(portal.min.z > 12 && portal.max.z < 14.5,'The portal stands at the stone bridgehead');
+    const bridgeEye = new THREE.Vector3(0, 1.98, 18);
+    const hallSign = root.getObjectByName('摘星留云').getWorldPosition(new THREE.Vector3());
+    const gateView = new THREE.Raycaster(bridgeEye, hallSign.sub(bridgeEye).normalize(), 0, 6);
+    assert.equal(gateView.intersectObject(root, true).length, 0, 'Looking through the gate reveals the hall inscription');
     const pairs=[...['Covered hillside gallery','Six-sided cloud pavilion'].map(name=>bounds(name)),
       [...bounds('Library roof'),...bounds('Instrument hall roof')]];
     for (const pair of pairs) {

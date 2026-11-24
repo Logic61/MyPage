@@ -97,6 +97,39 @@ def nameboard(title, font_path, output, width):
     board.save(output, quality=93, method=6)
 
 
+def entrance_nameboard(root, font_path):
+    """Fit the generated carving and its silhouette to the same front-elevation UVs."""
+    source = np.asarray(Image.open(root / "docs/design/cloud-court/cloudrest-nameboard.webp").convert("RGB"))
+    timber = (source.min(axis=2) < 160).astype("uint8")
+    contours, _ = cv2.findContours(timber, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    contour = max(contours, key=cv2.contourArea)
+    x, y, width, height = cv2.boundingRect(contour)
+    outline = cv2.approxPolyDP(contour, 1.6, True).reshape(-1, 2)
+    profile = np.round((outline - [x, y]) / [width-1, height-1], 5).tolist()
+    (root / "src/assets/cloudrest-nameboard-profile.json").write_text(
+        json.dumps(profile, separators=(",", ":")) + "\n", encoding="utf8")
+
+    # Extend the wood edge under the bevel and distant mip levels so the ivory studio
+    # backdrop cannot leave a pale fringe. Only the profile itself is drawn in the scene.
+    crop = source[y:y+height, x:x+width]
+    outside = cv2.erode(timber, np.ones((5, 5), np.uint8))[y:y+height, x:x+width] == 0
+    from scipy.ndimage import distance_transform_edt
+    nearest = distance_transform_edt(outside, return_distances=False, return_indices=True)
+    board = Image.fromarray(crop[tuple(nearest)])
+    ink = Image.new("L", board.size)
+    font = ImageFont.truetype(font_path, round(height * .75))
+    for i, c in enumerate("留云阁"):
+        left, top, right, bottom = font.getbbox(c)
+        centre = width * (.5 + (i - 1) * .185)
+        ImageDraw.Draw(ink).text((centre-(left+right)/2, height*.53-(top+bottom)/2), c, font=font, fill=255)
+    shadow = Image.new("L", board.size)
+    shadow.paste(ink, (1, 3))
+    board.paste("#40281a", mask=shadow.filter(ImageFilter.GaussianBlur(1.4)))
+    board.paste("#ead096", mask=ink)
+    board.thumbnail((1600, 512), Image.Resampling.LANCZOS)
+    board.save(root / "public/world/cloudrest-cedar-tablet.webp", quality=90, method=6)
+
+
 if __name__ == "__main__":
     font = ImageFont.truetype(sys.argv[1], 232)
     root = Path(__file__).resolve().parents[1]
@@ -107,7 +140,7 @@ if __name__ == "__main__":
         atlas.paste(light, (column * 288, 0))
     art = root / "public/world"
     atlas.save(art / "gate-stroke-light.webp", lossless=True, method=6)
-    nameboard("留云阁", sys.argv[1], art / "cloudrest-nameboard.webp", 1160)
+    entrance_nameboard(root, sys.argv[1])
     nameboard("摘星留云", sys.argv[1], art / "star-hall-nameboard.webp", 1360)
     out = root / "src/assets/gate-posts.json"
     out.write_text(json.dumps(posts, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf8")

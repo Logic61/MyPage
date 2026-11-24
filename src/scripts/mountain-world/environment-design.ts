@@ -346,7 +346,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   const galleryStone = buildCloudGallery(group,library,geometries,materials,colliders);
   buildReedShades(group,library,geometries,materials);
   // Capture the undersides before scenery is batched. Jumping never raycasts the roof tiles.
-  const headPieces = new Set(['Recessed opening head', 'Painted lintel frame', 'Carved plaque backing', 'Recessed central lintel',
+  const headPieces = new Set(['Recessed opening head', 'Painted lintel frame', 'Carved plaque backing', '留云阁', 'Recessed central lintel',
     'Continuous open-gallery bearing beam', 'Visible gallery cross beam', 'Covered walk cross beam',
     'Inner gallery plate', 'Outer gallery plate', 'Weighted roll at the foot of a bamboo blind']);
   const overheads: Overhead[] = [];
