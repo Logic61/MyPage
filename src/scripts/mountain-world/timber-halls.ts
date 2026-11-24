@@ -31,12 +31,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   const cut = lacquer.clone();
   cut.name = 'Chisel-cut cedar posts'; cut.vertexColors = true;
   cut.color.set('#9e6046');
-  cut.emissive.set('#b2d9ca'); cut.emissiveIntensity = .09;
-  cut.onBeforeCompile = shader => {
-    // White vertices are untouched cedar. Light is confined to the bottom of each groove.
-    shader.fragmentShader = shader.fragmentShader.replace('#include <emissivemap_fragment>',
-      '#include <emissivemap_fragment>\n totalEmissiveRadiance *= smoothstep(0.02, 0.46, 1.0 - vColor.r);');
-  };
+  cut.emissive.set('#afccbc'); cut.emissiveIntensity = .08;
   const mineral = new THREE.MeshStandardMaterial({ name: 'Deep teal beam ground', color: '#414d45', roughness: .80 });
   const gold = new THREE.MeshStandardMaterial({ name: 'Aged bronze leaf', color: '#d7ad62', metalness: .36, roughness: .46 });
   const glazed = new THREE.MeshStandardMaterial({ name: 'Ash-blue fired pantiles', color: '#b2b7c6', vertexColors: true, roughness: .75, metalness: .045 });
@@ -121,17 +116,23 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     };
     image.onerror = () => resolve(); image.src = assetRoot+'cloud-crane-frieze.webp';
   });
-  async function surfaceMap(name: string, targets: THREE.MeshStandardMaterial[], channel: 'map' | 'normalMap' | 'roughnessMap' = 'map') {
+  async function surfaceMap(name: string, targets: THREE.MeshStandardMaterial[], channel: 'map' | 'normalMap' | 'roughnessMap' | 'emissiveMap' = 'map') {
     const empty = targets.filter(material => !material[channel]);
     if (empty.length) {
-      const neutral = neutralSurfaceMap(channel);
+      const neutral = channel === 'emissiveMap'
+        ? new THREE.DataTexture(new Uint8Array([0,0,0,255]), 1, 1)
+        : neutralSurfaceMap(channel);
+      if (channel === 'emissiveMap') { neutral.channel = 1; neutral.needsUpdate = true; }
       textures.push(neutral);
       for (const material of empty) material[channel] = neutral;
     }
     try {
       const tex = await new THREE.TextureLoader().loadAsync(assetRoot+name);
       if (disposed) { tex.dispose(); return; }
-      tex.colorSpace = channel === 'map' ? THREE.SRGBColorSpace : THREE.NoColorSpace; tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.anisotropy = 4;
+      tex.colorSpace = channel === 'map' || channel === 'emissiveMap' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      if (channel === 'emissiveMap') tex.channel = 1;
+      else tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      tex.anisotropy = 4;
       textures.push(tex);
       for (const material of targets) material[channel] = tex;
     } catch { /* The authored base colour and relief remain usable. */ }
@@ -140,6 +141,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   cut.normalScale.copy(lacquer.normalScale);
   cedar.normalScale.setScalar(.24);
   const surfaceImages = Promise.all([
+    surfaceMap('gate-stroke-light.webp', [cut], 'emissiveMap'),
     surfaceMap('honed-limestone.webp', [m.stone, m.sideStone]),
     surfaceMap('flagstone-normal.webp', [m.stone, m.sideStone], 'normalMap'),
     surfaceMap('lacquer-grain.webp', [lacquer,cedar,jujube,cut]),
@@ -164,18 +166,18 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
       box(gold, 'Fine ochre fillet', x, y - height / 2 + .023, z + sign * depth / 2, width, .018, .026);
     }
   }
-  function plaque(zh: string, english: string, x: number, y: number, z: number, w: number, h: number) {
-    box(m.timber, 'Carved plaque backing', x, y, z, w + .09, h + .09, .115);
+  function plaque(title: string, translation: string, artwork: string, x: number, y: number, z: number, w: number, h: number) {
+    box(m.timber, 'Carved plaque backing', x, y, z, w + .13, h + .12, .14);
+    box(gold, 'Recessed bronze tablet rim', x, y, z + .068, w + .056, h + .054, .019);
+    box(mineral, 'Lacquered tablet bevel', x, y, z + .082, w + .031, h + .03, .025);
     const plate = drawCanvas(768, 224), ctx = plate.ctx;
-    ctx.fillStyle = '#223b35'; ctx.fillRect(0, 0, 768, 224);
-    ctx.strokeStyle = '#bca26c'; ctx.lineWidth = 3; ctx.strokeRect(10, 9, 748, 206);
-    ctx.lineWidth = 1.7; ctx.strokeRect(18, 17, 732, 190);
-    for (const cx of [30, 738]) for (const cy of [29, 195]) { ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.stroke(); }
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#efcf8b';
-    ctx.font = en ? '68px Georgia, serif' : '132px KaiTi, STKaiti, "Courtyard Lettering", "Noto Serif SC", serif';
-    ctx.fillText(en ? english : zh, 384, en ? 119 : 117, 666);
-    const face = new THREE.MeshStandardMaterial({ map: plate.texture, roughness: .7 });
-    part(new THREE.PlaneGeometry(w, h), face, 'Hall name tablet', x, y, z + .061);
+    ctx.fillStyle = '#20322e'; ctx.fillRect(0, 0, 768, 224);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#dfc286';
+    ctx.font = en ? '72px Georgia, serif' : '154px KaiTi, STKaiti, serif';
+    ctx.fillText(en ? translation : title, 384, 112, 665);
+    const face = new THREE.MeshStandardMaterial({ map: plate.texture, roughness: .74 });
+    part(new THREE.PlaneGeometry(w, h), face, title, x, y, z + .096);
+    return surfaceMap(artwork, [face]);
   }
   function lantern(x: number, top: number, z: number, s: number) {
     const profiles = [[.13, -.63], [.23, -.60], [.275, -.48], [.268, -.27], [.205, -.17], [.126, -.15]];
@@ -326,7 +328,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
       box(m.timber,'Raised transom fillet',x,y,-5.65,2.62,.04,.049);
     paintedBeam(x,3.86,-5.76,2.66,.20,.28);
   }
-  plaque('雲 庭 書 齋','Cloud Court Study',0,4.29,doorZ+.18,2.61,.64);
+  const hallBoard = plaque('摘星留云','Gather Stars, Keep Clouds','star-hall-nameboard.webp',0,4.35,doorZ+.18,3.14,.75);
   for (const x of [-3.16,3.16]) lantern(x,4.75,-5.06,.98);
   assembly = group;
   for (const sign of [-1,1]) {
@@ -378,7 +380,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   group.add(tiledRoof({ name:'Southern mountain gate', eave:rectangularRing(0,gateZ,2.99,1.21),
     ridge:rectangularRing(0,gateZ,1.92,.018),height:3.20,rise:.89,lift:.50,tileWidth:.18,gildedVerge:true },roofMaterials));
   ridgeCrest(0,gateZ,4.15,1.94,.72);
-  plaque('雲 庭','Cloud Court',0,2.91,gateZ+.63,1.27,.36);
+  const gateBoard = plaque('留云阁','Cloudrest Pavilion','cloudrest-nameboard.webp',0,2.80,gateZ+.63,2.20,.61);
   for (const side of [-1,1]) lantern(side*2,2.99,gateZ+.67,.58);
 
   for (const px of [-10.18,10.18]) {
@@ -409,12 +411,12 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
     obstacle(lx,lz,.27,.27);
   }
   return {
-    group, ready: Promise.all([ready, surfaceImages]).then(() => {}),
+    group, ready: Promise.all([ready, surfaceImages, gateBoard, hallBoard]).then(() => {}),
     updateGateLight(time: number, eye: THREE.Vector3, reducedMotion: boolean) {
       const distance = Math.hypot(eye.x, eye.z - gateZ);
       const near = 1 - THREE.MathUtils.smoothstep(distance, 2, 11);
       const breath = reducedMotion ? 0 : .034 * Math.sin(time * Math.PI / 3.5);
-      cut.emissiveIntensity = .09 + near * (.26 + breath);
+      cut.emissiveIntensity = .08 + near * (.22 + breath);
     },
     dispose() { disposed = true; textures.forEach(texture => texture.dispose()); },
   };

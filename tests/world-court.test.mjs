@@ -54,9 +54,17 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     await Promise.all([site.ready,furnishings.assetsReady]);
     const first = scene.getObjectByName('青山流云皆入境'), second = scene.getObjectByName('旧忆新知尽成篇');
     assert.ok(first.position.x > 0 && second.position.x < 0);
+    assert.ok(scene.getObjectByName('留云阁').geometry.parameters.width > 2);
+    assert.ok(scene.getObjectByName('摘星留云').geometry.parameters.width > 3);
     for (const pillar of [first, second]) {
       assert.equal(pillar.material.map, cedar.map);
       assert.equal(pillar.material.transparent, false);
+      assert.equal(pillar.material.emissiveMap.channel, 1);
+      const strokeUV = pillar.geometry.attributes.uv1;
+      assert.equal(strokeUV.count, pillar.geometry.attributes.position.count);
+      const start = pillar === first ? 0 : .5;
+      for (let i = 0; i < gateData[pillar.name].vertices.length / 3; i++)
+        assert.ok(strokeUV.getX(i) >= start && strokeUV.getX(i) <= start + .5);
       const surface = pillar.geometry.attributes.position;
       pillar.updateWorldMatrix(true, false);
       let deepest = 0, sample;

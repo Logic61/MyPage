@@ -42,7 +42,7 @@ function describePlace(x: number, z: number) {
   if (x > 14 && x < 24 && Math.abs(z - 5) <= .95)
     return { name: '东云栈', nameEn: 'East Skywalk', indoor: false };
   if (x >= -6.1 && x <= 6.1 && z >= -10 && z <= -5.8)
-    return { name: '云庭书斋', nameEn: 'Cloud Court Study', indoor: true };
+    return { name: '留云阁', nameEn: 'Cloudrest Pavilion', indoor: true };
   if (x >= -6.1 && x <= -3.2 && z > -5.8 && z <= .6)
     return { name: '藏书小阁', nameEn: 'The library wing', indoor: true };
   if (x >= 3.2 && x <= 6.1 && z > -5.8 && z <= .6)
@@ -228,7 +228,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     const settings = root.querySelector<HTMLDialogElement>('[data-world-settings]')!;
     const settingsButton = root.querySelector<HTMLButtonElement>('[data-world-settings-open]')!;
     let introTimer = 0, hintTimer = 0, resumeAfterSettings = false;
-    const pauseButton = root.querySelector<HTMLButtonElement>('[data-world-pause]')!;
+    const immersive = root.querySelector<HTMLInputElement>('[data-world-immersive]')!;
     const standButton = root.querySelector<HTMLButtonElement>('[data-world-stand]');
     const jumpButton = root.querySelector<HTMLButtonElement>('[data-world-jump]')!;
     const lockButton = root.querySelector<HTMLButtonElement>('[data-world-lock]');
@@ -239,7 +239,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     const bobInput = root.querySelector<HTMLInputElement>('[data-world-bob]')!;
     const guideLabelsInput = root.querySelector<HTMLInputElement>('[data-world-guide-labels]')!;
     qualitySelect.value = coarse ? 'smooth' : 'detail';
-    guideLabelsInput.checked = true;
+    guideLabelsInput.checked = true; immersive.checked = false;
     try {
       const saved = JSON.parse(sessionStorage.getItem(stateKey) || 'null');
       if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.z) && navigation.canWalk(saved.x, saved.z)) {
@@ -258,10 +258,15 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
         if (Number.isFinite(preferences.sensitivity)) sensitivity = THREE.MathUtils.clamp(preferences.sensitivity, 0.4, 1.8);
         headBob = !reducedMotion && preferences.headBob === true;
         guideLabelsInput.checked = preferences.guideLabels !== false;
+        immersive.checked = preferences.immersive === true;
       }
     } catch { /* Storage is optional. */ }
     sensitivityInput.value = String(sensitivity); bobInput.checked = headBob;
-    ui.setWaymarksVisible(guideLabelsInput.checked);
+    function syncGuideVisibility() {
+      root.dataset.immersive = String(immersive.checked);
+      ui.setWaymarksVisible(guideLabelsInput.checked && !immersive.checked);
+    }
+    syncGuideVisibility();
     pipeline.setQuality(qualitySelect.value as RenderQuality);
     root.addEventListener('mountain-mouse-fallback', () => {
       if (mode !== 'exploring' || ui.isOpen() || document.pointerLockElement === canvas) return;
@@ -351,7 +356,6 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
         window.clearTimeout(introTimer); window.clearTimeout(hintTimer);
         delete root.dataset.arriving; hint.hidden = true;
       }
-      pauseButton.hidden = value !== 'exploring';
       if (value !== 'exploring') {
         delete root.dataset.canVault;
         pointerLock.cancel(); look.suspend();
@@ -582,7 +586,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       }
     }, {signal});
     function savePreferences() {
-      try { localStorage.setItem('mountain-first-person:preferences', JSON.stringify({ quality: qualitySelect.value, sensitivity, headBob, guideLabels: guideLabelsInput.checked })); } catch {}
+      try { localStorage.setItem('mountain-first-person:preferences', JSON.stringify({ quality: qualitySelect.value, sensitivity, headBob, guideLabels: guideLabelsInput.checked, immersive: immersive.checked })); } catch {}
     }
     qualitySelect.addEventListener('change', () => {
       pipeline.setQuality(qualitySelect.value as RenderQuality); qualityAdjustments = 0; resetFrameWindow(); savePreferences();
@@ -591,7 +595,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     sensitivityInput.addEventListener('input', () => { sensitivity = Number(sensitivityInput.value); savePreferences(); }, { signal });
     bobInput.addEventListener('change', () => { headBob = bobInput.checked && !reducedMotion; savePreferences(); }, { signal });
     guideLabelsInput.addEventListener('change', () => {
-      ui.setWaymarksVisible(guideLabelsInput.checked);
+      syncGuideVisibility();
       savePreferences();
     }, { signal });
     settingsButton.addEventListener('click', () => {
@@ -609,7 +613,10 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     standButton?.addEventListener('click', () => {
       if (mode === 'exploring' && seatedAt) { standUp(true); canvas!.focus({ preventScroll: true }); }
     }, { signal });
-    pauseButton.addEventListener('click', pause, { signal });
+    immersive.addEventListener('change', () => {
+      syncGuideVisibility(); savePreferences();
+      if (mode === 'exploring') canvas!.focus({ preventScroll: true });
+    }, { signal });
     lockButton?.addEventListener('click', requestLock, { signal });
     document.addEventListener('pointerlockchange', () => {
       const locked = document.pointerLockElement === canvas;
@@ -626,7 +633,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
         look.suspend(); dragLook = true;
         if (wasLocked) relockOnTap = true;
         if (wasLocked && mode === 'exploring') {
-          if (seatedAt) lastSeatUnlock = performance.now();
+          if (seatedAt && !immersive.checked) lastSeatUnlock = performance.now();
           else pause();
         }
         clearDrag(); clearPointer();
@@ -735,7 +742,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       if (settings.open || mode === 'guide') return;
       if (event.code === 'KeyH' && mode === 'exploring' && !hint.hidden) { hint.hidden = true; return; }
       if (ui.isOpen() || event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.ctrlKey || event.metaKey || event.altKey) return;
-      if (event.code === 'Escape' && mode === 'exploring' && seatedAt && (document.pointerLockElement === canvas || performance.now() - lastSeatUnlock < 180)) {
+      if (event.code === 'Escape' && mode === 'exploring' && seatedAt && !immersive.checked && (document.pointerLockElement === canvas || performance.now() - lastSeatUnlock < 180)) {
         if (document.pointerLockElement === canvas) unlock();
         return;
       }

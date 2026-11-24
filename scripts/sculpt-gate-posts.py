@@ -9,7 +9,7 @@ import sys
 
 import cv2
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from scipy.spatial import Delaunay
 
 
@@ -44,15 +44,70 @@ def sculpt(line, font):
         if x % 3 == 0 or y % 3 == 0:
             points.add((int(x), int(y)))
     points = np.asarray(sorted(points), dtype=int)
-    # A V-cut is deepest at the centre of each stroke. The cut tapers out at the tips.
-    depth = np.clip((distance[points[:, 1], points[:, 0]] - 1) / 11, 0, 1)
+    field = np.clip((distance - 1) / 11, 0, 1)
+    # Refine chords that bridge counters or adjacent strokes, using the original glyph as reference.
+    for iteration in range(6):
+        mesh = Delaunay(points)
+        depth = field[points[:, 1], points[:, 0]]
+        if iteration == 5:
+            break
+        tri = mesh.simplices
+        probes = []
+        for weights in ((1/3, 1/3, 1/3), (.5, .5, 0), (.5, 0, .5), (0, .5, .5)):
+            xy = np.rint(np.einsum("ijk,j->ik", points[tri], weights)).astype(int)
+            error = np.abs(depth[tri] @ weights - field[xy[:, 1], xy[:, 0]])
+            probes.extend(xy[error > .19])
+        if not probes:
+            break
+        points = np.unique(np.vstack((points, probes)), axis=0)
     vertices = np.column_stack((points, np.round(depth * 255).astype(int)))
-    triangles = Delaunay(points).simplices[:, ::-1]  # image Y grows downward
-    return {"vertices": vertices.ravel().tolist(), "indices": triangles.ravel().tolist()}
+    triangles = mesh.simplices[:, ::-1]  # image Y grows downward
+    light = np.asarray(mask) * (.78 + .22 * field)
+    return ({"vertices": vertices.ravel().tolist(), "indices": triangles.ravel().tolist()},
+            Image.fromarray(light.astype("uint8")).crop((453, 0, 741, 2111)))
+
+
+def nameboard(title, font_path, output, width):
+    height = 320
+    y, x = np.mgrid[:height, :width]
+    patina = .5 + .28 * np.cos((x / width - .5) * np.pi) + .16 * np.sin(y / height * np.pi)
+    base = np.array([15, 31, 29]) + patina[..., None] * [13, 18, 15]
+    board = Image.fromarray(base.astype("uint8"))
+    draw = ImageDraw.Draw(board)
+    for inset, colour, weight in ((8, "#ad8351", 3), (16, "#70573b", 2)):
+        draw.rectangle((inset, inset, width-1-inset, height-1-inset), outline=colour, width=weight)
+    # Mirrored stepped key-fret corners, linked to the inner fillet.
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            ox, oy = (width-1 if sx < 0 else 0), (height-1 if sy < 0 else 0)
+            corner = [(16,53),(41,53),(41,31),(31,31),(31,42),(56,42),(56,24),(92,24)]
+            draw.line([(ox+sx*a, oy+sy*b) for a,b in corner], fill="#ba9861", width=3)
+    ink = Image.new("L", board.size)
+    font = ImageFont.truetype(font_path, 232)
+    advance = 240
+    for i, c in enumerate(title):
+        left, top, right, bottom = font.getbbox(c)
+        cx = width/2 + (i - (len(title)-1)/2) * advance
+        ImageDraw.Draw(ink).text((cx-(left+right)/2, height/2-(top+bottom)/2), c, font=font, fill=255)
+    shadow = Image.new("L", board.size)
+    shadow.paste(ink, (1, 3))
+    board.paste("#171b17", mask=shadow.filter(ImageFilter.GaussianBlur(1)))
+    gold = np.array([228, 197, 130]) - (y/height)[..., None] * [37, 37, 24]
+    board.paste(Image.fromarray(gold.astype("uint8")), mask=ink)
+    board.save(output, quality=93, method=6)
 
 
 if __name__ == "__main__":
     font = ImageFont.truetype(sys.argv[1], 232)
-    posts = {line: sculpt(line, font) for line in ("青山流云皆入境", "旧忆新知尽成篇")}
-    out = Path(__file__).resolve().parents[1] / "src/assets/gate-posts.json"
+    root = Path(__file__).resolve().parents[1]
+    posts = {}
+    atlas = Image.new("L", (576, 2111))
+    for column, line in enumerate(("青山流云皆入境", "旧忆新知尽成篇")):
+        posts[line], light = sculpt(line, font)
+        atlas.paste(light, (column * 288, 0))
+    art = root / "public/world"
+    atlas.save(art / "gate-stroke-light.webp", lossless=True, method=6)
+    nameboard("留云阁", sys.argv[1], art / "cloudrest-nameboard.webp", 1160)
+    nameboard("摘星留云", sys.argv[1], art / "star-hall-nameboard.webp", 1360)
+    out = root / "src/assets/gate-posts.json"
     out.write_text(json.dumps(posts, ensure_ascii=False, separators=(",", ":")) + "\n", encoding="utf8")

@@ -2,6 +2,8 @@
 
 The bridge-facing entrance posts carry two vertical inscriptions in [Zhi Mang Xing](https://github.com/googlefonts/zhimangxing) (SIL Open Font License). The cedar shafts and their V-cut strokes share one continuous surface per post. To regenerate the mesh, run `python scripts/sculpt-gate-posts.py path/to/ZhiMangXing-Regular.ttf`. The depth reaches 7 mm in the broad strokes and tapers to zero at the brush tips.
 
+The same script paints the gold-lettered 留云阁 and 摘星留云 nameboards and bakes the pillar light mask from the original glyph outlines. The mask uses a second set of texture coordinates, independent of the cedar grain.
+
 `mountain-silk-landscape.webp` is an original image generated for this project's circular landscape screen on 2026-11-22 using ChatGPT's built-in `imagegen` tool. It is a decorative painting texture, not a photograph, scan of a historical work, or rendering of the finished room. No reference image was supplied.
 
 The generated 1254 × 1254 PNG was converted to lossless WebP for delivery (2,503,137 → 1,656,420 bytes). Decoded RGB pixels were checked to be identical. The original generated PNG remains in the image-generation output, outside the repository. The application uses this single WebP as an sRGB, `flipY=true` albedo map on a non-emissive PBR silk material. A procedural Canvas landscape remains visible if local image loading fails.

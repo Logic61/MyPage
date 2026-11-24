@@ -137,6 +137,7 @@ export function createWorldUI(root: HTMLElement, config: WorldConfig, actions: U
       if (currentInteraction !== interaction.id) {
         currentInteraction = interaction.id;
         promptLabel.textContent = en ? interaction.labelEn : interaction.label;
+        prompt.setAttribute('aria-label', promptLabel.textContent);
       }
       prompt.hidden = false;
       if (screen && Number.isFinite(screen.x) && Number.isFinite(screen.y)) {

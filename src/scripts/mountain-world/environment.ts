@@ -287,7 +287,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
         if (!copy.attributes.uv) copy.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(count * 2), 2));
         if (material instanceof THREE.MeshStandardMaterial && material.vertexColors && !copy.attributes.color)
           copy.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array(count * 3).fill(1), 3));
-        for (const name of Object.keys(copy.attributes)) if (!['position', 'normal', 'uv', 'color'].includes(name)) copy.deleteAttribute(name);
+        for (const name of Object.keys(copy.attributes)) if (!['position', 'normal', 'uv', 'uv1', 'color'].includes(name)) copy.deleteAttribute(name);
         return copy;
       });
       const geometry = mergeGeometries(copies, false);

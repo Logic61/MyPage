@@ -69,8 +69,8 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
   document.getElementById = () => ({ textContent: JSON.stringify({ isEn: true, prefix: '', base: '/', posts: [] }) });
   document.exitPointerLock = () => { exitRequests++; };
   const controls = {};
-  for (const name of ['arrival', 'track', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'pause', 'lock', 'stand', 'jump', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob', 'guide-labels']) {
-    controls[name] = name === 'quality' ? new Select() : ['sensitivity', 'bob', 'guide-labels'].includes(name) ? new Input() : new Element();
+  for (const name of ['arrival', 'track', 'hint', 'settings', 'settings-open', 'settings-close', 'entry', 'enter', 'entry-title', 'entry-copy', 'immersive', 'lock', 'stand', 'jump', 'stick', 'stick-thumb', 'quality', 'sensitivity', 'bob', 'guide-labels']) {
+    controls[name] = name === 'quality' ? new Select() : ['sensitivity', 'bob', 'guide-labels', 'immersive'].includes(name) ? new Input() : new Element();
     root.children.set(`[data-world-${name}]`, controls[name]);
   }
   controls.enter.children.set('[data-world-enter-label]', new Element());
@@ -274,12 +274,31 @@ test('guide labels default on, remember changes between visits and leave nearby 
   first.emit(option, 'change');
   assert.equal(first.ui.guideLabels, false);
   const saved = first.localStore.getItem(key);
-  assert.deepEqual(JSON.parse(saved), { quality: 'smooth', sensitivity: 1.3, headBob: false, guideLabels: false });
+  assert.deepEqual(JSON.parse(saved), { quality: 'smooth', sensitivity: 1.3, headBob: false, guideLabels: false, immersive: false });
   const next = await world({ local: { [key]: saved } });
   assert.equal(next.controls['guide-labels'].checked, false);
   assert.equal(next.ui.guideLabels, false);
   await next.lock(); next.step(); next.key('KeyE');
   assert.deepEqual(next.activated, ['centre']);
+});
+
+test('immersive exploration remembers its switch and Escape pauses even when seated', async () => {
+  const h = await world({bench:true});
+  const toggle = h.controls.immersive;
+  assert.equal(toggle.checked, false);
+  toggle.checked = true; h.emit(toggle, 'change');
+  assert.equal(h.root.dataset.immersive, 'true');
+  assert.equal(h.ui.guideLabels, false);
+  assert.equal(h.controls['guide-labels'].checked, true);
+  await h.lock(); h.step(); h.key('KeyE');
+  assert.equal(h.root.dataset.seated, 'true');
+  h.key('Escape');
+  assert.equal(h.root.dataset.mode, 'paused');
+  const key = 'mountain-first-person:preferences';
+  const next = await world({local:{[key]: h.localStore.getItem(key)}});
+  assert.equal(next.controls.immersive.checked, true);
+  next.controls.immersive.checked = false; next.emit(next.controls.immersive,'change');
+  assert.equal(next.ui.guideLabels, true);
 });
 
 test('fallback dragging has centre aim only during a real drag and never activates on release', async () => {
@@ -609,7 +628,7 @@ test('an unsafe entrance uses only a validated neighbour or fails without an unc
 
 test('roofed courtyard wings and outdoor spaces use their matching location and ambience', async () => {
   for (const [x, z, name, indoor] of [
-    [0, -7, '云庭书斋', true], [-4, -2, '藏书小阁', true], [4, -2, '临庭观物', true],
+    [0, -7, '留云阁', true], [-4, -2, '藏书小阁', true], [4, -2, '临庭观物', true],
     [0, -2, '天光水庭', false], [0, 6, '天光水庭', false], [0, 4, '庭中荷池', false], [7, -4, '临云长廊', false],
     [10, 5, '松间露台', false], [1.3, 11, '云山石径', false],
   ]) {
@@ -774,7 +793,7 @@ test('Space jumps once per press and leaves focused controls to the browser', as
   const h = await world();
   h.step(1000);
   const grounded = h.camera.position.y;
-  h.emit(h.window, 'keydown', { code: 'Space', target: h.controls.pause });
+  h.emit(h.window, 'keydown', { code: 'Space', target: h.controls.immersive });
   h.step();
   assert.equal(h.camera.position.y, grounded);
   h.emit(h.window, 'keydown', { code: 'Space', target: h.canvas });

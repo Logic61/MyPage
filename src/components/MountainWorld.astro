@@ -22,10 +22,10 @@ const marks = [
 ];
 ---
 
-<Layout title={isEn ? 'Cloud Court Study · Shane Lorien' : '云庭书斋 · Shane Lorien'} section="home" spatial>
+<Layout title={isEn ? 'Cloudrest Pavilion · Shane Lorien' : '留云阁 · Shane Lorien'} section="home" spatial>
   <div class="mountain-world" data-mountain-world data-state="poster" data-language={isEn ? 'en' : 'zh'}>
-    <main inert id="main-content" class="mw-stage" tabindex="-1" aria-label={isEn ? 'Explore the cloud courtyard' : '探索云庭书斋'}>
-      <canvas id="mountain-canvas" tabindex="0" aria-label={isEn ? 'First-person cloud courtyard. WASD to walk, Shift to run. Space to jump, or vault when facing an open window nearby. Aim with the centre dot and press E or click to interact. Click the scene to lock the mouse again. Escape to pause. On touchscreens use the left stick to walk, drag to look, and tap Jump or Vault.' : '第一人称云庭书斋。WASD 行走，Shift 奔跑，空格跳跃。靠近打开的窗，面向窗洞按空格翻窗。用准心瞄准，按 E 或点击交互。鼠标脱离后点击画面重新锁定。Esc 暂停。触屏使用左侧摇杆行走，拖动环顾，点右侧按钮跳跃或翻窗。'}></canvas>
+    <main inert id="main-content" class="mw-stage" tabindex="-1" aria-label={isEn ? 'Explore the cloud courtyard' : '探索留云阁'}>
+      <canvas id="mountain-canvas" tabindex="0" aria-label={isEn ? 'First-person cloud courtyard. WASD to walk, Shift to run. Space to jump, or vault when facing an open window nearby. Aim with the centre dot and press E or click to interact. Click the scene to lock the mouse again. Escape to pause. On touchscreens use the left stick to walk, drag to look, and tap Jump or Vault.' : '第一人称留云阁。WASD 行走，Shift 奔跑，空格跳跃。靠近打开的窗，面向窗洞按空格翻窗。用准心瞄准，按 E 或点击交互。鼠标脱离后点击画面重新锁定。Esc 暂停。触屏使用左侧摇杆行走，拖动环顾，点右侧按钮跳跃或翻窗。'}></canvas>
       <div class="mw-vignette" aria-hidden="true"></div>
     </main>
 
@@ -41,9 +41,8 @@ const marks = [
       </div>
     </div>
     <header class="mw-header">
-      <a class="mw-brand" href={`${prefix}/`} aria-label={isEn ? 'Cloud Court Study · home' : '云庭书斋 · 首页'}>
-        <span class="mw-seal" aria-hidden="true">山<br />居</span>
-        <span class="mw-brand-type"><strong>{isEn ? 'Cloud Court Study' : '云庭书斋'}</strong><span>SHANE LORIEN</span></span>
+      <a class="mw-brand" href={`${prefix}/`} aria-label={isEn ? 'Cloudrest Pavilion · home' : '留云阁 · 首页'}>
+        <span class="mw-brand-type"><strong>{isEn ? 'Cloudrest Pavilion' : '留云阁'}</strong><span>SHANE LORIEN</span></span>
       </a>
       <nav class="mw-tools" aria-label={isEn ? 'Study controls' : '书斋操作'}>
         <button type="button" class="mw-lock-button" data-world-lock aria-label={isEn ? 'Lock the mouse and aim with the centre dot' : '锁定鼠标，使用中心准心环顾与交互'}><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="5" /><path d="M12 2v4m0 12v4M2 12h4m12 0h4" /></svg><span>{isEn ? 'Lock mouse' : '锁定鼠标'}</span></button>
@@ -54,7 +53,9 @@ const marks = [
         </button>
         <button type="button" data-world-settings-open aria-haspopup="dialog"><Icon name="mdi:cog-outline" /><span>{isEn ? 'Settings' : '设置'}</span></button>
         <button type="button" class="mw-tool-button" data-world-action="reset" aria-label={isEn ? 'Return to Cloudwatch Landing' : '回到候云台'} disabled><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /></svg></button>
-        <button type="button" class="mw-tool-button" data-world-pause aria-label={isEn ? 'Pause exploring' : '暂停探索'} hidden><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 5v14M16 5v14" /></svg></button>
+        <label class="mw-immersive-option"><input type="checkbox" data-world-immersive aria-label={isEn ? 'Immersive mode' : '沉浸体验'} />
+          <Icon name="mdi:image-filter-center-focus" /><span>{isEn ? 'Immersive mode' : '沉浸体验'}</span>
+        </label>
         <a class="mw-language" href={languageHref} lang={isEn ? 'zh-CN' : 'en'} aria-label={isEn ? '中文版本' : 'English version'}>{isEn ? '中' : 'EN'}</a>
       </nav>
     </header>
@@ -97,7 +98,7 @@ const marks = [
     </nav>
     <div class="mw-reticle" data-world-reticle aria-hidden="true"><span></span></div>
     <div class="mw-thumbstick" data-world-stick role="group" aria-label={isEn ? 'Drag to walk' : '拖动摇杆行走'}><span class="mw-thumbstick-ring"></span><span class="mw-thumbstick-knob" data-world-stick-thumb></span></div>
-    <button type="button" class="mw-jump" data-world-jump aria-keyshortcuts="Space">
+    <button type="button" class="mw-jump" data-world-jump aria-keyshortcuts="Space" aria-label={isEn ? 'Jump or vault' : '跳跃或翻窗'}>
       <kbd>{isEn ? 'Space' : '空格'}</kbd>
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4m-5 5 5-5 5 5M5 19h14" /></svg>
       <span class="mw-jump-label">{isEn ? 'Jump' : '跳跃'}</span><span class="mw-vault-label">{isEn ? 'Vault' : '翻窗'}</span>
@@ -107,7 +108,7 @@ const marks = [
       <img src={`${base}/world/immortal-mountains-panorama.webp`} width="2172" height="724" alt="" loading="lazy" decoding="async" />
       <div class="mw-fallback-copy">
         <p class="mw-eyebrow">{isEn ? 'Beyond the clouds' : '云深处，灯尚明'}</p>
-        <h1 id="mw-fallback-title">{isEn ? 'Come in. Stay a while.' : '云庭书斋'}</h1>
+        <h1 id="mw-fallback-title">{isEn ? 'Come in. Stay a while.' : '留云阁'}</h1>
         <p data-world-failure>{isEn ? 'The 3D scene is unavailable in this browser. The writing is still here.' : '此浏览器暂时无法展开三维场景，仍可直接翻阅这里的文字。'}</p>
         <nav aria-label={isEn ? 'Read the site' : '直接阅读'}><a href={`${prefix}/static/`}>{isEn ? 'Static site' : '静态页面'}</a><a href={`${prefix}/blog`}>{isEn ? 'Read the blog' : '翻阅文章'}</a><a href={`${prefix}/projects`}>{isEn ? 'Projects' : '查看项目'}</a><a href={`${prefix}/cv`}>{isEn ? 'About & CV' : '关于我'}</a></nav>
       </div>
@@ -123,8 +124,8 @@ const marks = [
       <button type="button" class="mw-map-button" data-world-action="map"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><path d="m5 9 8-3 10 3 8-3v22l-8 3-10-3-8 3V9Zm8-3v22m10-19v22" /><path d="m9 20 9-6 9 7" stroke-dasharray="2 3" /></svg><span>{isEn ? 'Around here' : '山居小引'}</span></button>
     </footer>
 
-    <button type="button" class="mw-interact" data-world-interaction data-world-action="interact" aria-keyshortcuts="E" hidden><kbd>E</kbd><span data-world-interaction-label></span><span class="mw-interact-touch">{isEn ? 'Tap' : '轻触'}</span></button>
-    <button type="button" class="mw-stand" data-world-stand aria-keyshortcuts="E" hidden><kbd>E</kbd> {isEn ? 'Stand up' : '起身'}</button>
+    <button type="button" class="mw-interact" data-world-interaction data-world-action="interact" aria-keyshortcuts="E" hidden><Icon name="mdi:hand-pointing-up" /><kbd>E</kbd><span data-world-interaction-label></span><span class="mw-interact-touch">{isEn ? 'Tap' : '轻触'}</span></button>
+    <button type="button" class="mw-stand" data-world-stand aria-keyshortcuts="E" aria-label={isEn ? 'Stand up' : '起身'} hidden><Icon name="mdi:arrow-up" /><kbd>E</kbd><span>{isEn ? 'Stand up' : '起身'}</span></button>
     <div class="mw-toast" data-world-toast role="status" hidden></div>
 
     <dialog class="mw-fall" data-world-fall aria-labelledby="fall-message">

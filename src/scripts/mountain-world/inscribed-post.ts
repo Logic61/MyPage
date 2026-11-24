@@ -7,6 +7,8 @@ export type GateLine = keyof typeof carvings;
 export function inscribedPost(line: GateLine, radius: number, height: number) {
   const { vertices, indices } = carvings[line];
   const positions: number[] = [], colours: number[] = [], uv: number[] = [];
+  const lightUV: number[] = [];
+  const column = line === '青山流云皆入境' ? 0 : 1;
   const ends: number[][] = [[], []];
   for (let i = 0; i < vertices.length; i += 3) {
     const u = vertices[i] / 1194, v = 1 - vertices[i + 1] / 2110;
@@ -15,6 +17,8 @@ export function inscribedPost(line: GateLine, radius: number, height: number) {
     const r = radius * (1 - .07 * v) - .007 * depth;
     positions.push(r * Math.sin(angle), (v - .5) * height, r * Math.cos(angle));
     uv.push(u, v);
+    lightUV.push((column + THREE.MathUtils.clamp((vertices[i] + .5 - 453) / 288, 0, 1)) / 2,
+      1 - (vertices[i + 1] + .5) / 2111);
     colours.push(1 - .72 * depth, 1 - .62 * depth, 1 - .5 * depth);
     if (v === 0 || v === 1) ends[v].push(i / 3);
   }
@@ -24,10 +28,12 @@ export function inscribedPost(line: GateLine, radius: number, height: number) {
   for (const [end, ring] of ends.entries()) {
     const centre = positions.length / 3;
     positions.push(0, (end - .5) * height, 0); uv.push(.5, .5); colours.push(1, 1, 1);
+    lightUV.push(0, 0);
     for (const index of ring) {
       const x = positions[index * 3], z = positions[index * 3 + 2];
       positions.push(x, positions[index * 3 + 1], z);
       uv.push(.5 + x / (2 * radius), .5 + z / (2 * radius)); colours.push(1, 1, 1);
+      lightUV.push(0, 0);
     }
     for (let i = 1; i < ring.length; i++) {
       if (end) faces.push(centre, centre + i, centre + i + 1);
@@ -37,6 +43,7 @@ export function inscribedPost(line: GateLine, radius: number, height: number) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geometry.setAttribute('uv1', new THREE.Float32BufferAttribute(lightUV, 2));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colours, 3));
   geometry.setIndex(faces); geometry.computeVertexNormals();
   // On uncut timber use the analytical taper normal; retain the chisel facets inside the strokes.
