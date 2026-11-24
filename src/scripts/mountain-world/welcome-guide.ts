@@ -4,6 +4,8 @@ export function createWelcomeGuide(dialog: HTMLDialogElement, signal: AbortSigna
   const pages = [...dialog.querySelectorAll<HTMLElement>('[data-welcome-page]')];
   const back = dialog.querySelector<HTMLButtonElement>('[data-welcome-back]')!;
   const next = dialog.querySelector<HTMLButtonElement>('[data-welcome-next]')!;
+  const nextLabel = next.querySelector<HTMLElement>('[data-welcome-next-label]')!;
+  const nextTitle = nextLabel.textContent;
   const done = dialog.querySelector<HTMLButtonElement>('[data-welcome-done]')!;
   const progress = dialog.querySelector<HTMLElement>('[data-welcome-progress]')!;
   const scroll = dialog.querySelector<HTMLElement>('[data-welcome-scroll]')!;
@@ -26,7 +28,31 @@ export function createWelcomeGuide(dialog: HTMLDialogElement, signal: AbortSigna
     resume(requestMouse);
   }
   back.addEventListener('click', () => showPage(0), { signal });
-  next.addEventListener('click', () => showPage(1), { signal });
+  let turning = false;
+  next.addEventListener('click', async () => {
+    if (turning) return;
+    turning = true;
+    next.setAttribute('aria-busy', 'true');
+    try {
+      const page = pages[1];
+      loadWelcomeImages(page);
+      const images = [...page.querySelectorAll('img')];
+      if (images.some(img => !img.complete || !img.naturalWidth)) nextLabel.textContent = next.dataset.loading!;
+      await Promise.all(images.map(img => {
+        if (img.complete && !img.naturalWidth) img.src = img.src;
+        return img.decode();
+      }));
+      if (dialog.open && !signal.aborted) {
+        nextLabel.textContent = nextTitle;
+        showPage(1);
+      }
+    } catch {
+      nextLabel.textContent = next.dataset.retry!;
+    } finally {
+      turning = false;
+      next.removeAttribute('aria-busy');
+    }
+  }, { signal });
   done.addEventListener('click', () => dismiss(true), { signal });
   dialog.querySelector('[data-welcome-close]')!.addEventListener('click', () => dismiss(true), { signal });
   dialog.addEventListener('cancel', event => { event.preventDefault(); dismiss(false); }, { signal });

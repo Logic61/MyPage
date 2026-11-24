@@ -163,8 +163,8 @@ const marks = [
       if (hasSeenWelcome()) {
         if (!matchMedia('(pointer: coarse)').matches && canvas.requestPointerLock) mouseLock.start();
       } else {
-        const firstPage = courtyard.querySelector<HTMLElement>('[data-welcome-page="1"]')!;
-        loadWelcomeImages(firstPage, 'low');
+        const guide = courtyard.querySelector<HTMLDialogElement>('[data-world-welcome]')!;
+        loadWelcomeImages(guide, 'low');
       }
       const releaseLock = () => { if (document.pointerLockElement === canvas) document.exitPointerLock(); };
       const pending = new AbortController();

@@ -60,7 +60,10 @@ const photo = (name: string) => `${base}/world/guide-${name}${isEn ? '-en' : ''}
     </span>
     <div class="welcome-controls">
       <button type="button" class="welcome-back" data-welcome-back hidden>{t('上一页', 'Back')}</button>
-      <button type="button" class="welcome-forward" data-welcome-next>{t('下一页', 'Next')} <span aria-hidden="true">→</span></button>
+      <button type="button" class="welcome-forward" data-welcome-next
+        data-loading={t('正在载入实景图…', 'Loading photos…')} data-retry={t('图片未载入，点击重试', 'Photos unavailable · Retry')}>
+        <span data-welcome-next-label>{t('下一页', 'Next')}</span> <span aria-hidden="true">→</span>
+      </button>
       <button type="button" class="welcome-forward" data-welcome-done hidden>{t('开始探索', 'Start exploring')} <span aria-hidden="true">→</span></button>
     </div>
   </footer>
