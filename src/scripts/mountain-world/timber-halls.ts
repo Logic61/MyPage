@@ -31,8 +31,8 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   const jujube = new THREE.MeshStandardMaterial({ name: 'Turned and oiled jujube wood', color: '#cc966b', roughness: .41 });
   const cut = lacquer.clone();
   cut.name = 'Chisel-cut cedar posts'; cut.vertexColors = true;
-  cut.color.set('#9e6046');
-  cut.emissive.set('#afccbc'); cut.emissiveIntensity = .08;
+  cut.color.set('#aa6b50');
+  cut.emissive.set('#c5d6bd'); cut.emissiveIntensity = .18;
   const mineral = new THREE.MeshStandardMaterial({ name: 'Deep teal beam ground', color: '#414d45', roughness: .80 });
   const gold = new THREE.MeshStandardMaterial({ name: 'Aged bronze leaf', color: '#d7ad62', metalness: .36, roughness: .46 });
   const glazed = new THREE.MeshStandardMaterial({ name: 'Ash-blue fired pantiles', color: '#b2b7c6', vertexColors: true, roughness: .75, metalness: .045 });
@@ -58,13 +58,19 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   function turned(name: string, mat: THREE.Material, x: number, y: number, z: number, profile: number[][], sides = 24) {
     return part(new THREE.LatheGeometry(profile.map(([r, h]) => new THREE.Vector2(r, h)), sides), mat, name, x, y, z);
   }
-  function post(x: number, z: number, top: number, radius: number, line?: GateLine) {
+  function timberShaft(x: number, z: number, base: number, top: number, radius: number, line?: GateLine) {
+    const height = top - base, centre = (top + base) / 2;
+    if (line) {
+      const carved = part(inscribedPost(line, radius, height), cut, line, x, centre, z);
+      // Face the centre of the approach bridge so the outer strokes stay in view.
+      carved.rotation.y = Math.atan2(-x, 8);
+    } else part(cylinder, lacquer, 'Lacquered timber pillar', x, centre, z, radius, height, radius);
+  }
+  function post(x: number, z: number, top: number, radius: number) {
     const foot = radius * 1.5;
     box(m.stone, 'Square plinth', x, .385, z, foot * 2, .17, foot * 2);
     turned('Turned stone column shoe', m.stone, x, .465, z, [[foot, 0], [foot, .055], [foot * .83, .08], [foot * .80, .14], [radius * 1.10, .19]]);
-    const height = top - .65, centre = (top + .65) / 2;
-    if (line) part(inscribedPost(line, radius, height), cut, line, x, centre, z);
-    else part(cylinder, lacquer, 'Lacquered timber pillar', x, centre, z, radius, height, radius);
+    timberShaft(x, z, .65, top, radius);
     part(disk, gold, 'Bronze foot band', x, .676, z, radius * 1.02, .029, radius * 1.02);
     obstacle(x, z, foot, foot);
   }
@@ -386,22 +392,44 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
   }
   // Cross the threshold as soon as the bridge opens out onto the main island.
   const gateZ=13.22, gateLift=.90;
+  const gateRadius = .29, gateHalfSpan = 2.10, plinthRadius = .395;
+  const drumProfile = [[.32,0],[.35,.012],[.35,.030],[.324,.045],[.339,.061],[.358,.094],
+    [.362,.12],[.355,.147],[.341,.17],[.316,.19],[.302,.202],[.31,.21],[.31,.23]];
+  const lotusDrum = new THREE.LatheGeometry(drumProfile.map(([r,h]) => new THREE.Vector2(r,h)),128);
+  const drumSurface = lotusDrum.attributes.position;
+  for (let i = 0; i < drumSurface.count; i++) {
+    const x = drumSurface.getX(i), z = drumSurface.getZ(i);
+    const t = THREE.MathUtils.clamp((drumSurface.getY(i) - .045) / .15, 0, 1);
+    const lobe = .5 + .5 * Math.cos(16 * Math.atan2(x,z));
+    const scale = 1 + .027 * Math.sin(Math.PI*t) * Math.pow(lobe,1.2+1.8*t) / Math.hypot(x,z);
+    drumSurface.setXYZ(i, x*scale, drumSurface.getY(i), z*scale);
+  }
+  lotusDrum.computeVertexNormals();
   // Viewed from the bridge, the first line is on the right and both read downwards.
-  for (const x of [-2.00,2.00]) {
+  for (const x of [-gateHalfSpan,gateHalfSpan]) {
     for (const side of [-1,1]) {
       const z=gateZ+side*.43;
       const line = x > 0 ? '青山流云皆入境' : '旧忆新知尽成篇';
-      post(x,z,2.76+gateLift,.19,side > 0 ? line : undefined);
-      brackets(x,2.71+gateLift,z,.89,side<0 ? Math.PI : 0);
+      box(m.sideStone,'Gate plinth tread',x,.35,z,2*plinthRadius,.10,2*plinthRadius);
+      box(m.stone,'Gate plinth cap',x,.443,z,.75,.087,.75);
+      part(lotusDrum,m.stone,'Lotus drum column shoe',x,.486,z);
+      turned('Gate bronze foot ferrule',gold,x,.712,z,[[.31,0],[.31,.016],[.294,.022],[.294,.051],[.30,.055],[.30,.065],[.287,.068]],48);
+      timberShaft(x,z,.73,2.76+gateLift,gateRadius,side > 0 ? line : undefined);
+      turned('Gate column capital',lacquer,x,2.60+gateLift,z,[[.27,0],[.288,.015],[.288,.046],[.305,.068],[.305,.116],[.27,.13]],48);
+      brackets(x,2.73+gateLift,z,1.08,side<0 ? Math.PI : 0);
+      obstacle(x,z,plinthRadius,plinthRadius);
     }
   }
-  for(const side of [-1,1]) paintedBeam(0,3.00+gateLift,gateZ+side*.45,4.58,.28,.27);
+  for(const side of [-1,1]) paintedBeam(0,3.00+gateLift,gateZ+side*.45,4.85,.28,.27);
   group.add(tiledRoof({ name:'Southern mountain gate', eave:rectangularRing(0,gateZ,2.99,1.21),
     ridge:rectangularRing(0,gateZ,1.92,.018),height:3.20+gateLift,rise:.89,lift:.50,tileWidth:.18,gildedVerge:true },roofMaterials));
   ridgeCrest(0,gateZ,4.15+gateLift,1.94,.72);
   const gateBoard = plaqueFace('留云阁','Cloudrest Pavilion','cloudrest-cedar-tablet.webp',
     entranceTablet(),0,2.85+gateLift,gateZ+.588);
-  for (const side of [-1,1]) lantern(side*2,2.99+gateLift,gateZ+.67,.58);
+  for (const side of [-1,1]) {
+    box(lacquer,'Gate lantern hanger',side*gateHalfSpan,3.07+gateLift,gateZ+.72,.11,.095,.51);
+    lantern(side*gateHalfSpan,3.04+gateLift,gateZ+.92,.58);
+  }
 
   for (const px of [-10.18,10.18]) {
     const pz = 4.92;
@@ -436,7 +464,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, obstacle: Ob
       const distance = Math.hypot(eye.x, eye.z - gateZ);
       const near = 1 - THREE.MathUtils.smoothstep(distance, 2, 11);
       const breath = reducedMotion ? 0 : .034 * Math.sin(time * Math.PI / 3.5);
-      cut.emissiveIntensity = .08 + near * (.22 + breath);
+      cut.emissiveIntensity = .18 + near * (.18 + breath);
     },
     dispose() { disposed = true; textures.forEach(texture => texture.dispose()); },
   };

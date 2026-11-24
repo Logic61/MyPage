@@ -55,6 +55,9 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     await Promise.all([site.ready,furnishings.assetsReady]);
     const first = scene.getObjectByName('青山流云皆入境'), second = scene.getObjectByName('旧忆新知尽成篇');
     assert.ok(first.position.x > 0 && second.position.x < 0);
+    const plinths = scene.getObjectsByProperty('name','Gate plinth tread');
+    assert.equal(plinths.length, 4);
+    assert.ok(first.position.x - second.position.x - plinths[0].scale.x > 3.40);
     const tablet = new THREE.Box3().setFromObject(scene.getObjectByName('留云阁'),true);
     assert.ok(tablet.max.x - tablet.min.x > 2.6 && tablet.max.z - tablet.min.z > .09);
     assert.ok(tablet.min.y - .29 > 3.17, 'The tablet clears the bridge paving by over 3.17 metres');
@@ -70,19 +73,32 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
         assert.ok(strokeUV.getX(i) >= start && strokeUV.getX(i) <= start + .5);
       const surface = pillar.geometry.attributes.position;
       pillar.updateWorldMatrix(true, false);
-      const height = 2 * (pillar.position.y - .65);
-      let deepest = 0, sample;
+      pillar.geometry.computeBoundingBox();
+      const bounds = pillar.geometry.boundingBox, height = bounds.max.y - bounds.min.y;
+      let radius = 0;
+      for (let i = 0; i < surface.count; i++) {
+        if (surface.getY(i) === bounds.min.y)
+          radius = Math.max(radius, Math.hypot(surface.getX(i), surface.getZ(i)));
+      }
+      assert.ok(Math.abs(2 * radius - .58) < .001);
+      let deepest = 0, sample, strokeBottom = Infinity, strokeTop = -Infinity;
       for (let i = 0; i < surface.count; i++) {
         const v = new THREE.Vector3().fromBufferAttribute(surface, i);
         if (Math.abs(v.y) >= height / 2 - .001) continue;
-        const depth = .19 * (1 - .07 * (v.y / height + .5)) - Math.hypot(v.x, v.z);
+        const depth = radius * (1 - .07 * (v.y / height + .5)) - Math.hypot(v.x, v.z);
         assert.ok(depth >= -1e-6, 'The shaft has no raised lettering');
+        if (depth > .0008) {
+          strokeBottom = Math.min(strokeBottom, v.y);
+          strokeTop = Math.max(strokeTop, v.y);
+        }
         if (depth > deepest) { deepest = depth; sample = v; }
       }
       assert.ok(deepest > .0065 && deepest < .0071, 'The strokes are recessed into the round shaft');
-      const inward = new THREE.Vector3(-sample.x, 0, -sample.z).normalize();
+      const coverage = (strokeTop - strokeBottom) / height;
+      assert.ok(coverage > .76 && coverage < .84, 'The seven-character carving fills about four fifths of the shaft');
+      const inward = new THREE.Vector3(-sample.x, 0, -sample.z).transformDirection(pillar.matrixWorld);
       // Offset from a shared vertex into the neighbouring face before raycasting the whole hall.
-      const origin = sample.clone().add(pillar.position).addScaledVector(inward, -.1);
+      const origin = pillar.localToWorld(sample.clone()).addScaledVector(inward, -.1);
       origin.y += .0001;
       const [hit] = new THREE.Raycaster(origin,inward,0,.11).intersectObject(pillar.parent,true);
       assert.ok(hit?.object === pillar, 'The approach ray hits the carved pillar itself');

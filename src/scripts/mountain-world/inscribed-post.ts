@@ -10,13 +10,18 @@ export function inscribedPost(line: GateLine, radius: number, height: number) {
   const lightUV: number[] = [];
   const column = line === '青山流云皆入境' ? 0 : 1;
   const ends: number[][] = [[], []];
+  // The carving was drawn on unwrapped timber. Use one scale for its width and height.
+  const brushHeight = 2 * Math.PI * radius * 2110 / 1194;
+  const lower = .10, upper = .85;
+  const margins = height - (upper - lower) * brushHeight;
+  const footMargin = margins * .42;
   for (let i = 0; i < vertices.length; i += 3) {
     const u = vertices[i] / 1194, v = 1 - vertices[i + 1] / 2110;
     const depth = vertices[i + 2] / 255;
     const angle = (u - .5) * 2 * Math.PI;
-    // Raise the shoulders and foot of the shaft without stretching the brush strokes.
-    const carvedHeight = 2.11;
-    const aboveFoot = v === 0 || v === 1 ? v * height : v * carvedHeight + .30 * (height - carvedHeight);
+    let aboveFoot = footMargin + (v - lower) * brushHeight;
+    if (v < lower) aboveFoot = v / lower * footMargin;
+    if (v > upper) aboveFoot = height - (1 - v) / (1 - upper) * (margins - footMargin);
     const woodV = aboveFoot / height;
     const r = radius * (1 - .07 * woodV) - .007 * depth;
     positions.push(r * Math.sin(angle), aboveFoot - height / 2, r * Math.cos(angle));
