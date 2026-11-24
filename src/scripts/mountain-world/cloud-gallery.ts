@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 import { architecturalBlock } from './environment-geometry';
+import { GALLERY } from './hall-terrace';
 import type { SurfaceLibrary } from './materials';
 import type { Collider } from './types';
 
@@ -68,7 +69,7 @@ function fernCrown() {
 
 export function buildCloudGallery(parent: THREE.Group, library: SurfaceLibrary, geometries:Set<THREE.BufferGeometry>,
   materials:Set<THREE.Material>, colliders:Collider[]) {
-  const group=new THREE.Group();group.name='West cliff gallery';parent.add(group);
+  const group=new THREE.Group();group.name='Cloudside gallery joinery and scholar stone';parent.add(group);
   const own=<T extends THREE.Material>(m:T)=>{materials.add(m);return m;};
   const keep=<T extends THREE.BufferGeometry>(g:T)=>{geometries.add(g);return g;};
   const stone=own(library.material('limestone',{color:'#d5d0b9',worldScale:1.4,normalScale:.34,roughness:.89}));
@@ -84,24 +85,24 @@ export function buildCloudGallery(parent: THREE.Group, library: SurfaceLibrary, 
   const plinth=keep(architecturalBlock(.354,.105,.354,.015));
   const shoe=keep(new THREE.LatheGeometry([[.162,0],[.163,.044],[.126,.118],[.147,.146],[.159,.159],[.151,.177],[.118,.193]]
     .map(([r,h])=>new THREE.Vector2(r,h)),16));
-  const shaft=keep(new THREE.CylinderGeometry(.098,.112,2.255,20));
+  const shaft=keep(new THREE.CylinderGeometry(.104,.12,2.465,24));
   const ankle=keep(new THREE.CylinderGeometry(.120,.120,.030,20));
   const shoulder=new THREE.Shape();
   shoulder.moveTo(0,0); shoulder.lineTo(.37,0); shoulder.quadraticCurveTo(.325,-.09,.225,-.09);
   shoulder.bezierCurveTo(.22,-.16,.155,-.155,.116,-.142);shoulder.quadraticCurveTo(.10,-.202,0,-.218);shoulder.closePath();
   const bracket=keep(new THREE.ExtrudeGeometry(shoulder,{depth:.077,bevelEnabled:true,bevelSize:.004,bevelThickness:.004,bevelSegments:1,curveSegments:4}));
-  for(const along of [-5.65,-1.8,2,7.55]){
-    place(plinth,stone,'Stone shoe of a round gallery column',-8.28,.3525,along);
-    place(shoe,stone,'Carved collar on the west gallery pier',-8.28,.405,along);
-    place(shaft,cedar,'Tapered cedar gallery column',-8.28,1.7255,along);
-    place(ankle,ochre,'Cedar basal moulding',-8.28,.611,along);
+  for (const postX of [-GALLERY.outerPost,GALLERY.outerPost]) for (const along of GALLERY.bents) {
+    place(plinth,stone,'Stone shoe of a round gallery column',postX,.3525,along);
+    place(shoe,stone,'Carved collar on the gallery pier',postX,.405,along);
+    place(shaft,cedar,'Tapered cedar gallery column',postX,1.8305,along);
+    place(ankle,ochre,'Cedar basal moulding',postX,.611,along);
     for(const side of [-1,1]){
-      const top=place(bracket,cedar,'Scroll-cut timber shoulder',-8.28-side*.0385,2.80,along);
+      const top=place(bracket,cedar,'Scroll-cut timber shoulder',postX-side*.0385,3.01,along);
       top.rotation.y=side*Math.PI/2;
-      const rim=place(bracket,ochre,'Recessed apron below the gallery plate',-8.28-side*.049,2.76,along);
+      const rim=place(bracket,ochre,'Recessed apron below the gallery plate',postX-side*.049,2.97,along);
       rim.rotation.y=side*Math.PI/2;rim.scale.set(.71,.80,1.12);
     }
-    colliders.push({x:-8.28,z:along,halfX:.177,halfZ:.177});
+    colliders.push({x:postX,z:along,halfX:.177,halfZ:.177});
   }
 
   const x=-6.64,z=-1.87,w=.71,h=.25,d=1.86, rim=.072;

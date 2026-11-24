@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { architecturalBlock } from './environment-geometry';
 import { stoneBalustrade } from './stone-balustrade';
 import { createStoneBeacon } from './court-beacon';
-import { SUN_DAIS } from './hall-terrace';
+import { EAST_BRIDGE, SUN_DAIS } from './hall-terrace';
 import type { SurfaceLibrary } from './materials';
 import type { createFloorFinishes } from './courtyard-paving';
 import type { Collider } from './types';
@@ -113,7 +113,7 @@ export function buildCliffCrossings(
     place(group,block,palette.stone,0,-.035,0,width,.42,length);
     const edge=walkingWidth/2, margin=east ? .10 : .17, bed={z0:-length/2,z1:length/2};
     place(group,block,slate,0,.238,0,walkingWidth,.122,length);
-    floors.flags(group,{...bed,x0:-edge+margin,x1:edge-margin},east ? .40 : .54,east ? .98 : 1.46,[],'field',.308);
+    floors.flags(group,{...bed,x0:-edge+margin,x1:edge-margin},east ? .48 : .54,east ? 1.28 : 1.46,[],'field',.308);
     for(const x0 of [-edge,edge-margin])
       floors.flags(group,{...bed,x0,x1:x0+margin},1.18,margin,[],'border',.308);
     // Build each full-width spandrel around a real elliptical void.
@@ -208,9 +208,11 @@ export function buildCliffCrossings(
   cliff(0,34,4.2,.39);
   cliff(SUN_DAIS.x,SUN_DAIS.z,4.3,1.2);
   span(0,23.875,16.25,3.3,false,2);
-  span(18.75,5,10.5,1.9,true,1);
+  const bridgeHalf = EAST_BRIDGE.width / 2;
+  span((EAST_BRIDGE.start + EAST_BRIDGE.end) / 2,EAST_BRIDGE.z,EAST_BRIDGE.end - EAST_BRIDGE.start,EAST_BRIDGE.width,true,1);
+  floors.flags(root,{x0:EAST_BRIDGE.landing,x1:EAST_BRIDGE.start,z0:EAST_BRIDGE.z-bridgeHalf,z1:EAST_BRIDGE.z+bridgeHalf},.55,.56,[],'threshold',.307);
   for (const side of [-1,1]) lantern(side*2.2,31.85);
-  for (const side of [-1,1]) lantern(12.35,5+side*1.59,.89);
+  for (const side of [-1,1]) lantern(12.35,EAST_BRIDGE.z+side*(bridgeHalf+.42),.89);
   const roseWindow=new THREE.Group();roseWindow.position.set(0,0,34);root.add(roseWindow);
   floorRing(roseWindow,slate,2.83,.146,.312);
   floorRing(roseWindow,honeyStone,2.43,.087,.313);
@@ -222,8 +224,9 @@ export function buildCliffCrossings(
     line(side*6.10,13.06,side*6.10,11.17,1,.85,true);
     // The pavilion exit stays open in the middle of each gallery edge.
     line(side*7.8,-7.9,side*12.84,-7.9,3,.91);
-    line(side*12.84,-7.9,side*12.84,3.67,6,.91,true);
-    line(side*12.84,6.34,side*12.84,8.04,1,.91);
+    const opening = side > 0 ? bridgeHalf+.16 : 1.34;
+    line(side*12.84,-7.9,side*12.84,EAST_BRIDGE.z-opening,6,.91,true);
+    line(side*12.84,EAST_BRIDGE.z+opening,side*12.84,8.04,1,.91);
   }
   edge([[-1.80,17.04],[-3.24,16.04],[-4.63,15.09]],.71);
   edge([[1.77,17.22],[3.41,16.87],[4.51,15.43]],.71);

@@ -5,7 +5,7 @@ import { setPoolReflections } from '../src/scripts/mountain-world/water-court.ts
 
 test('pool contacts stay local, freeze on pause, and expire or clear when motion is reduced', () => {
   const material = new MeshPhysicalMaterial();
-  const waves = setPoolReflections(material);
+  const waves = setPoolReflections(material, -7.4);
   const shader = { ...ShaderLib.physical, uniforms: {} };
   material.onBeforeCompile(shader);
   const { poolContactCount: count, poolContacts: contacts } = shader.uniforms;

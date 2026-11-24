@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { GALLERY, PINE_PAVILIONS } from './hall-terrace';
 import type { SurfaceLibrary } from './materials';
 
 /** Split-reed blinds tied across actual openings. Each local Z axis runs along the supporting beam. */
@@ -44,12 +45,16 @@ export function buildReedShades(parent: THREE.Group, library: SurfaceLibrary, ge
       piece(endGrain,cord,'Spiral end grain of the bamboo roll',0,bottom,side*(width/2+.023));
     }
   }
-  for(const [z,width,drop] of [[-3.65,2.08,.65],[.10,1.84,.78],[4.72,1.86,.58]])
-    shade('West gallery reed blind',-8.26,2.77,z,0,width,drop);
+  const drops = [.46,.56,.34];
+  for (let i=0;i<drops.length;i++) {
+    const start = GALLERY.bents[i], end = GALLERY.bents[i+1];
+    shade('West gallery reed blind',-GALLERY.outerPost+.02,2.97,(start+end)/2,0,end-start-.72,drops[i]);
+  }
   // Between the workshop's three inner posts. Both roller edges clear a two-metre visitor on the gallery floor.
   shade('North workshop reed blind',3.20,2.983,-3.02,0,1.97,.48);
   shade('South workshop reed blind',3.20,2.983,-.74,0,2.05,.53);
-  // Two angled faces share the pavilion hexagon's north-west and north-east beams.
-  const midX=1.91*.75,midZ=1.91*Math.sqrt(3)/4;
-  for(const side of [-1,1]) shade('Outlook pavilion reed blind',10.18+side*midX,2.823,4.92-midZ,side*Math.PI/6,1.51,.411);
+  // Reeds behind the seat shelter the western bays; the two eastern bays frame the cloud sea.
+  const {x,z,postCircle,beamY}=PINE_PAVILIONS;
+  for(const side of [-1,1]) shade('Outlook pavilion reed blind',x-postCircle*.75,beamY-.084,
+    z+side*postCircle*Math.sqrt(3)/4,side*Math.PI/6,postCircle-.42,.43);
 }

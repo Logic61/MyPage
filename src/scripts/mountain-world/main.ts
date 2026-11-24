@@ -12,7 +12,7 @@ import { createLandscapeBackdrop } from './landscape-backdrop';
 import type { EntryArt } from './entry-art';
 import { createStudyRenderer, type RenderQuality } from './rendering';
 import { createInteractionPicker, movementDirection, FLOOR_HEIGHT, EYE_HEIGHT, SEATED_EYE_HEIGHT } from './first-person';
-import { walkRiseAt } from './hall-terrace';
+import { EAST_BRIDGE, GALLERY, NORTH_HALL_FRONT, NORTH_HALL_SETBACK, walkRiseAt } from './hall-terrace';
 import { COURTYARD_POOL, poolDepthAt, poolFloorAt, POOL_WATER_Y } from './water-court';
 import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from './look-controls';
 import { createCourtyardMouseLock } from './pointer-lock';
@@ -39,19 +39,23 @@ function describePlace(x: number, z: number) {
     return { name: '渡云桥', nameEn: 'Cloud Crossing', indoor: false };
   if (Math.hypot(x - 26, z - 5) <= 4.3)
     return { name: '日轮台', nameEn: 'Sunwheel Terrace', indoor: false };
-  if (x > 14 && x < 24 && Math.abs(z - 5) <= .95)
+  if (x > EAST_BRIDGE.start && x < EAST_BRIDGE.end && Math.abs(z - EAST_BRIDGE.z) <= EAST_BRIDGE.width / 2)
     return { name: '东云栈', nameEn: 'East Skywalk', indoor: false };
-  if (x >= -6.1 && x <= 6.1 && z >= -10 && z <= -5.8)
+  if (Math.abs(x) <= 6.1 && z >= -10 - NORTH_HALL_SETBACK && z <= NORTH_HALL_FRONT)
     return { name: '留云阁', nameEn: 'Cloudrest Pavilion', indoor: true };
+  if (Math.abs(x) <= 6.1 && z > NORTH_HALL_FRONT && z <= -5.8)
+    return { name: '堂前月台', nameEn: 'Hall terrace', indoor: false };
   if (x >= -6.1 && x <= -3.2 && z > -5.8 && z <= .6)
     return { name: '藏书小阁', nameEn: 'The library wing', indoor: true };
   if (x >= 3.2 && x <= 6.1 && z > -5.8 && z <= .6)
     return { name: '临庭观物', nameEn: 'The courtyard workroom', indoor: true };
-  if (Math.abs(x) >= 6.1 && Math.abs(x) <= 8.4 && z >= -8.2 && z <= 7.5)
+  if (Math.abs(x) >= (z > .6 ? 6.35 : GALLERY.wall) && Math.abs(x) <= GALLERY.outerFloor && z >= GALLERY.north && z <= GALLERY.south)
     return { name: '临云长廊', nameEn: 'The cloudside gallery', indoor: false };
   if ((Math.abs(x) <= 3.2 && z > -5.8 && z <= .6) || (Math.abs(x) < 6.35 && z > .6 && z <= 8.4))
     return { name: '天光水庭', nameEn: 'The sunlit water court', indoor: false };
-  if (Math.abs(x) > 8.4 && z >= -8.2 && z <= 8.5)
+  if (z > 8.4 && z <= 13.17 && Math.abs(x) <= (z <= 9.58 ? 9.48 : 6.27))
+    return { name: '山门前庭', nameEn: 'The entrance terrace', indoor: false };
+  if (Math.abs(x) >= (z > GALLERY.south ? 6.35 : 7.36) && z >= -8.2 && z <= 8.5)
     return { name: '松间露台', nameEn: 'The pine terrace', indoor: false };
   return { name: '云山石径', nameEn: 'The cloud mountain path', indoor: false };
 }

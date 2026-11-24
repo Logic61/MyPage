@@ -1,16 +1,14 @@
 import * as THREE from 'three';
 import { createLotusPlanting } from './lotus-pond';
-import { COURTYARD_POOL, POOL_BED_Y, POOL_COPING_Y, POOL_WATER_Y, setPoolReflections } from './water-court';
+import { COURTYARD_POOL, FORECOURT_PLANTER, POOL_BED_Y, POOL_COPING_Y, POOL_WATER_Y, setPoolReflections } from './water-court';
 import { createFloorFinishes } from './courtyard-paving';
 import { buildTimberHalls } from './timber-halls';
 import { buildCloudGallery } from './cloud-gallery';
 import { buildReedShades } from './reed-shades';
-import { HALL_STEPS, NORTH_HALL_RISE } from './hall-terrace';
+import { EAST_BRIDGE, GALLERY, HALL_STEPS, NORTH_HALL_FRONT, NORTH_HALL_RISE, NORTH_HALL_SETBACK } from './hall-terrace';
 import { architecturalBlock, gridSurface } from './environment-geometry';
 import type { SurfaceLibrary } from './materials';
 import type { Collider, Overhead, WalkArea } from './types';
-
-export const FORECOURT_PLANTER = { x0: -6.09, x1: -5.02, z0: 2.05, z1: 5.35 } as const;
 
 type Rect = { x0: number; x1: number; z0: number; z1: number };
 const mirrorRect = (rect: Rect): Rect => ({ ...rect, x0: -rect.x1, x1: -rect.x0 });
@@ -21,7 +19,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   const group = new THREE.Group(); group.name = 'Cloud court — north study and two open wings'; root.add(group);
   const hallInterior = new THREE.Group();
   hallInterior.name = 'North study on its stone terrace';
-  hallInterior.position.y = NORTH_HALL_RISE;
+  hallInterior.position.set(0, NORTH_HALL_RISE, -NORTH_HALL_SETBACK);
   group.add(hallInterior);
   let assembly = group;
   const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>(), colliders: Collider[] = [];
@@ -50,7 +48,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     color: '#83ada6', vertexColors:true, roughness: .16, metalness: .09, transparent: true, opacity: .60,
     clearcoat: .63, clearcoatRoughness: .18, depthWrite: false, side: THREE.DoubleSide,
   }));
-  const poolWaves = setPoolReflections(waterMaterial);
+  const poolWaves = setPoolReflections(waterMaterial, NORTH_HALL_FRONT);
   const blocks = new Map<string, THREE.BufferGeometry>(), unitCube = keep(new THREE.BoxGeometry(1, 1, 1));
   const vUp = new THREE.Vector3(0, 1, 0);
 
@@ -65,7 +63,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     return add(geometry, material, name, x, y, z);
   }
   function obstacle(x: number, z: number, halfX: number, halfZ: number) {
-    const collider: Collider = { x, z, halfX, halfZ };
+    const collider: Collider = { x, z: z + assembly.position.z, halfX, halfZ };
     colliders.push(collider);
     return collider;
   }
@@ -103,7 +101,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
       if (sill && !isDoor) {
         const latticeInset = opening.lattice ? .15 + Math.min(.37, length * .16) : .07;
         const inset = Math.max(latticeInset, opening.clearInset ?? 0);
-        sill.window = { axis, from: opening.from + inset, to: opening.to - inset,
+        const alongOffset = axis === 'z' ? assembly.position.z : assembly.position.x;
+        sill.window = { axis, from: alongOffset + opening.from + inset, to: alongOffset + opening.to - inset,
           sillTop: opening.bottom + .021 + assembly.position.y, seat: opening.seat };
       }
       for (const p of [opening.from + .035, opening.to - .035]) {
@@ -150,9 +149,9 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
       if (parent!==group) parent.add(bed);
     }
   }
-  function paving(rect: Rect, course: number, length: number, holes: Rect[] = []) {
+  function paving(rect: Rect, course: number, length: number, holes: Rect[] = [], finish: 'field' | 'threshold' | 'border' = 'field') {
     floorBase(rect,holes);
-    floors.flags(group,rect,course,length,holes);
+    floors.flags(group,rect,course,length,holes,finish);
   }
   function timberFloor(rect: Rect, parent: THREE.Object3D = group) {
     floorBase(rect,[],parent);
@@ -164,23 +163,39 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   timberFloor({ x0: -6.1, x1: -3.2, z0: -5.8, z1: .6 });
   timberFloor({ x0: 3.2, x1: 6.1, z0: -5.8, z1: .6 });
   const rim = {x0:COURTYARD_POOL.x0-.16,x1:COURTYARD_POOL.x1+.16,z0:COURTYARD_POOL.z0-.16,z1:COURTYARD_POOL.z1+.16};
-  paving({x0:-6.35,x1:6.35,z0:.6,z1:8.4},.45,1.22,[rim,FORECOURT_PLANTER,mirrorRect(FORECOURT_PLANTER)]);
+  const waterCentre = (COURTYARD_POOL.z0 + COURTYARD_POOL.z1) / 2;
+  // Longer ashlar courses lead out from the pond to the two open pavilion terraces.
+  const north = waterCentre - 1.16, south = waterCentre + 1.16;
+  paving({x0:-6.35,x1:6.35,z0:.6,z1:north},.54,1.40,[rim]);
+  paving({x0:-6.35,x1:6.35,z0:north,z1:south},.58,1.96,[rim],'threshold');
+  paving({x0:-6.35,x1:6.35,z0:south,z1:8.4},.54,1.40,[rim]);
+  // The gateway opens onto a continuous, flush stone apron between the pines.
+  paving({x0:-5.99,x1:5.99,z0:8.4,z1:12.87},.64,1.76,[FORECOURT_PLANTER,mirrorRect(FORECOURT_PLANTER)]);
+  paving({x0:-5.99,x1:5.99,z0:12.87,z1:13.17},.30,1.6,[],'threshold');
   for (const sign of [-1,1]) {
     const side = (r: Rect) => sign < 0 ? r : mirrorRect(r);
-    floors.flags(group,side({x0:-1.98,x1:-1.82,z0:8.4,z1:15.75}),1.18,.16,[],'border');
-    // Side courts continue the gate landing to its stone parapet. The pines root outside the apron.
-    paving(side({x0:-5.99,x1:-1.98,z0:8.40,z1:12.87}),.46,1.35);
-    floors.flags(group,side({x0:-6.27,x1:-5.99,z0:8.40,z1:13.17}),1.12,.28,[],'border');
-    floors.flags(group,side({x0:-5.99,x1:-1.98,z0:12.87,z1:13.17}),.30,1.22,[],'threshold');
-    timberFloor(side({x0:-7.36,x1:-6.1,z0:-6,z1:7.85}));
+    paving(side({x0:-1.98,x1:-1.82,z0:13.17,z1:15.75}),1.18,.16,[],'border');
+    paving(side({x0:-6.27,x1:-5.99,z0:8.4,z1:13.17}),1.12,.28,[],'border');
+    // Shallow stone landings meet the ends of the elm decks beyond the south bank.
+    paving(side({x0:-9.48,x1:-6.35,z0:8.29,z1:8.4}),.11,1.56,[],'threshold');
+    paving(side({x0:-9.48,x1:-6.27,z0:8.4,z1:9.38}),.49,1.60);
+    paving(side({x0:-9.48,x1:-6.27,z0:9.38,z1:9.58}),.20,1.60,[],'border');
+    timberFloor(side({x0:-GALLERY.outerFloor,x1:-GALLERY.wall,z0:GALLERY.north,z1:.6}));
+    timberFloor(side({x0:-GALLERY.outerFloor,x1:-6.35,z0:.6,z1:GALLERY.south}));
+    // Across the open pavilion approach the boards run in the direction of travel.
+    const landing = side({x0:-7.36,x1:-6.35,z0:GALLERY.south,z1:8.29});
+    floorBase(landing);
+    floors.boards(group,landing,true);
   }
-  paving({x0:-3.2,x1:3.2,z0:-5.8,z1:.6},.50,1.40);
-  paving({x0:-1.82,x1:1.82,z0:8.4,z1:15.75},.50,1.38);
+  // A continuous cross-landing separates the side doors from the stairs.
+  paving({x0:-6.1,x1:6.1,z0:NORTH_HALL_FRONT,z1:-5.8},.50,1.40);
+  const flower = {x0:-1.08,x1:1.08,z0:-3.55,z1:-1.39};
+  paving({x0:-3.2,x1:3.2,z0:-5.8,z1:.6},.50,1.40,[flower]);
+  floors.flowerPanel(group,0,(flower.z0+flower.z1)/2,flower.x1-flower.x0);
+  paving({x0:-1.82,x1:1.82,z0:13.17,z1:15.75},.50,1.38);
   for (const x of [-3.2, 3.2]) box(.095, .018, 6.4, x, .294, -2.6, joinery, 'Flush inner-gallery edge board', .002).castShadow = false;
-  box(12.2, .018, .095, 0, .294, -5.8, joinery, 'North study open threshold', .002).castShadow = false;
 
   const waterW = COURTYARD_POOL.x1 - COURTYARD_POOL.x0, waterD = COURTYARD_POOL.z1 - COURTYARD_POOL.z0;
-  const waterCentre = (COURTYARD_POOL.z0 + COURTYARD_POOL.z1) / 2;
   const shallow=new THREE.Color('#c2c9a9'), deep=new THREE.Color('#547d77');
   const waterGeometry = keep(gridSurface(88,82,(u,v) => new THREE.Vector3((u-.5)*waterW,POOL_WATER_Y,(v-.5)*waterD),true,
     (u,v)=>shallow.clone().lerp(deep,THREE.MathUtils.smoothstep(Math.min(u,v,1-u,1-v),0,.38))));
@@ -246,18 +261,21 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   const water=add(waterGeometry,waterMaterial,'Open reflecting pool',0,0,waterCentre);
   water.castShadow=false; water.userData.dynamic=true; water.userData.ignoreInteractionRay=true;
   // Two stronger colonies leave open water on the diagonal between the gate and the hall.
-  lotus.plant(-1.40,2.83,-1,-.37,.97);
-  lotus.plant(-.78,2.52,1,.95,.66);
-  lotus.plant(1.30,4.91,1,-.45,1.08);
-  lotus.plant(.47,5.12,-1,.86,.75);
-  lotus.plant(1.47,2.53,1,.44,.64);
+  lotus.plant(-1.40,COURTYARD_POOL.z0+1.04,-1,-.37,.97);
+  lotus.plant(-.78,COURTYARD_POOL.z0+.73,1,.95,.66);
+  lotus.plant(1.30,COURTYARD_POOL.z0+3.12,1,-.45,1.08);
+  lotus.plant(.47,COURTYARD_POOL.z0+3.33,-1,.86,.75);
+  lotus.plant(1.47,COURTYARD_POOL.z0+.74,1,.44,.64);
   lotus.finish();
   for (const planter of [FORECOURT_PLANTER,mirrorRect(FORECOURT_PLANTER)]) {
     const x=(planter.x0+planter.x1)/2,z=(planter.z0+planter.z1)/2,w=planter.x1-planter.x0,d=planter.z1-planter.z0;
     box(w,.065,d,x,.305,z,soil,'Pine bed',.01);
     for (const side of [-1,1]) {
-      box(.12,.15,d,x+side*(w/2-.06),.36,z,limestone,'Stone planting curb');
-      box(w-.24,.15,.12,x,.36,z+side*(d/2-.06),limestone,'Stone planting curb');
+      const course=d/3;
+      for (let bay=0;bay<3;bay++) {
+        box(.14,.15,course-.007,x+side*(w/2-.07),.367,z-d/2+(bay+.5)*course,limestone,'Dressed pine-bed curb',.012);
+      }
+      box(w-.29,.15,.14,x,.367,z+side*(d/2-.07),limestone,'Dressed pine-bed curb',.012);
     }
     obstacle(x,z,w/2+.01,d/2+.01);
   }
@@ -297,7 +315,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   assembly = group;
   const archivePlaster = own(library.material('plaster', { color: '#f4e5ce', worldScale: .78, roughness: .94, normalScale: .21 }));
   const archiveElm = own(library.material('paleWood', { color: '#bc886a', worldScale: .92, roughness: .76, normalScale: .28 }));
-  const wingDoor = { from: -5.62, to: -4.14, bottom: .3, top: 2.89 };
+  const wingDoor = GALLERY.door;
   function archiveWall(axis: 'x' | 'z', fixed: number, lo: number, hi: number, top: number, door?: Opening) {
     const inward = axis === 'z' ? 1 : -1, face = fixed + inward * .14;
     wall(axis, fixed, lo, hi, top, door ? [door] : [], archivePlaster);
@@ -315,7 +333,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   archiveWall('z',-6.1,-5.8,.6,3.47,wingDoor);
   archiveWall('x',.6,-6.1,-3.2,3.16);
   wall('z',6.1,-5.8,.6,3.47,[
-    wingDoor, {from:-3.12,to:.20,bottom:1.07,top:2.96,lattice:true},
+    wingDoor, {from:-3.12,to:.46,bottom:1.07,top:2.96,lattice:true},
   ]);
   for (const sign of [-1, 1]) {
     // The additional timber cheeks at this opening leave .62 m clear on each side of its centre.
@@ -334,13 +352,13 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   assembly = group;
 
   for (const sign of [-1,1]) {
-    for (const z of [-5.65,-1.8,2,7.55]) {
-      if (sign>0) post(sign*8.28,z,2.82,.16);
-      beam(new THREE.Vector3(sign*6.25,3.07,z),new THREE.Vector3(sign*8.28,2.85,z),.10,.12,'Covered walk cross beam');
+    for (const z of GALLERY.bents) {
+      beam(new THREE.Vector3(sign*GALLERY.innerPost,3.21,z),new THREE.Vector3(sign*GALLERY.outerPost,3.07,z),.12,.16,'Covered walk cross beam');
     }
-    for (const z of [2,7.55]) post(sign*6.25,z,3.04,.16);
-    box(.15,.13,13.42,sign*6.25,3.04,.95,joinery,'Inner gallery plate');
-    box(.17,.16,13.42,sign*8.28,2.85,.95,joinery,'Outer gallery plate');
+    for (const z of [GALLERY.bents[0],GALLERY.bents[3]]) post(sign*GALLERY.innerPost,z,3.19,.16);
+    const span = GALLERY.south-GALLERY.north-.46, midZ = (GALLERY.north+GALLERY.south)/2;
+    box(.17,.16,span,sign*GALLERY.innerPost,3.19,midZ,joinery,'Inner gallery plate');
+    box(.19,.19,span,sign*GALLERY.outerPost,3.06,midZ,joinery,'Outer gallery plate');
   }
   const halls = buildTimberHalls(group, { timber: joinery, stone: limestone, sideStone: sidePaving, plaster, archivePlaster, soffit }, obstacle, en);
   const galleryStone = buildCloudGallery(group,library,geometries,materials,colliders);
@@ -367,23 +385,28 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   });
 
   const walkAreas: WalkArea[] = [
-    { x: 0, z: -7.9, halfX: 6.1, halfZ: 2.1 },
+    { x: 0, z: -7.9 - NORTH_HALL_SETBACK, halfX: 6.1, halfZ: 2.1 },
+    { x: 0, z: -5.8 - NORTH_HALL_SETBACK / 2, halfX: 6.1, halfZ: NORTH_HALL_SETBACK / 2 },
     { x: -4.65, z: -2.6, halfX: 1.45, halfZ: 3.2 },
     { x: 4.65, z: -2.6, halfX: 1.45, halfZ: 3.2 },
     { x: 0, z: -2.6, halfX: 3.2, halfZ: 3.2 },
     { x: 0, z: 4.5, halfX: 6.35, halfZ: 3.9 },
-    { x: 0, z: 8.4, halfX: 1.8, halfZ: .55 },
-    { x: 0, z: 11.00, halfX: 3.65, halfZ: 2.72 },
-    { x: 0, z: 14.25, halfX: 1.8, halfZ: 1.5 },
+    { x: 0, z: (8.20+9.58)/2, halfX: 9.48, halfZ: (9.58-8.20)/2 },
+    { x: 0, z: (8.4+13.17)/2, halfX: 6.27, halfZ: (13.17-8.4)/2 },
+    { x: 0, z: (13.17+15.75)/2, halfX: 1.98, halfZ: (15.75-13.17)/2 },
     { x: 0, z: 23.875, halfX: 1.65, halfZ: 8.125 },
     { x: 0, z: 34, halfX: 4.2, halfZ: 4.2, shape: 'ellipse' },
-    { x: 18.75, z: 5, halfX: 5.25, halfZ: .95 },
+    { x: (EAST_BRIDGE.landing + EAST_BRIDGE.end) / 2, z: EAST_BRIDGE.z, halfX: (EAST_BRIDGE.end - EAST_BRIDGE.landing) / 2, halfZ: EAST_BRIDGE.width / 2 },
     { x: 26, z: 5, halfX: 4.3, halfZ: 4.3, shape: 'ellipse' },
-    { x: -7.25, z: .925, halfX: 1.15, halfZ: 6.925 },
     { x: -10.15, z: .10, halfX: 2.81, halfZ: 8.1 },
-    { x: 7.25, z: .925, halfX: 1.15, halfZ: 6.925 },
     { x: 10.15, z: .10, halfX: 2.81, halfZ: 8.1 },
   ];
+  for (const side of [-1,1]) {
+    walkAreas.push({
+      x:side*(GALLERY.wall+GALLERY.outerFloor)/2, z:(GALLERY.north+GALLERY.south)/2,
+      halfX:(GALLERY.outerFloor-GALLERY.wall)/2, halfZ:(GALLERY.south-GALLERY.north)/2,
+    },{x:side*6.865,z:(GALLERY.south+8.29)/2,halfX:.515,halfZ:(8.29-GALLERY.south)/2});
+  }
   return {
     geometries, materials, colliders, overheads, walkAreas, floors, galleryStone, ready: Promise.all([halls.ready,lotus.ready,floors.ready]).then(()=>{}),
     dispose() { halls.dispose(); lotus.dispose(); floors.dispose(); },

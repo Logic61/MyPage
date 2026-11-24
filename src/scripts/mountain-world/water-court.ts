@@ -1,8 +1,11 @@
 import type { MeshPhysicalMaterial } from 'three';
 
 /** World metres shared by the basin, lanterns, wading surface and printed plan. */
-export const COURTYARD_POOL = { x0: -2.26, x1: 2.26, z0: 1.79, z1: 6.02 } as const;
-export const POOL_LAMP = { postX: 2.72, z: 6.03, northZ: 1.80, approachX: 3.45, approachZ: 6.32 } as const;
+export const COURTYARD_POOL = { x0: -2.26, x1: 2.26, z0: 2.64, z1: 6.87 } as const;
+export const POOL_LAMP = { postX: 2.72, z: COURTYARD_POOL.z1 + .01, northZ: COURTYARD_POOL.z0 + .01,
+  approachX: 3.45, approachZ: COURTYARD_POOL.z1 + .30 } as const;
+/** The second pine island mirrors this western one across the entrance axis. */
+export const FORECOURT_PLANTER = { x0: -5.91, x1: -4.29, z0: 9.32, z1: 11.97 } as const;
 export const POOL_WATER_Y = .257;
 export const POOL_RIPPLE_SPEED = 1.16;
 export const POOL_RIPPLE_START = .10;
@@ -32,7 +35,7 @@ export function poolDepthAt(x: number, z: number, feetY: number) {
 }
 
 /** Reflected silhouettes of the three fixed elevations; the ray follows the viewer and the actual wave normal. */
-export function setPoolReflections(water:MeshPhysicalMaterial) {
+export function setPoolReflections(water:MeshPhysicalMaterial, hallFrontZ: number) {
   const capacity = 6, lifetime = 1.85;
   const pulses = new Float32Array(capacity * 4); // World x, world z, age in seconds, strength.
   const contacts = { value: 0 }, time = { value: 0 };
@@ -85,7 +88,7 @@ export function setPoolReflections(water:MeshPhysicalMaterial) {
       vec3 waterNormal=inverseTransformDirection(normal,viewMatrix);
       vec3 ray=reflect(normalize(vPoolPoint-cameraPosition),waterNormal);
       vec3 echo=vec3(.35,.45,.46);
-      float reach=(-5.8-vPoolPoint.z)/min(ray.z,-.01);
+      float reach=(${hallFrontZ.toFixed(3)}-vPoolPoint.z)/min(ray.z,-.01);
       vec2 wall=vPoolPoint.xy+ray.xy*reach;
       if(ray.z<-.01 && abs(wall.x)<6.35 && wall.y>.90 && wall.y<7.8){
         float column=abs(fract(wall.x/3.12+.5)-.5);

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { gridSurface, seeded } from './environment-geometry';
+import { FORECOURT_PLANTER } from './water-court';
 
 /** The inhabited rim stays true to the walking polygon. Fissures deepen below the cap. */
 export function cragFace(outline: number[][]) {
@@ -128,8 +129,11 @@ export function cliffGarden(spurs: Spur[]) {
     }
   }
   // Wild asters grow in drifts beside the bridge lanterns and in sheltered cracks on the crags.
-  const beds = [[-2.75,.30,32.7,.67],[2.8,.30,32.9,.55],[-4.7,.29,12.7,.93],[5.1,.29,11.3,.8],
-    [-5.55,.36,3.85,.43],[5.56,.36,4.1,.43],[-10.1,.285,10.9,.81],[10.8,.285,10.4,.76],
+  const underPines = (FORECOURT_PLANTER.x0 + FORECOURT_PLANTER.x1) / 2;
+  const beds = [[-2.75,.30,32.7,.67],[2.8,.30,32.9,.55],
+    [underPines-.06,.338,FORECOURT_PLANTER.z0+.62,.41],[-underPines+.13,.338,FORECOURT_PLANTER.z0+.59,.39],
+    [underPines+.12,.338,FORECOURT_PLANTER.z1-.56,.40],[-underPines-.05,.338,FORECOURT_PLANTER.z1-.61,.42],
+    [-10.1,.285,10.9,.81],[10.8,.285,10.4,.76],
     ...spurs.filter((_,i) => i % 3 !== 2).map(s => [s.x,s.y + .07,s.z,s.width * .43])];
   const flower = new THREE.Color('#e8cb82'), sun = new THREE.Color('#f2e4c4'), bud = new THREE.Color('#c69138');
   for (const [cx,cy,cz,radius] of beds) {

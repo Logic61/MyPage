@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { architecturalBlock, seeded } from './environment-geometry';
+import { PINE_PAVILIONS } from './hall-terrace';
 
 const boardWidth = .84;
 const margin = .061;
@@ -45,7 +46,7 @@ function makeBoardFace() {
 
 export function buildGoSetting(parent: THREE.Group, stone: THREE.Material, shadowStone: THREE.Material,
   timber: THREE.Material, bowlWood: THREE.Material, gold: THREE.Material, obstacle: (x: number, z: number, hx: number, hz: number) => void) {
-  const x = -10.18, z = 4.92;
+  const x = -PINE_PAVILIONS.x, z = PINE_PAVILIONS.z;
   const setting = new THREE.Group();
   setting.name = 'West pavilion stone Go table and drum stools';
   setting.position.set(x, .3, z);
@@ -123,7 +124,8 @@ export function buildGoSetting(parent: THREE.Group, stone: THREE.Material, shado
   const drum = profile([[0,0],[.205,0],[.218,.017],[.218,.045],[.196,.064],[.185,.11],
     [.208,.19],[.226,.258],[.223,.306],[.209,.337],[.218,.345],[.218,.38],[.203,.391],[0,.391]]);
   const drumRing = profile([[.215,0],[.22,.004],[.216,.011]]);
-  for (const [dx,dz] of [[0,1.04],[0,-1.04],[1.1,0],[-1.1,0]]) {
+  // Two players face across the board. The observers sit slightly off-axis, clear of the column feet.
+  for (const [dx,dz] of [[0,.92],[0,-.92],[.96,.24],[-.96,-.24]]) {
     set(drum,stone,'Turned limestone drum seat',dx,0,dz);
     for (const h of [.029,.351]) set(drumRing,shadowStone,'Drum seat beaded ring',dx,h,dz);
     obstacle(x+dx,z+dz,.222,.222);

@@ -156,8 +156,44 @@ export function createFloorFinishes(library: SurfaceLibrary, keep: Owner, own: <
     batch.finish(parent,'Radially cut terrace flags',stone,keep);
   }
 
+  /** Four arcs of green stone set into one square flag at the foot of the hall. */
+  function flowerPanel(parent: THREE.Object3D, x: number, z: number, width: number) {
+    const half = width / 2 - .0035;
+    const square = (r: number) => [[-r,-r],[r,-r],[r,r],[-r,r]].map(([u,v]) => new THREE.Vector2(u,v));
+    const flower = (r: number) => Array.from({length:96}, (_, i) => {
+      const a = i * Math.PI / 48;
+      const local = (a + Math.PI / 4) % (Math.PI / 2) - Math.PI / 4;
+      const d = .45 * r, petal = r - d;
+      const reach = d * Math.cos(local) + Math.sqrt(petal ** 2 - (d * Math.sin(local)) ** 2);
+      return new THREE.Vector2(reach * Math.cos(a), reach * Math.sin(a));
+    });
+    const ring = (outer: THREE.Vector2[], hole: THREE.Vector2[]) => {
+      const shape = new THREE.Shape(outer);
+      shape.holes.push(new THREE.Path(hole));
+      return shape;
+    };
+    const rim = square(half-.105), inner = square(half-.13);
+    const petals = flower(.79), heart = flower(.745);
+    const geometry = keep(new THREE.ShapeGeometry([
+      ring(square(half),rim), ring(rim,inner), ring(inner,petals), ring(petals,heart), new THREE.Shape(heart),
+    ]));
+    const surface = geometry.getAttribute('position'), colors = new Float32Array(surface.count * 3);
+    const palette = ['#d0c7b6','#7f8e85','#e8dfcf','#71867d','#ddd7c8'].map(hex => new THREE.Color(hex));
+    for (const group of geometry.groups) {
+      const pigment = palette[group.materialIndex!];
+      for (let i = group.start; i < group.start + group.count; i++)
+        pigment.toArray(colors, 3 * geometry.index!.getX(i));
+    }
+    geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+    geometry.clearGroups();
+    geometry.rotateX(-Math.PI/2);
+    const panel = new THREE.Mesh(geometry,stone);
+    panel.position.set(x,.304,z); panel.name = 'Four-petal stone inlay'; panel.receiveShadow = true;
+    parent.add(panel);
+  }
+
   // A flush six-sided stone inset follows the pavilion columns in the timber terrace.
-  function pavilion(parent: THREE.Object3D, x: number, z: number) {
+  function pavilion(parent: THREE.Object3D, x: number, z: number, radius: number) {
     const paving = new CourseMesh(248);
     const corner = (side: number, r: number): Point => {
       const angle = -side * Math.PI / 3;
@@ -167,8 +203,8 @@ export function createFloorFinishes(library: SurfaceLibrary, keep: Owner, own: <
       const a = corner(side,r), b = corner(side+1,r);
       return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
     };
-    const radii = [.49,1.17,1.76,2.22,2.36];
-    paving.polygon(Array.from({length:6},(_,i)=>corner(i,2.36)),.308,'border');
+    const radii = [.49,1.23,1.90,radius-.16,radius];
+    paving.polygon(Array.from({length:6},(_,i)=>corner(i,radius)),.308,'border');
     paving.polygon(Array.from({length:6},(_,i)=>corner(i,.485)),.316,'field');
     for (let j=1;j<radii.length;j++) {
       const outer = radii[j]-.004, inner = radii[j-1]+.004, blocks = j===1 ? 1 : 2;
@@ -181,5 +217,5 @@ export function createFloorFinishes(library: SurfaceLibrary, keep: Owner, own: <
     paving.finish(parent,'Six-sided inset of dressed pavilion flags',stone,keep);
   }
 
-  return {flags,boards,round,pavilion,ready,dispose(){released=true;for(const texture of textures)texture.dispose();}};
+  return {flags,boards,round,pavilion,flowerPanel,ready,dispose(){released=true;for(const texture of textures)texture.dispose();}};
 }

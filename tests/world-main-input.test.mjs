@@ -628,9 +628,9 @@ test('an unsafe entrance uses only a validated neighbour or fails without an unc
 
 test('roofed courtyard wings and outdoor spaces use their matching location and ambience', async () => {
   for (const [x, z, name, indoor] of [
-    [0, -7, '留云阁', true], [-4, -2, '藏书小阁', true], [4, -2, '临庭观物', true],
-    [0, -2, '天光水庭', false], [0, 6, '天光水庭', false], [0, 4, '庭中荷池', false], [7, -4, '临云长廊', false],
-    [10, 5, '松间露台', false], [1.3, 11, '云山石径', false],
+    [0, -7, '堂前月台', false], [0, -8.6, '留云阁', true], [-4, -2, '藏书小阁', true], [4, -2, '临庭观物', true],
+    [0, -2, '天光水庭', false], [0, 7.5, '天光水庭', false], [0, 4, '庭中荷池', false], [7, -4, '临云长廊', false],
+    [9, -4, '临云长廊', false], [7.8, 4.8, '松间露台', false], [10, 5, '松间露台', false], [1.3, 11, '山门前庭', false],
   ]) {
     const h = await world({ session: { [courtyardStateKey]: JSON.stringify({ x, z }) } });
     h.step(40);
@@ -827,12 +827,13 @@ test('the touch jump button works under the second finger while the walking stic
 });
 
 test('a visitor can walk over the coping, jump from the submerged bed and climb the far bank', async () => {
-  const h = await world({ session: { [courtyardStateKey]: JSON.stringify({ x: 0, z: 6.62, yaw: 0, pitch: 0 }) } });
+  const {z0,z1}=waterCourt.COURTYARD_POOL;
+  const h = await world({ session: { [courtyardStateKey]: JSON.stringify({ x: 0, z: z1+.60, yaw: 0, pitch: 0 }) } });
   const eye = firstPerson.EYE_HEIGHT, shore = firstPerson.FLOOR_HEIGHT + eye;
   assert.equal(h.camera.position.y, shore);
   h.emit(h.window, 'keydown', { code: 'KeyW' });
   const heights = [];
-  while (h.camera.position.z > 4.3 && heights.length < 150) {
+  while (h.camera.position.z > z1-1.72 && heights.length < 150) {
     h.step(); heights.push(h.camera.position.y);
   }
   h.emit(h.window, 'keyup', { code: 'KeyW' });
@@ -848,7 +849,7 @@ test('a visitor can walk over the coping, jump from the submerged bed and climb 
   for (let i=0;i<60;i++) h.step();
   assert.equal(h.camera.position.y,bed);
   h.emit(h.window,'keydown',{code:'KeyW'});
-  for (let i=0;i<150 && h.camera.position.z>1.24;i++) h.step();
+  for (let i=0;i<150 && h.camera.position.z>z0-.55;i++) h.step();
   assert.equal(h.camera.position.y,shore);
   assert.equal(h.root.dataset.mode,'exploring');
 });
@@ -897,7 +898,7 @@ test('a higher stair can catch the feet during ascent and a paused crossing resu
 });
 
 test('wading emits spaced footsteps and a stronger landing, then settles at rest', async () => {
-  const h = await world({ session: { [courtyardStateKey]: JSON.stringify({x:0,z:6.8,yaw:0}) } });
+  const h = await world({ session: { [courtyardStateKey]: JSON.stringify({x:0,z:waterCourt.COURTYARD_POOL.z1+.78,yaw:0}) } });
   h.step(1000);
   h.emit(h.window,'keydown',{code:'KeyW'});
   for (let i=0;i<104;i++) h.step();
@@ -916,7 +917,7 @@ test('wading emits spaced footsteps and a stronger landing, then settles at rest
 });
 
 test('E stirs where the visitor looks and a tap stirs where the finger lands', async () => {
-  const options = { furnished:false, session:{ [courtyardStateKey]:JSON.stringify({x:0,z:6.85,yaw:0,pitch:-.93}) } };
+  const options = { furnished:false, session:{ [courtyardStateKey]:JSON.stringify({x:0,z:waterCourt.COURTYARD_POOL.z1+.83,yaw:0,pitch:-.93}) } };
   const desktop = await world(options);
   desktop.enter(); await desktop.lock(); desktop.step(90);
   assert.equal(desktop.ui.interaction?.id,'water');

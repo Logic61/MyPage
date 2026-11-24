@@ -8,6 +8,7 @@ import { buildCliffCrossings } from './cliff-crossings';
 import { branchWind, buildPines } from './pine-grove';
 import { createStudyArchitecture } from './environment-design';
 import { COURTYARD_POOL } from './water-court';
+import { GALLERY, PINE_PAVILIONS } from './hall-terrace';
 import type { Collider, Environment } from './types';
 
 /** A bright, inhabited mountain courtyard on a continuous level walking plane. */
@@ -132,8 +133,13 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   graniteFaces.push(architecture.galleryStone);
   for (const side of [-1,1]) {
     mesh(cube, wood, side * 10.15, .111, .1, 5.65, .36, 16.4);
-    architecture.floors.boards(root,{x0:side*10.15-2.79,x1:side*10.15+2.79,z0:-8.08,z1:8.29},true);
-    architecture.floors.pavilion(root,side*10.18,4.92);
+    // Join the longitudinal gallery boards at the outer margin. In the open
+    // forecourt the deck runs crosswise towards the pavilions.
+    for (const [inner,z0,z1] of [[7.36,-8.08,GALLERY.north],[GALLERY.outerFloor,GALLERY.north,GALLERY.south],[7.36,GALLERY.south,8.29]]) {
+      const x0 = side < 0 ? -12.94 : inner, x1 = side < 0 ? -inner : 12.94;
+      architecture.floors.boards(root,{x0,x1,z0,z1},true);
+    }
+    architecture.floors.pavilion(root,side*PINE_PAVILIONS.x,PINE_PAVILIONS.z,PINE_PAVILIONS.paving);
     for (const z of [-6.3, -.2, 6.4]) {
       timber(new THREE.Vector3(side * 9.8, -2.4, z), new THREE.Vector3(side * 12.62, -.12, z), .105);
       mesh(block, wood, side * 11, -.17, z, 4.1, .28, .22);

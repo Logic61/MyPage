@@ -1,6 +1,7 @@
 ---
 import FolioGlyph from './FolioGlyph.astro';
-import { COURTYARD_POOL } from '../scripts/mountain-world/water-court';
+import { EAST_BRIDGE, GALLERY, NORTH_HALL_SETBACK, PINE_PAVILIONS } from '../scripts/mountain-world/hall-terrace';
+import { COURTYARD_POOL, FORECOURT_PLANTER } from '../scripts/mountain-world/water-court';
 import { getBlogPosts, postDate, postDescription, postSlug } from '../utils/posts';
 
 interface Props { isEn: boolean; }
@@ -8,6 +9,10 @@ const { isEn } = Astro.props;
 const t = (zh: string, en: string) => isEn ? en : zh;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const prefix = base + (isEn ? '/en' : '');
+const pavilionFootprint = (side: number) => Array.from({length:6}, (_,i) => {
+  const angle = i*Math.PI/3, {x,z,eaves} = PINE_PAVILIONS;
+  return `${side*x+eaves*Math.cos(angle)},${z-eaves*Math.sin(angle)}`;
+}).join(' ');
 const posts = (await getBlogPosts(isEn)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 const categoryOf = (post: typeof posts[number]) => post.data.category || t('手记', 'Notes');
 const categories = [...new Set(posts.map(categoryOf))];
@@ -67,12 +72,22 @@ const places = [
                   <defs><pattern id="hatch" width=".8" height=".8" patternUnits="userSpaceOnUse"><path d="m0 .8.8-.8" stroke="currentColor" stroke-width=".12" opacity=".35"/></pattern></defs>
                   <g fill="none" stroke="currentColor" stroke-width=".2" stroke-linejoin="round">
                     <polygon points="-14.5,-11.7 -7.8,-14.2 .2,-13.2 8.7,-12.4 13.7,-8.4 15,-1.2 14.1,8.3 10.7,12 5.5,14.4 3.6,17.1 -1.1,17.9 -5.1,15.1 -11.4,12 -14.9,6.1 -16,-.8" fill="#c6bfa32b"/>
-                    <path d="M-6.1-10H6.1v4.2H-6.1z" fill="url(#hatch)"/>
-                    <path d="M-6.1-5.62V-5.8H-3.2V.6H-6.1V-4.14 M6.1-5.62V-5.8H3.2V.6H6.1V-4.14" fill="url(#hatch)"><title>{t('两翼侧门通往长廊','Side doors from both wings to the galleries')}</title></path>
-                    <path d="M-6.35.6V8.4h4.5m3.7 0h4.5V.6 M-1.65 8.4v23.7m3.3-23.7v23.7 M13.5 4.05h9.1m-9.1 1.9h9.1"/>
+                    <rect x={-6.1} y={-10 - NORTH_HALL_SETBACK} width="12.2" height="4.2" fill="url(#hatch)"/>
+                    {[-1,1].map(side => <g transform={`scale(${side},1)`}>
+                      <path d={`M6.1 ${GALLERY.door.from}V-5.8H3.2V.6H6.1V${GALLERY.door.to}`} fill="url(#hatch)"><title>{t('两翼侧门通往长廊','Side doors from both wings to the galleries')}</title></path>
+                      <path d={`M6.1 ${GALLERY.north}H${GALLERY.outerFloor}V${GALLERY.south}H6.35`} stroke-width=".12"/>
+                      {GALLERY.bents.map(z => <circle cx={GALLERY.outerPost} cy={z} r=".15" fill="currentColor" stroke="none"/>)}
+                    </g>)}
+                    <path d="M-6.1 11.17v1.89h3.9m4.4 0h3.9v-1.89 M-1.65 15.75V31.9m3.3-16.15V31.9"/>
+                    {[-1,1].map(side => <line x1={EAST_BRIDGE.landing} x2={EAST_BRIDGE.end}
+                      y1={EAST_BRIDGE.z + side*(EAST_BRIDGE.width/2-.11)} y2={EAST_BRIDGE.z + side*(EAST_BRIDGE.width/2-.11)}/>)}
+                    {[FORECOURT_PLANTER.x0,-FORECOURT_PLANTER.x1].map(x => <rect x={x} y={FORECOURT_PLANTER.z0}
+                      width={FORECOURT_PLANTER.x1-FORECOURT_PLANTER.x0} height={FORECOURT_PLANTER.z1-FORECOURT_PLANTER.z0} fill="#87907966">
+                      <title>{t('迎宾台松池','Pine bed on the entrance terrace')}</title>
+                    </rect>)}
                     <path d="M-2.99 12.01h5.98v2.42h-5.98z M-2.99 12.01l1.07 1.21-1.07 1.21m1.07-1.21h3.84l1.07-1.21m-1.07 1.21 1.07 1.21" fill="url(#hatch)"/>
                     <rect x={COURTYARD_POOL.x0} y={COURTYARD_POOL.z0} width={COURTYARD_POOL.x1-COURTYARD_POOL.x0} height={COURTYARD_POOL.z1-COURTYARD_POOL.z0} fill="#8fa99c9c"><title>{t('天光水庭 · 方荷池','Water court · Lotus pond')}</title></rect>
-                    <path d="m-10.15 2.48 2.18 1.26v2.52l-2.18 1.26-2.18-1.26V3.74z M10.15 2.48l2.18 1.26v2.52l-2.18 1.26-2.18-1.26V3.74z"/>
+                    {[-1,1].map(side => <polygon points={pavilionFootprint(side)}><title>{side < 0 ? t('松间棋亭','Go pavilion') : t('临崖小坐','Overlook pavilion')}</title></polygon>)}
                     <circle cx="0" cy="34" r="4.2" fill="url(#hatch)"/>
                     <a href="#sunwheel" data-world-destination="sunwheel" aria-label={t('指路至日轮台','Guide me to Sunwheel Terrace')}>
                       <circle cx="26" cy="5" r="4.3" fill="url(#hatch)"/><circle cx="26" cy="5" r="2.55"/>

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { branchGeometry, gridSurface, seeded } from './environment-geometry';
+import { FORECOURT_PLANTER } from './water-court';
 import type { Collider } from './types';
 
 type Clock = { value: number };
@@ -173,8 +174,10 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
     crown.userData.ignoreInteractionRay = crown.userData.ignoreAmbientOcclusion = true;
     root.add(crown);
   }
-  pine(-5.55,4.0,4.35,1.18,119,.91);
-  pine(5.55,4.0,4.25,-1.06,91,.88);
+  const pineX = (FORECOURT_PLANTER.x0 + FORECOURT_PLANTER.x1) / 2;
+  const pineZ = (FORECOURT_PLANTER.z0 + FORECOURT_PLANTER.z1) / 2;
+  pine(pineX,pineZ,4.35,1.18,119,.91);
+  pine(-pineX,pineZ,4.25,-1.06,91,.88);
   pine(-13.7,3.4,6.05,1.38,13); pine(-11.75,9,5.1,-1.03,42);
   pine(-10.8,-10.4,6.0,-.92,77); pine(10.7,-10.4,5.4,1.16,31);
   pine(13.65,8.4,5.10,.85,108,.90);

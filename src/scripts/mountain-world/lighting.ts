@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { NORTH_HALL_SETBACK } from './hall-terrace';
 
 /** Shared with the offline geometry review; no renderer is needed to create the lights. */
 export function createStudyLighting(scene: THREE.Scene, coarse = false) {
@@ -21,7 +22,7 @@ export function createStudyLighting(scene: THREE.Scene, coarse = false) {
 
   const doorway = new THREE.RectAreaLight(0xe4edf0, 1.65, 9.2, 2.4);
   doorway.name = 'Broad courtyard sky over the north study';
-  doorway.position.set(0, 3.3, -5.3); doorway.lookAt(0, 1.5, -9.6);
+  doorway.position.set(0, 3.3, -5.3 - NORTH_HALL_SETBACK); doorway.lookAt(0, 1.5, -9.6 - NORTH_HALL_SETBACK);
   scene.add(doorway); lights.push(doorway);
 
   const shelfBounce = new THREE.RectAreaLight(0xf4e8d4, 1.8, 3.8, 2.2);
@@ -31,14 +32,14 @@ export function createStudyLighting(scene: THREE.Scene, coarse = false) {
 
   const sideSky = new THREE.RectAreaLight(0xe4edf0, 1.6, 3.8, 2.2);
   sideSky.name = 'Open-court sky in the instrument wing';
-  sideSky.position.set(2.95, 2.7, -2.8); sideSky.lookAt(5.9, 1.4, -2.8);
+  sideSky.position.set(2.95, 2.7, -2.30); sideSky.lookAt(5.9, 1.4, -2.30);
   scene.add(sideSky); lights.push(sideSky);
 
   // A broad, quiet wash gives the silk painting and its timber rim a readable
   // silhouette. The picture remains a reflective surface, not a glowing portal.
   const paintingWash = new THREE.RectAreaLight(0xfff2d8, 1.7, 3.5, 2.1);
   paintingWash.name = 'Soft reflected light over the circular silk painting';
-  paintingWash.position.set(-0.4, 3.45, -7.8); paintingWash.lookAt(-0.5, 2.45, -9.4);
+  paintingWash.position.set(-0.4, 3.45, -7.8 - NORTH_HALL_SETBACK); paintingWash.lookAt(-0.5, 2.45, -9.4 - NORTH_HALL_SETBACK);
   scene.add(paintingWash); lights.push(paintingWash);
 
   return {
