@@ -29,7 +29,9 @@ const three = {...THREE,TextureLoader:class { async loadAsync(){return new THREE
 const roof = loadModule('tiled-roof',{three,'./environment-geometry':shapes});
 const stoneRail = loadModule('stone-balustrade',{three});
 const goSetting = loadModule('go-pavilion',{three,'./environment-geometry':shapes});
-const halls = loadModule('timber-halls',{three,'./environment-geometry':shapes,'./tiled-roof':roof,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./go-pavilion':goSetting});
+const gateData = JSON.parse(fs.readFileSync(new URL('../src/assets/gate-posts.json',import.meta.url),'utf8'));
+const gatePost = loadModule('inscribed-post',{three,'../../assets/gate-posts.json':{default:gateData}});
+const halls = loadModule('timber-halls',{three,'./environment-geometry':shapes,'./tiled-roof':roof,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./go-pavilion':goSetting,'./inscribed-post':gatePost});
 const waterCourt = loadModule('water-court',{});
 const lotus = loadModule('lotus-pond',{three,'./environment-geometry':shapes,'./water-court':waterCourt});
 const paving = loadModule('courtyard-paving',{three,'./environment-geometry':shapes});
@@ -52,8 +54,28 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     await Promise.all([site.ready,furnishings.assetsReady]);
     const first = scene.getObjectByName('青山流云皆入境'), second = scene.getObjectByName('旧忆新知尽成篇');
     assert.ok(first.position.x > 0 && second.position.x < 0);
-    assert.equal(first.geometry.attributes.uv.getX(0), .5);
-    assert.equal(second.geometry.attributes.uv.getX(0), 0);
+    for (const pillar of [first, second]) {
+      assert.equal(pillar.material.map, cedar.map);
+      assert.equal(pillar.material.transparent, false);
+      const surface = pillar.geometry.attributes.position;
+      pillar.updateWorldMatrix(true, false);
+      let deepest = 0, sample;
+      for (let i = 0; i < surface.count; i++) {
+        const v = new THREE.Vector3().fromBufferAttribute(surface, i);
+        if (Math.abs(v.y) >= 1.05) continue;
+        const depth = .19 * (1 - .07 * (v.y / 2.11 + .5)) - Math.hypot(v.x, v.z);
+        assert.ok(depth >= -1e-6, 'The shaft has no raised lettering');
+        if (depth > deepest) { deepest = depth; sample = v; }
+      }
+      assert.ok(deepest > .0065 && deepest < .0071, 'The strokes are recessed into the round shaft');
+      const inward = new THREE.Vector3(-sample.x, 0, -sample.z).normalize();
+      // Offset from a shared vertex into the neighbouring face before raycasting the whole hall.
+      const origin = sample.clone().add(pillar.position).addScaledVector(inward, -.1);
+      origin.y += .0001;
+      const [hit] = new THREE.Raycaster(origin,inward,0,.11).intersectObject(pillar.parent,true);
+      assert.ok(hit?.object === pillar, 'The approach ray hits the carved pillar itself');
+      assert.ok(Math.abs(hit.distance - .1) < .001, 'The first visible surface is the groove floor');
+    }
     const eye = new THREE.Vector3(0, 1.98, 34);
     site.update(0, 0, false, eye);
     const farLight = first.material.emissiveIntensity;

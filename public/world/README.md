@@ -1,6 +1,6 @@
 # Mountain study artwork
 
-The entrance gate carries two vertical inscriptions in [Zhi Mang Xing](https://github.com/googlefonts/zhimangxing) (SIL Open Font License). `gate-couplet-cut.webp` contains just the fourteen rasterized characters and their carved edges. Each panel samples one half of the image for both the cut and its celadon glow.
+The bridge-facing entrance posts carry two vertical inscriptions in [Zhi Mang Xing](https://github.com/googlefonts/zhimangxing) (SIL Open Font License). The cedar shafts and their V-cut strokes share one continuous surface per post. To regenerate the mesh, run `python scripts/sculpt-gate-posts.py path/to/ZhiMangXing-Regular.ttf`. The depth reaches 7 mm in the broad strokes and tapers to zero at the brush tips.
 
 `mountain-silk-landscape.webp` is an original image generated for this project's circular landscape screen on 2026-11-22 using ChatGPT's built-in `imagegen` tool. It is a decorative painting texture, not a photograph, scan of a historical work, or rendering of the finished room. No reference image was supplied.
 
