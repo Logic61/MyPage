@@ -34,13 +34,82 @@ const goSetting = loadModule('go-pavilion',{three,'./environment-geometry':shape
 const gateData = JSON.parse(fs.readFileSync(new URL('../src/assets/gate-posts.json',import.meta.url),'utf8'));
 const gatePost = loadModule('inscribed-post',{three,'../../assets/gate-posts.json':{default:gateData}});
 const tabletProfile = JSON.parse(fs.readFileSync(new URL('../src/assets/cloudrest-nameboard-profile.json',import.meta.url),'utf8'));
-const halls = loadModule('timber-halls',{three,'./environment-geometry':shapes,'./tiled-roof':roof,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./go-pavilion':goSetting,'./inscribed-post':gatePost,'../../assets/cloudrest-nameboard-profile.json':{default:tabletProfile}});
+const lanterns = loadModule('forecourt-lantern',{three,'./environment-geometry':shapes});
+const halls = loadModule('timber-halls',{three,'./environment-geometry':shapes,'./tiled-roof':roof,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./go-pavilion':goSetting,'./inscribed-post':gatePost,'./forecourt-lantern':lanterns,'../../assets/cloudrest-nameboard-profile.json':{default:tabletProfile}});
 const waterCourt = loadModule('water-court',{});
 const lotus = loadModule('lotus-pond',{three,'./environment-geometry':shapes,'./water-court':waterCourt});
 const paving = loadModule('courtyard-paving',{three,'./environment-geometry':shapes});
-const gallery=loadModule('cloud-gallery',{three,'./environment-geometry':shapes,'./hall-terrace':terrace,'three/addons/objects/MarchingCubes.js':{MarchingCubes}});
-const { createStudyArchitecture } = loadModule('environment-design',{three,'./reed-shades':loadModule('reed-shades',{three,'./hall-terrace':terrace}),'./environment-geometry':shapes,'./timber-halls':halls,'./lotus-pond':lotus,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./courtyard-paving':paving,'./water-court':waterCourt,'./cloud-gallery':gallery});
+const foliage = loadModule('woodland-foliage',{three,'./environment-geometry':shapes});
+const understory = loadModule('pine-understory',{three,'./woodland-foliage':foliage,'./environment-geometry':shapes,'./water-court':waterCourt});
+const gallery=loadModule('cloud-gallery',{three,'./environment-geometry':shapes,'./hall-terrace':terrace,'./woodland-foliage':foliage,'three/addons/objects/MarchingCubes.js':{MarchingCubes}});
+const { createStudyArchitecture } = loadModule('environment-design',{three,'./reed-shades':loadModule('reed-shades',{three,'./hall-terrace':terrace}),'./environment-geometry':shapes,'./timber-halls':halls,'./lotus-pond':lotus,'./stone-balustrade':stoneRail,'./hall-terrace':terrace,'./courtyard-paving':paving,'./water-court':waterCourt,'./cloud-gallery':gallery,'./pine-understory':understory});
 const origin = {x:0,z:34};
+
+test('the paired landing lamps share their carvings and expose paper through all six pierced bronze faces', () => {
+  const group=new THREE.Group(), stone=new THREE.MeshStandardMaterial(), bronze=new THREE.MeshStandardMaterial();
+  const collisions=[], paper=lanterns.buildForecourtLanterns(group,stone,bronze,(...box)=>collisions.push(box));
+  group.updateMatrixWorld(true);
+  const [left,right]=group.children;
+  const geometries=new Set(), materials=new Set();
+  group.traverse(part=>{if (part.isMesh) { geometries.add(part.geometry); materials.add(part.material); }});
+  try {
+    assert.deepEqual(collisions,[[-4.94,12.42,.27,.27],[4.94,12.42,.27,.27]]);
+    const footName='Stepped octagonal lantern plinth', foot=left.getObjectByName(footName);
+    assert.equal(foot.geometry,right.getObjectByName(footName).geometry);
+    const bounds=new THREE.Box3().setFromObject(foot,true);
+    assert.equal(bounds.min.y,.30);
+    assert.ok(bounds.max.x-bounds.min.x<=.54 && bounds.max.z-bounds.min.z<=.54);
+    const grilles=left.getObjectsByProperty('name','Pierced ruyi transom');
+    const windows=left.getObjectsByProperty('name','Fibred lantern window');
+    assert.equal(grilles.length,6);
+    assert.equal(windows.length,6);
+    assert.ok(windows[0].material.depthWrite && !windows[0].receiveShadow,
+      'Occlusion uses the paper surface and its lit fibres diffuse directional shadows');
+    const ray=new THREE.Raycaster();
+    for (const [i,grille] of grilles.entries()) {
+      const direction=new THREE.Vector3(0,0,-1).transformDirection(grille.matrixWorld);
+      for (const [x,y] of [[-.025,-.012],[.025,-.012],[-.025,.012],[.025,.012],[0,0]]) {
+        ray.set(grille.localToWorld(new THREE.Vector3(x,y,.06)),direction);
+        assert.equal(ray.intersectObject(grille).length>0,x===0,'The central knot is solid and its four lobes are open');
+        assert.ok(ray.intersectObject(windows[i]).length>0,'The paper sits behind every bronze opening');
+      }
+      assert.equal(windows[i].material.emissiveMap,paper);
+    }
+  } finally {
+    paper.dispose(); geometries.forEach(g=>g.dispose()); materials.forEach(m=>m.dispose());
+  }
+});
+
+test('the cliff spring touches its bed upstream and divides into free-falling veils beyond the lip', () => {
+  const {buildCliffSpring}=loadModule('cliff-spring',{three,'./environment-geometry':shapes,'three/addons/utils/BufferGeometryUtils.js':{mergeGeometries}});
+  const scene=new THREE.Group(), stone=new THREE.MeshStandardMaterial(), resources=[stone];
+  const keep=value=>{resources.push(value);return value;};
+  try {
+    const aerationMap={value:keep(new THREE.Texture())};
+    const clock=buildCliffSpring(scene,stone,keep,keep,aerationMap);
+    const bed=scene.getObjectByName('Wet shelves and hollow at the spring head');
+    const film=scene.getObjectByName('Spring rill and divided waterfall'), drops=scene.getObjectByName('Droplets shed by the waterfall');
+    assert.equal(film.material.uniforms.time,drops.material.uniforms.time);
+    assert.equal(film.material.uniforms.time,clock);
+    assert.equal(film.material.uniforms.aerationMap,aerationMap);
+    assert.ok(!film.material.depthWrite && !drops.material.depthWrite);
+    const {position,uv}=film.geometry.attributes;
+    const sample=(s,t,epsilon) => Array.from({length:uv.count},(_,i)=>i)
+      .filter(i=>Math.abs(uv.getX(i)-s)<epsilon && Math.abs(uv.getY(i)-t)<.014)
+      .map(i=>new THREE.Vector3().fromBufferAttribute(position,i));
+    const [feed]=sample(.47,-.5,.012);
+    const down=new THREE.Raycaster(feed,new THREE.Vector3(0,-1,0),0,.085);
+    assert.ok(down.intersectObject(bed).length,'A solid wet channel lies immediately beneath the feeding rill');
+    for (const seam of [.14,.80]) {
+      const brink=sample(seam,0,.001), falling=sample(seam,.74,.001);
+      assert.equal(brink.length,2);
+      assert.equal(falling.length,2);
+      assert.ok(brink[0].distanceTo(brink[1])<.001,'Water emerges as one continuous surface');
+      assert.ok(falling[0].distanceTo(falling[1])>.10,'A physical gap exposes the rock below');
+      assert.ok(falling[0].y<brink[0].y-2.7);
+    }
+  } finally { resources.forEach(resource=>resource.dispose()); }
+});
 
 test('the furnished wings and terraces preserve clear sightlines, solid walls and walkable approaches', async () => {
   const ink = loadModule('furnishing-ink',{three});

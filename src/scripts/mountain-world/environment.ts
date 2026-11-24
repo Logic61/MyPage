@@ -1,11 +1,12 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary } from './materials';
-import { branchGeometry, mistTexture, naturalRock, roundedBlock, seeded } from './environment-geometry';
+import { branchGeometry, mistTexture, roundedBlock, seeded } from './environment-geometry';
 import { bambooWind, buildBamboo } from './bamboo';
-import { cliffGarden, cliffSpurs, cragFace, mountainRunoff, plantingSoil } from './cliff-garden';
+import { cliffGarden, cliffSpurs, cragFace, plantingSoil } from './cliff-garden';
+import { buildCliffSpring, stainSpringCliff } from './cliff-spring';
 import { buildCliffCrossings } from './cliff-crossings';
-import { branchWind, buildPines } from './pine-grove';
+import { buildPines } from './pine-grove';
 import { createStudyArchitecture } from './environment-design';
 import { COURTYARD_POOL } from './water-court';
 import { GALLERY, PINE_PAVILIONS } from './hall-terrace';
@@ -20,10 +21,8 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   const colliders: Collider[] = [];
   const keep = <T extends THREE.BufferGeometry>(geometry: T): T => { geometries.add(geometry); return geometry; };
   const own = <T extends THREE.Material>(material: T): T => { materials.add(material); return material; };
-  const rng = seeded(23877);
   const stone = own(library.material('stone', { worldScale: .58, normalScale: .7 }));
   const darkStone = own(library.material('darkStone', { worldScale: .43, normalScale: .75 }));
-  const cutStone = own(library.material('stone', { worldScale: .82, normalScale: .45, roughness: .88 }));
   const earth = own(library.material('ground', { worldScale: .55, normalScale: .55 }));
   const projectEarth = earth.onBeforeCompile;
   earth.onBeforeCompile = (shader, renderer) => {
@@ -38,27 +37,11 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   earth.customProgramCacheKey = () => 'courtyard-granite-and-turf';
   const wood = own(library.material('wood', { repeat: [1, 1.35], normalScale: .45 }));
   const bark = own(library.material('bark', { repeat: [1.7, 1], normalScale: .85 }));
-  const moss = own(library.material('moss', { worldScale: 1.1, normalScale: .4 }));
-  const fernMaterial = own(new THREE.MeshStandardMaterial({ color: '#596e4c', roughness: .95, side: THREE.DoubleSide }));
   const block = keep(roundedBlock()), cube = keep(new THREE.BoxGeometry(1, 1, 1));
-  const mossRock = keep(naturalRock(12));
-  const smallRock = keep(naturalRock(31, 1));
-  const matrix = new THREE.Matrix4(), quat = new THREE.Quaternion(), vector = new THREE.Vector3(), scale = new THREE.Vector3();
 
-  interface Placed { x: number; y: number; z: number; sx: number; sy: number; sz: number; rx?: number; ry?: number; rz?: number; color?: THREE.Color; }
   function mesh(g: THREE.BufferGeometry, m: THREE.Material, x = 0, y = 0, z = 0, sx = 1, sy = 1, sz = 1, parent: THREE.Object3D = root) {
     const result = new THREE.Mesh(g, m); result.position.set(x, y, z); result.scale.set(sx, sy, sz);
     result.castShadow = true; result.receiveShadow = true; parent.add(result); return result;
-  }
-  function batch(g: THREE.BufferGeometry, m: THREE.Material, instances: Placed[], name: string, parent: THREE.Object3D = root) {
-    const result = new THREE.InstancedMesh(g, m, instances.length); result.name = name;
-    instances.forEach((item, i) => {
-      quat.setFromEuler(new THREE.Euler(item.rx ?? 0, item.ry ?? 0, item.rz ?? 0));
-      matrix.compose(vector.set(item.x, item.y, item.z), quat, scale.set(item.sx, item.sy, item.sz)); result.setMatrixAt(i, matrix);
-      if (item.color) result.setColorAt(i, item.color);
-    });
-    result.instanceMatrix.needsUpdate = true; if (result.instanceColor) result.instanceColor.needsUpdate = true;
-    result.castShadow = true; result.receiveShadow = true; result.computeBoundingSphere(); parent.add(result); return result;
   }
   function obstacle(x: number, z: number, halfX: number, halfZ: number) { colliders.push({ x, z, halfX, halfZ }); }
   function branch(points: THREE.Vector3[], start: number, end: number, m: THREE.Material = bark) {
@@ -87,6 +70,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     };
     rock.customProgramCacheKey = () => 'courtyard-granite-in-cloud';
   }
+  stainSpringCliff(granite);
   let disposed = false;
   const assetRoot = (import.meta.env?.BASE_URL ?? '/MyPage/').replace(/\/$/, '');
   const graniteFaces = [granite,darkStone];
@@ -100,13 +84,22 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   mesh(keep(cragFace(outline)), granite).castShadow = false;
   const ledges = cliffSpurs(outline);
   mesh(keep(ledges.rock), granite).castShadow = false;
-  mesh(keep(plantingSoil()), moss).castShadow = false;
+  mesh(keep(plantingSoil()), earth).castShadow = false;
   const reeds = own(new THREE.MeshStandardMaterial({vertexColors: true, side: THREE.DoubleSide, roughness: .9}));
-  mesh(keep(cliffGarden(ledges.spurs)), reeds).castShadow = false;
-  const fall = mountainRunoff();
-  const cascade = mesh(keep(fall.geometry), own(fall.material));
-  cascade.castShadow = cascade.receiveShadow = false;
-  cascade.userData.dynamic = cascade.userData.ignoreInteractionRay = cascade.userData.ignoreAmbientOcclusion = true;
+  mesh(keep(cliffGarden()), reeds).castShadow = false;
+  const wetRock = own(library.material('stone', {worldScale:.71, normalScale:.49, roughness:.59}));
+  wetRock.name = 'Water-worn granite at the spring';
+  wetRock.vertexColors = true;
+  graniteFaces.push(wetRock);
+  const neutralWater = new THREE.DataTexture(new Uint8Array([42,42,42,255]),1,1);
+  neutralWater.needsUpdate = true; localTextures.add(neutralWater);
+  const aerationMap: THREE.IUniform<THREE.Texture> = {value:neutralWater};
+  const springTime = buildCliffSpring(root,wetRock,keep,own,aerationMap);
+  const springImageReady = new THREE.TextureLoader().loadAsync(assetRoot+'/world/spring-aeration.webp').then(texture => {
+    if (disposed) { texture.dispose(); return; }
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping; texture.anisotropy = 4;
+    localTextures.add(texture); aerationMap.value = texture;
+  }).catch(() => { /* The animated water and the spray still draw with the neutral surface. */ });
   const groundShape = new THREE.Shape(outline.map(([x, z]) => new THREE.Vector2(x, -z)));
   const {x0,x1,z0,z1}=COURTYARD_POOL, hole=new THREE.Path();
   hole.moveTo(x0-.015,-z0+.015); hole.lineTo(x1+.015,-z0+.015);
@@ -114,23 +107,9 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   groundShape.holes.push(hole);
   const ground = mesh(keep(new THREE.ShapeGeometry(groundShape)), earth, 0, .284, 0); ground.rotation.x = -Math.PI / 2; ground.castShadow = false;
 
-  // Small fractured stones, moss islands and grass sit at edges, not across the path.
-  const rubble: Placed[] = [], growth: Placed[] = [];
-  for (const [cx, cz, radius] of [[-13.7, 6.7, 1.4], [-13.6, -.7, 1.0], [-7.2, 10.8, 1.3], [11.9, 10, 1.2], [9.4, -10.2, .9]]) {
-    for (let i = 0; i < 22; i++) {
-      const a = rng() * Math.PI * 2, d = Math.sqrt(rng()) * radius;
-      rubble.push({ x: cx + Math.cos(a) * d, y: .29, z: cz + Math.sin(a) * d,
-        sx: .055 + rng() * .14, sy: .035 + rng() * .09, sz: .065 + rng() * .14, ry: rng() * 6 });
-    }
-    for (let i = 0; i < 7; i++) growth.push({ x: cx + (rng() - .5) * radius, y: .285, z: cz + (rng() - .5) * radius,
-      sx: .25 + rng() * .4, sy: .012, sz: .23 + rng() * .3, ry: rng() * 6 });
-  }
-  batch(smallRock, cutStone, rubble, 'Small fractured edge stones');
-  batch(mossRock, moss, growth, 'Low moss islands').castShadow = false;
-
   // Timber veranda. Its outer carved-stone parapets meet the bridge railing at the pavilion gate.
   const architecture = createStudyArchitecture(root, library, en);
-  graniteFaces.push(architecture.galleryStone);
+  graniteFaces.push(architecture.galleryStone,architecture.pineStone);
   for (const side of [-1,1]) {
     mesh(cube, wood, side * 10.15, .111, .1, 5.65, .36, 16.4);
     // Join the longitudinal gallery boards at the outer margin. In the open
@@ -152,7 +131,8 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   const pines = buildPines(root, bark, colliders, windTime, keep, texture => localTextures.add(texture));
   own(pines.material);
 
-  // Slender bamboo and small ferns occupy the western rock edge only.
+  // Seed at the bamboo grove so planting edits do not relocate its culms or the valley wisps.
+  const rng = seeded(3529634898);
   const bamboo = buildBamboo(rng);
   const culms = own(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .57 }));
   const blades = own(new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .79, side: THREE.DoubleSide }));
@@ -162,14 +142,6 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     plant.name = name; plant.userData.dynamic = true;
   }
   obstacle(-13.7, -.75, .72, 1.38);
-  const leafShape = keep(new THREE.BufferGeometry());
-  leafShape.setAttribute('position', new THREE.Float32BufferAttribute([0, 0, 0, -.07, .012, .24, 0, .025, .58, 0, 0, 0, 0, .025, .58, .055, -.006, .24], 3));
-  leafShape.setAttribute('uv', new THREE.Float32BufferAttribute([.5, 0, 0, .45, .5, 1, .5, 0, .5, 1, 1, .45], 2)); leafShape.computeVertexNormals();
-  branchWind(fernMaterial, windTime, 'y', .065);
-  const ferns: Placed[] = [];
-  for (const [x, z] of [[-13.6, 6.8], [-13.1, 6.2], [-13.4, -.1], [11.8, 9.4]]) for (let j = 0; j < 12; j++)
-    ferns.push({ x, y: .3, z, sx: .6, sy: .7, sz: .7, ry: j * Math.PI / 6, rx: -.8 + (j % 3) * .1 });
-  batch(leafShape, fernMaterial, ferns, 'Low edge ferns');
 
   // The distant mountains belong to the generated landscape backdrop, not opaque polygon rings.
   const mistMap = mistTexture(); localTextures.add(mistMap);
@@ -237,7 +209,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     return {bird, wings, phase: phase+i*.044, radius: radius+i*.85, height: height+i*.22, beat: i+flightIndex*2};
   }));
   return {
-    root, colliders, overheads: architecture.overheads, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready,graniteReady]).then(() => {}),
+    root, colliders, overheads: architecture.overheads, walkAreas, outline, roofOccluders: [], assetsReady: Promise.all([architecture.ready,pines.ready,graniteReady,springImageReady]).then(() => {}),
     disturbWater: architecture.disturbWater,
     update(time, delta, _indoor, reducedMotion, eye) {
       birds.forEach(({bird,wings,phase,radius,height,beat})=>{
@@ -249,7 +221,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
       });
       architecture.update(time, delta, reducedMotion, eye);
       windTime.value = time;
-      fall.time.value = time;
+      springTime.value = time;
       for (const cloud of clouds) {
         const drift = Math.sin(time * .148 + cloud.phase), curl = Math.sin(time * .20 + cloud.phase * 2);
         cloud.sprite.position.set(cloud.x + drift * cloud.travel, cloud.y + curl * .54, cloud.z + drift * cloud.travel * .40);

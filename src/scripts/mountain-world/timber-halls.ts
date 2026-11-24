@@ -4,6 +4,7 @@ import { stoneBalustrade } from './stone-balustrade';
 import { hexagonalRing, rectangularRing, tiledRoof } from './tiled-roof';
 import { GALLERY, NORTH_HALL_RISE, NORTH_HALL_SETBACK, PINE_PAVILIONS } from './hall-terrace';
 import { buildGoSetting } from './go-pavilion';
+import { buildForecourtLanterns } from './forecourt-lantern';
 import { inscribedPost, type GateLine } from './inscribed-post';
 import gateTabletProfile from '../../assets/cloudrest-nameboard-profile.json';
 
@@ -39,6 +40,14 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, addObstacle:
   const ridge = new THREE.MeshStandardMaterial({ name: 'Blue-black glazed ridge clay', color: '#303e4c', roughness: .56 });
   const windowPaper = new THREE.MeshStandardMaterial({ name: 'Tea-coloured mulberry paper', color: '#d5ab79', emissive: '#75431c', emissiveIntensity: .18, roughness: .98 });
   const silk = new THREE.MeshStandardMaterial({ name: 'Amber lantern silk', color: '#edbb76', emissive: '#bb5b25', emissiveIntensity: .37, roughness: .86 });
+  const lanternStone = m.stone.clone();
+  lanternStone.name = 'Weathered celadon-grey lantern stone';
+  lanternStone.color.set('#ddc9cf'); lanternStone.roughness = .91; lanternStone.normalScale.setScalar(.49);
+  lanternStone.onBeforeCompile = (shader, renderer) => {
+    m.stone.onBeforeCompile.call(lanternStone, shader, renderer);
+    if (shader.uniforms.uSurfaceWorldScale) shader.uniforms.uSurfaceWorldScale.value = 2.1;
+  };
+  lanternStone.customProgramCacheKey = () => m.stone.customProgramCacheKey();
   const roofMaterials = { tile: glazed, ridge, soffit: cedar, timber: lacquer, bronze: gold };
   const cube = new THREE.BoxGeometry(1, 1, 1), disk = new THREE.CylinderGeometry(1, 1, 1, 24);
   const cylinder = new THREE.CylinderGeometry(.93, 1, 1, 20);
@@ -144,7 +153,8 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, addObstacle:
   const surfaceImages = Promise.all([
     surfaceMap('gate-stroke-light.webp', [cut], 'emissiveMap'),
     surfaceMap('honed-limestone.webp', [m.stone, m.sideStone]),
-    surfaceMap('flagstone-normal.webp', [m.stone, m.sideStone], 'normalMap'),
+    surfaceMap('court-stone.webp', [lanternStone]),
+    surfaceMap('flagstone-normal.webp', [m.stone, m.sideStone, lanternStone], 'normalMap'),
     surfaceMap('lacquer-grain.webp', [lacquer,cedar,jujube,cut]),
     surfaceMap('timber-normal.webp', [lacquer,cedar,cut], 'normalMap'),
     surfaceMap('timber-rough.webp', [lacquer,cedar,cut], 'roughnessMap'),
@@ -446,16 +456,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, addObstacle:
   }
   // At the outer ends of the pine beds, the two lamps frame the view into the garden.
   box(m.stone,'Gate approach paving',0,.17,13.625,3.3,.24,4.25);
-  for (const sign of [-1,1]) {
-    const lx=sign*4.94,lz=12.42;
-    box(m.stone,'Stone lantern foot',lx,.39,lz,.54,.18,.54);
-    turned('Carved stone lantern pedestal',m.stone,lx,.47,lz,[[.24,0],[.24,.09],[.16,.15],[.105,.22],[.13,.46],[.19,.52],[.24,.56],[.21,.63]],8);
-    part(disk,silk,'Amber light in stone lantern',lx,1.29,lz,.166,.39,.166);
-    for (const dx of [-.162,.162]) for (const dz of [-.162,.162])
-      box(m.stone,'Stone lantern jamb',lx+dx,1.28,lz+dz,.058,.41,.058);
-    turned('Stone lantern cap',m.stone,lx,1.47,lz,[[.33,0],[.35,.055],[.24,.11],[.12,.22],[.064,.24],[.073,.31],[.012,.37]],8);
-    obstacle(lx,lz,.27,.27);
-  }
+  textures.push(buildForecourtLanterns(group,lanternStone,gold,obstacle));
   return {
     group, ready: Promise.all([ready, surfaceImages, gateBoard, hallBoard]).then(() => {}),
     updateGateLight(time: number, eye: THREE.Vector3, reducedMotion: boolean) {

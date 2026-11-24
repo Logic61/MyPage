@@ -4,6 +4,7 @@ import { COURTYARD_POOL, FORECOURT_PLANTER, POOL_BED_Y, POOL_COPING_Y, POOL_WATE
 import { createFloorFinishes } from './courtyard-paving';
 import { buildTimberHalls } from './timber-halls';
 import { buildCloudGallery } from './cloud-gallery';
+import { buildPineUnderstory } from './pine-understory';
 import { buildReedShades } from './reed-shades';
 import { EAST_BRIDGE, GALLERY, HALL_STEPS, NORTH_HALL_FRONT, NORTH_HALL_RISE, NORTH_HALL_SETBACK } from './hall-terrace';
 import { architecturalBlock, gridSurface } from './environment-geometry';
@@ -43,7 +44,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   const joints = own(new THREE.MeshStandardMaterial({ color: '#8b8070', roughness: .94 }));
   const carpet = own(library.material('cloth', { repeat: [6, 5], normalScale: .26, roughness: 1 }));
   const binding = own(new THREE.MeshStandardMaterial({ color: '#a4aa98', roughness: 1 }));
-  const soil = own(library.material('ground', { worldScale: 1.5, color: '#a9b4a0', normalScale: .32 }));
+  const soil = own(library.material('ground', { worldScale: 2, roughness: .98, normalScale: .34 }));
   const waterMaterial = own(new THREE.MeshPhysicalMaterial({
     color: '#83ada6', vertexColors:true, roughness: .16, metalness: .09, transparent: true, opacity: .60,
     clearcoat: .63, clearcoatRoughness: .18, depthWrite: false, side: THREE.DoubleSide,
@@ -361,7 +362,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     box(.19,.19,span,sign*GALLERY.outerPost,3.06,midZ,joinery,'Outer gallery plate');
   }
   const halls = buildTimberHalls(group, { timber: joinery, stone: limestone, sideStone: sidePaving, plaster, archivePlaster, soffit }, obstacle, en);
-  const galleryStone = buildCloudGallery(group,library,geometries,materials,colliders);
+  const gallery = buildCloudGallery(group,library,geometries,materials,colliders);
+  const understory = buildPineUnderstory(group,library,geometries,materials,gallery,soil);
   buildReedShades(group,library,geometries,materials);
   // Capture the undersides before scenery is batched. Jumping never raycasts the roof tiles.
   const headPieces = new Set(['Recessed opening head', 'Painted lintel frame', 'Carved plaque backing', '留云阁', 'Recessed central lintel',
@@ -408,7 +410,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     },{x:side*6.865,z:(GALLERY.south+8.29)/2,halfX:.515,halfZ:(8.29-GALLERY.south)/2});
   }
   return {
-    geometries, materials, colliders, overheads, walkAreas, floors, galleryStone, ready: Promise.all([halls.ready,lotus.ready,floors.ready]).then(()=>{}),
+    geometries, materials, colliders, overheads, walkAreas, floors, galleryStone: gallery.crag, pineStone: understory.stone,
+    ready: Promise.all([halls.ready,lotus.ready,floors.ready,understory.ready]).then(()=>{}),
     dispose() { halls.dispose(); lotus.dispose(); floors.dispose(); },
     disturbWater(x: number, z: number, strength: number) {
       if (poolWaves.disturb(x, z, strength)) lotus.disturb(x, z, Math.min(1, strength));

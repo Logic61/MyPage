@@ -2,12 +2,13 @@ import * as THREE from 'three';
 import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 import { architecturalBlock } from './environment-geometry';
 import { GALLERY } from './hall-terrace';
+import { fernCrown } from './woodland-foliage';
 import type { SurfaceLibrary } from './materials';
 import type { Collider } from './types';
 
 /** Eroded limestone with two irregular tunnels. The field is sampled once when the gallery is built. */
-function scholarStone(material: THREE.Material) {
-  const size = 36, field = new MarchingCubes(size,material,false,false,7500);
+function scholarStone(material: THREE.Material, pineBed=false) {
+  const size = 36, field = new MarchingCubes(size,material,false,false,pineBed?10000:7500);
   field.isolation = 0;
   for (let iz=0;iz<size;iz++) for (let iy=0;iy<size;iy++) for (let ix=0;ix<size;ix++) {
     const x=2*ix/size-1,y=2*iy/size-1,z=2*iz/size-1;
@@ -17,7 +18,15 @@ function scholarStone(material: THREE.Material) {
     const body=1-(x/.41)**2-(y/.82)**2-(side/flank)**2+1.35*seam;
     const upper=((y-.29+.11*x)/.248)**2+((z-.089-.17*x)/.302)**2-1+seam;
     const lower=((y+.25+.12*x)/.179)**2+((z+.088-.18*x)/.176)**2-1+.85*seam;
-    field.setCell(ix,iy,iz,Math.min(body,upper,lower));
+    if (pineBed) {
+      const spine=z+.22*y+.054*Math.sin(6*y);
+      const flank=.66-.15*y+.052*Math.cos(8*y);
+      const fractures=.046*Math.sin(23*z+15*x)*Math.cos(16*y)+.033*Math.cos(21*x-13*z+23*y);
+      const mass=1-(x/(.54-.09*y))**2-(y/.81)**2-(spine/flank)**2+1.47*seam+fractures;
+      const window=((y-.22-.57*x)/.176)**2+((z+.054-.21*x)/.198)**2-1+.84*seam;
+      const notch=((y+.50+.075*x)/.108)**2+((z-.42-.14*x)/.16)**2-1+.55*seam;
+      field.setCell(ix,iy,iz,Math.min(mass,window,notch));
+    } else field.setCell(ix,iy,iz,Math.min(body,upper,lower));
   }
   field.update();
   const result=new THREE.BufferGeometry(), verts=field.geometry.drawRange.count;
@@ -40,33 +49,6 @@ function scholarStone(material: THREE.Material) {
   return result;
 }
 
-/** A single mesh per crown, with tapered paired pinnae on arching fronds. */
-function fernCrown() {
-  const p:number[]=[],colors:number[]=[], shade=new THREE.Color('#46603b'), sun=new THREE.Color('#97a751'), tint=new THREE.Color();
-  function leaf(a:THREE.Vector3,b:THREE.Vector3,c:THREE.Vector3,d:THREE.Vector3,light:number) {
-    tint.copy(shade).lerp(sun,light);
-    for(const v of [a,b,c,a,c,d]) {p.push(v.x,v.y,v.z);colors.push(tint.r,tint.g,tint.b);}
-  }
-  for(let f=0;f<9;f++) {
-    const angle=f*2.39996,along=new THREE.Vector3(Math.cos(angle),0,Math.sin(angle));
-    const across=new THREE.Vector3(-along.z,0,along.x),length=.24+.08*Math.sin(f*1.9),height=.20+.05*Math.cos(f*1.13);
-    const stem=(t:number)=>along.clone().multiplyScalar(length*t).setY(height*(1.95*t-1.33*t*t));
-    for(let k=1;k<12;k++) {
-      const t=k/12,a=stem(t),b=stem(t-1/12);
-      leaf(a.clone().addScaledVector(across,.0018),b.clone().addScaledVector(across,.0018),
-        b.clone().addScaledVector(across,-.0018),a.clone().addScaledVector(across,-.0018),.45);
-      for(const side of [-1,1]) {
-        const span=length*(.025+.18*Math.sin(t*Math.PI)**.7);
-        const tip=a.clone().addScaledVector(across,side*span).addScaledVector(along,span*.72);tip.y+=.012;
-        const centre=a.clone().lerp(tip,.43); centre.y+=.007;
-        leaf(a,centre.clone().addScaledVector(along,.010*(1-.45*t)),tip,centre.clone().addScaledVector(along,-.008),.22+.57*t);
-      }
-    }
-  }
-  const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
-  g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.computeVertexNormals();return g;
-}
-
 export function buildCloudGallery(parent: THREE.Group, library: SurfaceLibrary, geometries:Set<THREE.BufferGeometry>,
   materials:Set<THREE.Material>, colliders:Collider[]) {
   const group=new THREE.Group();group.name='Cloudside gallery joinery and scholar stone';parent.add(group);
@@ -74,8 +56,8 @@ export function buildCloudGallery(parent: THREE.Group, library: SurfaceLibrary, 
   const keep=<T extends THREE.BufferGeometry>(g:T)=>{geometries.add(g);return g;};
   const stone=own(library.material('limestone',{color:'#d5d0b9',worldScale:1.4,normalScale:.34,roughness:.89}));
   const crag=own(library.material('limestone',{color:'#ede5d1',worldScale:1.5,normalScale:.48,roughness:.91}));crag.vertexColors=true;
-  const loam=own(library.material('ground',{color:'#a2b086',worldScale:2.0,roughness:.96}));
-  const foliage=own(new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.95}));
+  const loam=own(library.material('ground',{color:'#ac957a',worldScale:2.6,roughness:.96}));
+  const foliage=own(new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.76}));
   function place(g:THREE.BufferGeometry,m:THREE.Material,name:string,x:number,y:number,z:number) {
     const mesh=new THREE.Mesh(g,m);mesh.name=name;mesh.position.set(x,y,z);mesh.castShadow=mesh.receiveShadow=true;group.add(mesh);return mesh;
   }
@@ -114,7 +96,8 @@ export function buildCloudGallery(parent: THREE.Group, library: SurfaceLibrary, 
     ashlar(w-rim*2,h,rim,x,.30+h/2,z+sign*(d-rim)/2);
   }
   place(keep(new THREE.BoxGeometry(w-rim*2,.026,d-rim*2)),loam,'Recessed soil in the west fern trough',x,.50,z);
-  const rock=place(keep(scholarStone(crag)),crag,'Double-perforated Taihu scholar stone',x,1.18,z-.008);
+  const ornamentalStone=keep(scholarStone(crag));
+  const rock=place(ornamentalStone,crag,'Double-perforated Taihu scholar stone',x,1.18,z-.008);
   rock.rotation.y=.94;
   const fern=keep(fernCrown());
   for(const [i,[dx,dz,scale]] of [[-.09,-.63,1.03],[.08,.66,.91],[-.15,.40,1.08],[.11,-.44,.72]].entries()){
@@ -122,5 +105,5 @@ export function buildCloudGallery(parent: THREE.Group, library: SurfaceLibrary, 
     crown.rotation.y=i*1.22;crown.scale.setScalar(scale);
   }
   colliders.push({x,z,halfX:w/2,halfZ:d/2});
-  return crag;
+  return { crag, ornamentalStone: keep(scholarStone(crag,true)), fern, foliage };
 }

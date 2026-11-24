@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { gridSurface, seeded } from './environment-geometry';
-import { FORECOURT_PLANTER } from './water-court';
+import { bankSedges } from './woodland-foliage';
 
 /** The inhabited rim stays true to the walking polygon. Fissures deepen below the cap. */
 export function cragFace(outline: number[][]) {
@@ -104,114 +104,6 @@ export function cliffSpurs(outline: number[][]) {
   return { rock, spurs };
 }
 
-export function cliffGarden(spurs: Spur[]) {
-  const positions: number[] = [], colors: number[] = [], indices: number[] = [];
-  const rng = seeded(91732), leaf = new THREE.Color(), shade = new THREE.Color('#465c46'), light = new THREE.Color('#a7a263');
-  function point(x: number,y: number,z: number,brightness: number) {
-    positions.push(x,y,z); colors.push(leaf.r*brightness,leaf.g*brightness,leaf.b*brightness);
-  }
-  // Shallow pockets of sedges soften the exposed granite between the bridge and the two galleries.
-  for (const [cx,cz,rx,rz] of [[-3.25,15.6,1.05,.55],[4.4,14.9,.8,.48],[-9.6,11.8,1.1,.41],
-      [12.8,8.85,.75,.75],[-14.4,-4.4,.45,1.5],[-2.9,34.6,.67,1.1],[2.7,33.4,.53,.83],[25.4,8.45,1.25,.32]]) {
-    for (let i=0;i<45;i++) {
-      const a=rng()*Math.PI*2,r=Math.sqrt(rng()),x=cx+Math.cos(a)*rx*r,z=cz+Math.sin(a)*rz*r;
-      const hue=rng();
-      for (let j=0;j<7;j++) {
-        const angle=rng()*Math.PI*2,dx=Math.cos(angle),dz=Math.sin(angle);
-        const h=.10+rng()*.23,len=.08+rng()*.20,w=.013+rng()*.011;
-        const n=positions.length/3; leaf.copy(shade).lerp(light,hue*.72+rng()*.26);
-        point(x,.285,z,.67);
-        point(x+dx*len*.3-dz*w,.285+h*.72,z+dz*len*.3+dx*w,.92);
-        point(x+dx*len*.3+dz*w,.285+h*.68,z+dz*len*.3-dx*w,1.08);
-        point(x+dx*len,.285+h,z+dz*len,1.12);
-        indices.push(n,n+1,n+2,n+1,n+3,n+2);
-      }
-    }
-  }
-  // Wild asters grow in drifts beside the bridge lanterns and in sheltered cracks on the crags.
-  const underPines = (FORECOURT_PLANTER.x0 + FORECOURT_PLANTER.x1) / 2;
-  const beds = [[-2.75,.30,32.7,.67],[2.8,.30,32.9,.55],
-    [underPines-.06,.338,FORECOURT_PLANTER.z0+.62,.41],[-underPines+.13,.338,FORECOURT_PLANTER.z0+.59,.39],
-    [underPines+.12,.338,FORECOURT_PLANTER.z1-.56,.40],[-underPines-.05,.338,FORECOURT_PLANTER.z1-.61,.42],
-    [-10.1,.285,10.9,.81],[10.8,.285,10.4,.76],
-    ...spurs.filter((_,i) => i % 3 !== 2).map(s => [s.x,s.y + .07,s.z,s.width * .43])];
-  const flower = new THREE.Color('#e8cb82'), sun = new THREE.Color('#f2e4c4'), bud = new THREE.Color('#c69138');
-  for (const [cx,cy,cz,radius] of beds) {
-    for (let stem = 0; stem < 22; stem++) {
-      const a = rng() * Math.PI * 2, r = Math.sqrt(rng()) * radius;
-      const x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r;
-      const h = .15 + .37 * rng(), dx = Math.cos(a) * h * .29, dz = Math.sin(a) * h * .29;
-      const n = positions.length / 3;
-      leaf.copy(shade).lerp(light, rng() * .7);
-      point(x - .008,cy,z,.67); point(x + .008,cy,z,.75); point(x + dx,cy + h,z + dz,1);
-      indices.push(n,n+1,n+2);
-      for (let j = 0; j < 5; j++) {
-        const u = .15 + j * .15, angle = a + j * 2.4, reach = .047 + rng() * .048;
-        const lx = Math.cos(angle), lz = Math.sin(angle), ox = x + dx * u, oz = z + dz * u, y = cy + h * u;
-        const k = positions.length / 3;
-        point(ox,y,oz,.70); point(ox+lx*reach*.52-lz*.014,y+.022,oz+lz*reach*.52+lx*.014,.92);
-        point(ox+lx*reach*.52+lz*.014,y+.028,oz+lz*reach*.52-lx*.014,1.04);
-        point(ox+lx*reach,y+.017,oz+lz*reach,.94);
-        indices.push(k,k+1,k+2,k+1,k+3,k+2);
-      }
-      if (rng() < .31) continue;
-      const petals = 7, k = positions.length / 3, reach = .021 + rng() * .024;
-      leaf.copy(bud); point(x+dx,cy+h+.006,z+dz,1);
-      leaf.copy(flower).lerp(sun, rng());
-      for (let j=0; j<petals; j++) {
-        const angle=a+j*Math.PI*2/petals, lx=Math.cos(angle), lz=Math.sin(angle);
-        point(x+dx+lx*reach-lz*.006,cy+h+.011*lx,z+dz+lz*reach+lx*.006,.93);
-        point(x+dx+lx*reach+lz*.006,cy+h+.011*lx+.002,z+dz+lz*reach-lx*.006,1.10);
-        indices.push(k,k+1+j*2,k+2+j*2);
-      }
-    }
-  }
-  // Arching leaf blades grow out of the undulating banks, with space between clumps.
-  for (const [cx,cz,rx,rz,h] of gardenBanks) {
-    for (let clump=0; clump<46; clump++) {
-      const a=rng()*Math.PI*2, r=Math.sqrt(rng())*.92;
-      const x=cx+Math.cos(a)*rx*r, z=cz+Math.sin(a)*rz*r, y=.281+h*(1-r*r)-.012;
-      for (let j=0; j<9; j++) {
-        const angle=rng()*Math.PI*2, dx=Math.cos(angle), dz=Math.sin(angle);
-        const rise=.07+.25*rng(), span=.07+.18*rng(), w=.012+.01*rng();
-        leaf.copy(shade).lerp(light,.10+.78*rng()); const k=positions.length/3;
-        point(x,y,z,.55);
-        point(x+dx*span*.18-dz*w,y+rise*.74,z+dz*span*.18+dx*w,.76);
-        point(x+dx*span*.18+dz*w,y+rise*.73,z+dz*span*.18-dx*w,.82);
-        point(x+dx*span*.68-dz*w*.66,y+rise,z+dz*span*.68+dx*w*.66,1.03);
-        point(x+dx*span*.68+dz*w*.66,y+rise*.96,z+dz*span*.68-dx*w*.66,.97);
-        point(x+dx*span,y+rise*.76,z+dz*span,1.07);
-        indices.push(k,k+1,k+2,k+1,k+3,k+2,k+2,k+3,k+4,k+3,k+5,k+4);
-      }
-    }
-  }
-  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-  g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3)); g.setIndex(indices); g.computeVertexNormals(); return g;
-}
-
-/** A lip in the rock feeds several transparent filaments. Gravity widens the spray at the foot. */
-export function mountainRunoff() {
-  const geometry=gridSurface(12,26,(u,v)=>{
-    const drop=1-v, spread=(u-.5)*(.68+drop*.45);
-    return new THREE.Vector3(-4.4+spread-.37*(1-Math.exp(-drop*11)), .13-drop*17,
-      15.73+1.34*(1-Math.exp(-drop*12))+.10*Math.sin(5*u+4*drop));
-  });
-  const time={value:0};
-  const material=new THREE.ShaderMaterial({
-    transparent:true, depthWrite:false, side:THREE.DoubleSide, uniforms:{time},
-    vertexShader:`varying vec2 streamUV;
-      void main(){ streamUV=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }`,
-    fragmentShader:`uniform float time; varying vec2 streamUV;
-      void main(){
-        float u=streamUV.x, v=streamUV.y;
-        float strands=.5+.5*sin(u*57.+1.4*sin(v*15.+time*2.)+.8*sin(u*29.-v*8.));
-        float streak=.5+.5*sin(v*56.+time*5.3+u*9.);
-        float banks=smoothstep(0.,.18,u)*(1.-smoothstep(.76,1.,u));
-        float opacity=banks*smoothstep(.02,.32,v)*(.24+.45*strands+.12*streak);
-        gl_FragColor=vec4(mix(vec3(.42,.64,.62),vec3(.94,.96,.86),strands*.74+streak*.21),opacity);
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
-      }`
-  });
-  return {geometry,material,time};
+export function cliffGarden() {
+  return bankSedges(gardenBanks);
 }
