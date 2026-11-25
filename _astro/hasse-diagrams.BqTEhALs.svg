@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="235" viewBox="0 0 680 235" role="img" aria-labelledby="title">
+  <title id="title">Hasse diagrams for divisibility on 1 through 9 and inclusion on the subsets of {a, b, c}</title>
+  <rect width="680" height="235" fill="#faf9f5" />
+  <g fill="none" stroke="#407872" stroke-width="2">
+    <path d="M170 192 80 150 M170 192 141 150 M170 192V150 M170 192 245 150 M141 150 90 107 M141 150V107 M170 150 141 107 M170 150V107 M170 107V64" />
+    <path d="M498 192 390 146 M498 192V146 M498 192 606 146 M390 146V100 M390 146 498 100 M498 146 390 100 M498 146 606 100 M606 146 498 100 M606 146V100 M390 100 498 55 M498 100V55 M606 100 498 55" />
+  </g>
+  <g fill="#407872">
+    <circle cx="170" cy="192" r="4" /><circle cx="80" cy="150" r="4" /><circle cx="141" cy="150" r="4" /><circle cx="170" cy="150" r="4" /><circle cx="245" cy="150" r="4" />
+    <circle cx="90" cy="107" r="4" /><circle cx="141" cy="107" r="4" /><circle cx="170" cy="107" r="4" /><circle cx="170" cy="64" r="4" />
+    <circle cx="498" cy="192" r="4" /><circle cx="390" cy="146" r="4" /><circle cx="498" cy="146" r="4" /><circle cx="606" cy="146" r="4" />
+    <circle cx="390" cy="100" r="4" /><circle cx="498" cy="100" r="4" /><circle cx="606" cy="100" r="4" /><circle cx="498" cy="55" r="4" />
+  </g>
+  <g fill="#243a39" font-family="serif" font-size="16" text-anchor="middle">
+    <text x="166" y="29">Divisibility</text><text x="498" y="29">Subset inclusion</text>
+    <text x="170" y="213">1</text><text x="80" y="140">5</text><text x="133" y="164">3</text><text x="182" y="154">2</text><text x="245" y="140">7</text>
+    <text x="90" y="96">9</text><text x="134" y="96">6</text><text x="182" y="111">4</text><text x="170" y="55">8</text>
+    <text x="498" y="213">∅</text><text x="366" y="150">{a}</text><text x="516" y="162">{b}</text><text x="631" y="150">{c}</text>
+    <text x="357" y="102">{a, b}</text><text x="520" y="92">{a, c}</text><text x="639" y="102">{b, c}</text><text x="498" y="47">{a, b, c}</text>
+  </g>
+</svg>
