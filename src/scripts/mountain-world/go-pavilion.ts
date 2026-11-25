@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { architecturalBlock, seeded } from './environment-geometry';
-import { PINE_PAVILIONS } from './hall-terrace';
+import { CHESS_PAVILION } from './hall-terrace';
 
 const boardWidth = .84;
 const margin = .061;
@@ -46,9 +46,9 @@ function makeBoardFace() {
 
 export function buildGoSetting(parent: THREE.Group, stone: THREE.Material, shadowStone: THREE.Material,
   timber: THREE.Material, bowlWood: THREE.Material, gold: THREE.Material, obstacle: (x: number, z: number, hx: number, hz: number) => void) {
-  const x = -PINE_PAVILIONS.x, z = PINE_PAVILIONS.z;
+  const x = CHESS_PAVILION.boardX, z = CHESS_PAVILION.boardZ;
   const setting = new THREE.Group();
-  setting.name = 'West pavilion stone Go table and drum stools';
+  setting.name = 'West pavilion stone Go table and two armchairs';
   setting.position.set(x, .3, z);
   parent.add(setting);
   const bronze = new THREE.MeshStandardMaterial({ name: 'Verdigris waist of the Go pedestal', color: '#476c61', roughness: .52, metalness: .50 });
@@ -121,14 +121,51 @@ export function buildGoSetting(parent: THREE.Group, stone: THREE.Material, shado
     set(lid,bowlWood,'Lid set beside the open bowl',bx,.588,bz+.248);
   }
   obstacle(x,z,.705,.64);
-  const drum = profile([[0,0],[.205,0],[.218,.017],[.218,.045],[.196,.064],[.185,.11],
-    [.208,.19],[.226,.258],[.223,.306],[.209,.337],[.218,.345],[.218,.38],[.203,.391],[0,.391]]);
-  const drumRing = profile([[.215,0],[.22,.004],[.216,.011]]);
-  // Two players face across the board. The observers sit slightly off-axis, clear of the column feet.
-  for (const [dx,dz] of [[0,.92],[0,-.92],[.96,.24],[-.96,-.24]]) {
-    set(drum,stone,'Turned limestone drum seat',dx,0,dz);
-    for (const h of [.029,.351]) set(drumRing,shadowStone,'Drum seat beaded ring',dx,h,dz);
-    obstacle(x+dx,z+dz,.222,.222);
+  // Two turned hardwood chairs belong to the game. The gallery side stays free for spectators.
+  const chair=new THREE.Group();
+  function placeChair(g:THREE.BufferGeometry,m:THREE.Material,name:string,px:number,py:number,pz:number) {
+    const part=new THREE.Mesh(g,m);part.name=name;part.position.set(px,py,pz);
+    part.castShadow=part.receiveShadow=true;chair.add(part);return part;
+  }
+  const grain=new Uint8Array(64*64*4);
+  for(let j=0;j<64;j++)for(let i=0;i<64;i++) {
+    const crossing=((i>>2)+(j>>2))%2, fibre=crossing?i%4:j%4;
+    const variation=(fibre===0?-.14:fibre===1?.13:.035)+.027*Math.sin(3*j+11*i);
+    const at=(j*64+i)*4;
+    grain[at]=172*(1+variation);grain[at+1]=155*(1+variation);grain[at+2]=112*(1+variation);grain[at+3]=255;
+  }
+  const weave=new THREE.DataTexture(grain,64,64,THREE.RGBAFormat);weave.colorSpace=THREE.SRGBColorSpace;
+  weave.wrapS=weave.wrapT=THREE.RepeatWrapping;weave.repeat.set(4,4);weave.generateMipmaps=true;
+  weave.minFilter=THREE.LinearMipmapLinearFilter;weave.magFilter=THREE.LinearFilter;weave.needsUpdate=true;
+  face.addEventListener('dispose',()=>weave.dispose());
+  const rush=new THREE.MeshStandardMaterial({map:weave,roughness:.92});
+  function rail(a:THREE.Vector3,b:THREE.Vector3,r1:number,r2:number,name:string) {
+    const mesh=placeChair(new THREE.CylinderGeometry(r2,r1,a.distanceTo(b),10),bowlWood,name,0,0,0);
+    mesh.position.copy(a).lerp(b,.5);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),b.clone().sub(a).normalize());
+  }
+  const point=(x:number,y:number,z:number)=>new THREE.Vector3(x,y,z);
+  for(const dx of [-1,1]) {
+    for(const dz of [-1,1]) rail(point(dx*.229,0,dz*.221),point(dx*.203,.444,dz*.194),.026,.034,'Raked chair leg');
+    rail(point(dx*.217,.15,-.208),point(dx*.217,.15,.208),.015,.015,'Side stretcher');
+    rail(point(dx*.211,.428,.194),point(dx*.242,.832,.251),.029,.024,'Raked stile below the crest rail');
+    rail(point(dx*.215,.435,-.18),point(dx*.237,.630,-.165),.022,.020,'Support under the horseshoe arm');
+  }
+  rail(point(-.216,.192,-.208),point(.216,.192,-.208),.018,.018,'Footrest between the forelegs');
+  placeChair(architecturalBlock(.574,.072,.525,.016),timber,'Mortised seat frame',0,.416,0);
+  placeChair(architecturalBlock(.510,.033,.461,.013),rush,'Woven rush chess seat',0,.463,-.006);
+  const back=placeChair(architecturalBlock(.236,.344,.038,.015),bowlWood,'Bent chair back splat',0,.635,.211);
+  back.rotation.x=.15;
+  const backPanel=placeChair(architecturalBlock(.192,.272,.012,.005),rush,'Woven centre of the back splat',0,.649,.191);
+  backPanel.rotation.x=.15;
+  const bow=[[-.265,.621,-.214],[-.252,.658,-.134],[-.244,.725,.073],[-.238,.809,.213],
+    [-.134,.856,.261],[0,.871,.268],[.134,.856,.261],[.238,.809,.213],[.244,.725,.073],[.252,.658,-.134],[.265,.621,-.214]];
+  placeChair(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(bow.map(([x,y,z])=>point(x,y,z))),45,.025,10,false),
+    bowlWood,'Continuous horseshoe crest rail and arms',0,0,0);
+  for(const sign of [-1,1]) {
+    const dx=sign*1.11,dz=sign*.47,yaw=Math.atan2(dx,dz);
+    const seat=chair.clone(true);seat.name='Rush-seated chess armchair';seat.position.set(dx,0,dz);seat.rotation.y=yaw;setting.add(seat);
+    const c=Math.abs(Math.cos(yaw)),s=Math.abs(Math.sin(yaw));
+    obstacle(x+dx,z+dz,.287*c+.276*s,.287*s+.276*c);
   }
   return face;
 }

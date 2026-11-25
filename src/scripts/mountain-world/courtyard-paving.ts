@@ -4,13 +4,14 @@ import type { SurfaceLibrary } from './materials';
 
 type Point = [number, number];
 type Rect = { x0: number; x1: number; z0: number; z1: number };
-type Finish = 'field' | 'border' | 'threshold' | 'wood' | 'woodEdge';
+type Finish = 'field' | 'border' | 'threshold' | 'walk' | 'wood' | 'woodEdge';
 type Owner = <T extends THREE.BufferGeometry>(value: T) => T;
 
 const shades: Record<Finish, [string,string]> = {
   field: ['#e5ddd0','#fff6e7'],
   border: ['#c8bfb2','#dfd2c0'],
   threshold: ['#d4cdbe','#ebdfc8'],
+  walk: ['#bcc4b4','#d6d8c7'],
   wood: ['#d8bd9e','#f7dfbd'],
   woodEdge: ['#bc9776','#d0b393'],
 };
@@ -102,19 +103,22 @@ export function createFloorFinishes(library: SurfaceLibrary, keep: Owner, own: <
   }
   const ready = Promise.all([load(stone,'honed-limestone.webp'),load(wood,'oiled-elm.webp')]);
 
-  function flags(parent: THREE.Object3D, rect: Rect, rowSize: number, length: number, holes: Rect[] = [], finish: Finish = 'field', y = .304) {
-    const rows = Math.max(1,Math.round((rect.z1-rect.z0)/rowSize)), step = (rect.z1-rect.z0)/rows;
+  function flags(parent: THREE.Object3D, rect: Rect, rowSize: number, length: number, holes: Rect[] = [], finish: Finish = 'field', y = .304, alongZ = false) {
+    const start=alongZ?rect.z0:rect.x0, end=alongZ?rect.z1:rect.x1;
+    const near=alongZ?rect.x0:rect.z0, far=alongZ?rect.x1:rect.z1;
+    const rows = Math.max(1,Math.round((far-near)/rowSize)), step = (far-near)/rows;
     const batch = new CourseMesh(Math.round(700+rect.x0*61+rect.z0*123));
     for (let row=0;row<rows;row++) {
-      const z0=rect.z0+row*step;
-      const offset = rect.x1-rect.x0 <= length+.001 ? 0 : [0,.50,.16,.66][row%4]*length;
-      for (let x=rect.x0-offset; x<rect.x1-.01; x+=length) {
-        const tile={x0:Math.max(x,rect.x0),x1:Math.min(x+length,rect.x1),z0,z1:z0+step};
+      const band=near+row*step;
+      const offset = end-start <= length+.001 ? 0 : [0,.50,.16,.66][row%4]*length;
+      for (let p=start-offset; p<end-.01; p+=length) {
+        const a=Math.max(p,start), b=Math.min(p+length,end);
+        const tile=alongZ?{x0:band,x1:band+step,z0:a,z1:b}:{x0:a,x1:b,z0:band,z1:band+step};
         for (const r of holes.reduce<Rect[]>((pieces,hole)=>pieces.flatMap(piece=>subtract(piece,hole)),[tile]))
           batch.rectangle(r,y,finish);
       }
     }
-    batch.finish(parent,'Staggered, honed limestone courses',stone,keep);
+    batch.finish(parent,finish==='walk'?'Long ashlar of the pond walks':'Staggered, honed limestone courses',stone,keep);
   }
 
   function boards(parent: THREE.Object3D,rect: Rect,alongX=false,y=.304) {
@@ -192,11 +196,10 @@ export function createFloorFinishes(library: SurfaceLibrary, keep: Owner, own: <
     parent.add(panel);
   }
 
-  // A flush six-sided stone inset follows the pavilion columns in the timber terrace.
-  function pavilion(parent: THREE.Object3D, x: number, z: number, radius: number) {
+  function pavilion(parent: THREE.Object3D, x: number, z: number, radius: number, orientation: number, rise: number) {
     const paving = new CourseMesh(248);
     const corner = (side: number, r: number): Point => {
-      const angle = -side * Math.PI / 3;
+      const angle = -orientation - side * Math.PI / 3;
       return [x + r * Math.cos(angle), z + r * Math.sin(angle)];
     };
     const edge = (side: number, r: number, t: number): Point => {
@@ -204,14 +207,14 @@ export function createFloorFinishes(library: SurfaceLibrary, keep: Owner, own: <
       return [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t];
     };
     const radii = [.49,1.23,1.90,radius-.16,radius];
-    paving.polygon(Array.from({length:6},(_,i)=>corner(i,radius)),.308,'border');
-    paving.polygon(Array.from({length:6},(_,i)=>corner(i,.485)),.316,'field');
+    paving.polygon(Array.from({length:6},(_,i)=>corner(i,radius)),.308+rise,'border');
+    paving.polygon(Array.from({length:6},(_,i)=>corner(i,.485)),.316+rise,'field');
     for (let j=1;j<radii.length;j++) {
       const outer = radii[j]-.004, inner = radii[j-1]+.004, blocks = j===1 ? 1 : 2;
       for (let side=0;side<6;side++) for (let k=0;k<blocks;k++) {
         const start = k/blocks+.0025, end = (k+1)/blocks-.0025;
         paving.polygon([edge(side,inner,start),edge(side,outer,start),edge(side,outer,end),edge(side,inner,end)],
-          .316,j===radii.length-1 ? 'border' : 'field');
+          .316+rise,j===radii.length-1 ? 'border' : 'field');
       }
     }
     paving.finish(parent,'Six-sided inset of dressed pavilion flags',stone,keep);

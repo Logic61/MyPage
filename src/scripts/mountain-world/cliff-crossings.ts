@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { architecturalBlock } from './environment-geometry';
 import { stoneBalustrade } from './stone-balustrade';
 import { createStoneBeacon } from './court-beacon';
-import { EAST_BRIDGE, SUN_DAIS } from './hall-terrace';
+import { EAST_BRIDGE, SUN_DAIS, TEA_PAVILION } from './hall-terrace';
 import type { SurfaceLibrary } from './materials';
 import type { createFloorFinishes } from './courtyard-paving';
 import type { Collider } from './types';
@@ -212,7 +212,8 @@ export function buildCliffCrossings(
   span((EAST_BRIDGE.start + EAST_BRIDGE.end) / 2,EAST_BRIDGE.z,EAST_BRIDGE.end - EAST_BRIDGE.start,EAST_BRIDGE.width,true,1);
   floors.flags(root,{x0:EAST_BRIDGE.landing,x1:EAST_BRIDGE.start,z0:EAST_BRIDGE.z-bridgeHalf,z1:EAST_BRIDGE.z+bridgeHalf},.55,.56,[],'threshold',.307);
   for (const side of [-1,1]) lantern(side*2.2,31.85);
-  for (const side of [-1,1]) lantern(12.35,EAST_BRIDGE.z+side*(bridgeHalf+.42),.89);
+  // Set them along the stone walk before the turning point into the tea house's broad front bay.
+  for (const side of [-1,1]) lantern(10.34,EAST_BRIDGE.z+side*(bridgeHalf+.42),.89);
   const roseWindow=new THREE.Group();roseWindow.position.set(0,0,34);root.add(roseWindow);
   floorRing(roseWindow,slate,2.83,.146,.312);
   floorRing(roseWindow,honeyStone,2.43,.087,.313);
@@ -226,8 +227,11 @@ export function buildCliffCrossings(
     line(side*7.8,-7.9,side*12.84,-7.9,3,.91);
     const opening = side > 0 ? bridgeHalf+.16 : 1.34;
     line(side*12.84,-7.9,side*12.84,EAST_BRIDGE.z-opening,6,.91,true);
-    line(side*12.84,EAST_BRIDGE.z+opening,side*12.84,8.04,1,.91);
+    if (side<0) line(-12.84,EAST_BRIDGE.z+opening,-12.84,8.04,1,.91);
   }
+  const teaRim=TEA_PAVILION.apron;
+  edge([[12.84,EAST_BRIDGE.z+bridgeHalf+.16],[teaRim.x1-.13,8.03],[teaRim.x1-.13,9.35],
+    [teaRim.x1-.13,teaRim.z1-.15],[11.04,teaRim.z1-.15]],.81);
   edge([[-1.80,17.04],[-3.24,16.04],[-4.63,15.09]],.71);
   edge([[1.77,17.22],[3.41,16.87],[4.51,15.43]],.71);
   // Leave the landing's rear steps and the view through the bronze disc open.

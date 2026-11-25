@@ -6,7 +6,7 @@ import { buildTimberHalls } from './timber-halls';
 import { buildCloudGallery } from './cloud-gallery';
 import { buildPineUnderstory } from './pine-understory';
 import { buildReedShades } from './reed-shades';
-import { EAST_BRIDGE, GALLERY, HALL_STEPS, NORTH_HALL_FRONT, NORTH_HALL_RISE, NORTH_HALL_SETBACK } from './hall-terrace';
+import { EAST_BRIDGE, GALLERY, HALL_STEPS, LIBRARY_ENTRY, NORTH_HALL_FRONT, NORTH_HALL_RISE, NORTH_HALL_SETBACK, TEA_PAVILION } from './hall-terrace';
 import { architecturalBlock, gridSurface } from './environment-geometry';
 import type { SurfaceLibrary } from './materials';
 import type { Collider, Overhead, WalkArea } from './types';
@@ -73,10 +73,10 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     result.position.copy(a).add(b).multiplyScalar(.5); result.scale.set(width, delta.length(), depth);
     result.quaternion.setFromUnitVectors(vUp, delta.normalize()); return result;
   }
-  function post(x: number, z: number, top: number, width = .19, depth = width) {
-    box(width, top - .3, depth, x, (top + .3) / 2, z, joinery, 'Timber column with a real bearing');
-    box(width + .09, .12, depth + .09, x, .36, z, limestone, 'Low stone column foot', .012);
-    obstacle(x, z, (width + .09) / 2 + .012, (depth + .09) / 2 + .012);
+  function post(x: number, z: number, top: number, width = .19, footing = .304) {
+    box(width, top - footing, width, x, (top + footing) / 2, z, joinery, 'Timber column with a real bearing');
+    box(width + .09, .12, width + .09, x, footing + .06, z, limestone, 'Low stone column foot', .012);
+    obstacle(x, z, (width + .09) / 2 + .012, (width + .09) / 2 + .012);
   }
   function horizontal(a: number, b: number, y: number, fixed: number, axis: 'x' | 'z', material: THREE.Material, name: string, h = .08, depth = .31) {
     return axis === 'x' ? box(b - a, h, depth, (a + b) / 2, y, fixed, material, name)
@@ -165,13 +165,26 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   timberFloor({ x0: 3.2, x1: 6.1, z0: -5.8, z1: .6 });
   const rim = {x0:COURTYARD_POOL.x0-.16,x1:COURTYARD_POOL.x1+.16,z0:COURTYARD_POOL.z0-.16,z1:COURTYARD_POOL.z1+.16};
   const waterCentre = (COURTYARD_POOL.z0 + COURTYARD_POOL.z1) / 2;
-  // Longer ashlar courses lead out from the pond to the two open pavilion terraces.
-  const north = waterCentre - 1.16, south = waterCentre + 1.16;
-  paving({x0:-6.35,x1:6.35,z0:.6,z1:north},.54,1.40,[rim]);
-  paving({x0:-6.35,x1:6.35,z0:north,z1:south},.58,1.96,[rim],'threshold');
-  paving({x0:-6.35,x1:6.35,z0:south,z1:8.4},.54,1.40,[rim]);
-  // The gateway opens onto a continuous, flush stone apron between the pines.
-  paving({x0:-5.99,x1:5.99,z0:8.4,z1:12.87},.64,1.76,[FORECOURT_PLANTER,mirrorRect(FORECOURT_PLANTER)]);
+  // A stopping place inside the gate leads onto two dry walks. The west one enters the book bay;
+  // the east one turns onto the bridge and joins the hall approach across the head of the pool.
+  const inner=-LIBRARY_ENTRY.east+.13, outer=-LIBRARY_ENTRY.jamb-.13;
+  const northWalk={x0:-outer,x1:outer,z0:COURTYARD_POOL.z0-1.51,z1:COURTYARD_POOL.z0-.43};
+  const turn={x0:-outer,x1:outer,z0:COURTYARD_POOL.z1+.91,z1:9.19};
+  const sideWalk={x0:-outer,x1:-inner,z0:northWalk.z1,z1:turn.z0};
+  const walks: {rect:Rect; alongZ:boolean}[] = [
+    {rect:{x0:-1.52,x1:1.52,z0:turn.z1,z1:12.87},alongZ:true},
+    {rect:turn,alongZ:false}, {rect:sideWalk,alongZ:true}, {rect:mirrorRect(sideWalk),alongZ:true},
+    {rect:northWalk,alongZ:false},
+    {rect:{x0:-outer,x1:-inner,z0:LIBRARY_ENTRY.front,z1:northWalk.z0},alongZ:true},
+    {rect:{x0:outer,x1:6.35,z0:EAST_BRIDGE.z-.77,z1:EAST_BRIDGE.z+.77},alongZ:false},
+  ];
+  const reservations=walks.map(({rect})=>rect);
+  paving({x0:-6.35,x1:6.35,z0:.6,z1:8.4},.54,1.40,[rim,...reservations]);
+  paving({x0:-5.99,x1:5.99,z0:8.4,z1:12.87},.64,1.76,[FORECOURT_PLANTER,mirrorRect(FORECOURT_PLANTER),...reservations]);
+  for(const {rect,alongZ} of walks) {
+    floorBase(rect);
+    floors.flags(group,rect,.49,1.58,[],'walk',.304,alongZ);
+  }
   paving({x0:-5.99,x1:5.99,z0:12.87,z1:13.17},.30,1.6,[],'threshold');
   for (const sign of [-1,1]) {
     const side = (r: Rect) => sign < 0 ? r : mirrorRect(r);
@@ -186,7 +199,13 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     // Across the open pavilion approach the boards run in the direction of travel.
     const landing = side({x0:-7.36,x1:-6.35,z0:GALLERY.south,z1:8.29});
     floorBase(landing);
-    floors.boards(group,landing,true);
+    if (sign<0) floors.boards(group,landing,true);
+    else {
+      const z0=EAST_BRIDGE.z-EAST_BRIDGE.width/2, z1=EAST_BRIDGE.z+EAST_BRIDGE.width/2;
+      floors.boards(group,{...landing,z1:z0},true);
+      floors.flags(group,{...landing,z0,z1},.52,1.49,[],'threshold');
+      floors.boards(group,{...landing,z0:z1},true);
+    }
   }
   // A continuous cross-landing separates the side doors from the stairs.
   paving({x0:-6.1,x1:6.1,z0:NORTH_HALL_FRONT,z1:-5.8},.50,1.40);
@@ -281,28 +300,65 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     obstacle(x,z,w/2+.01,d/2+.01);
   }
 
-  // Individual dressed stones wrap the platform. Their recessed beds give each tread a shadow line.
-  for (let step = 1; step <= HALL_STEPS.count; step++) {
-    const { front, rear, halfWidth, tread, riser, count } = HALL_STEPS;
-    const margin = (count - step) * tread;
-    const w = halfWidth + margin;
-    const south = front + margin, north = rear - margin;
-    const top = .3 + step * riser - .012;
-    box(w * 2 - .032, riser - .004, south - north - .032, 0, top - riser / 2 - .014, (north + south) / 2,
-      sidePaving, 'Rebated plinth under the hall stair', .012);
-    for (const z of [north + tread / 2, south - tread / 2]) {
-      const pieces = Math.ceil(2 * w / 1.51);
-      const width = 2 * w / pieces;
-      for (let k = 0; k < pieces; k++) box(width - .007, .085, tread + .014,
-        -w + width * (k + .5), top - .0425, z, limestone, 'Dressed front and rear stair nosing', .011);
+  // A single flight meets a full-width ashlar porch. The side flights serve the window seats.
+  const {halfWidth, stairHalf, cheek, rear, front, tread, riser, count} = HALL_STEPS;
+  const top = .3 + NORTH_HALL_RISE, depth = front - rear, midZ = (rear + front) / 2;
+  const toe = front + (count-1) * tread, sideToe = halfWidth + (count-1) * tread;
+  box(2*halfWidth,NORTH_HALL_RISE-.014,depth,0,.3+(NORTH_HALL_RISE-.014)/2,midZ,
+    sidePaving,'Solid ashlar body of the hall terrace');
+  floors.flags(group,{x0:-halfWidth,x1:halfWidth,z0:NORTH_HALL_FRONT,z1:front-.25},.51,1.54,[],'threshold',top+.004);
+  floors.flags(group,{x0:-halfWidth,x1:halfWidth,z0:rear,z1:-10-NORTH_HALL_SETBACK},.19,1.32,[],'border',top+.004);
+  // Carry the paving under the side windows and the full bases of the outermost hall posts.
+  for (const side of [-1,1]) {
+    const a=side*6.1, b=side*halfWidth;
+    floors.flags(group,{x0:Math.min(a,b),x1:Math.max(a,b),z0:-10-NORTH_HALL_SETBACK,z1:NORTH_HALL_FRONT},1.30,.38,[],'border',top+.004);
+  }
+  for (let step=1;step<count;step++) {
+    const run=(count-step)*tread, y=.3+step*riser;
+    const edge=front+run;
+    box(2*stairHalf,y-.3-.012,tread,0,(y+.3-.012)/2,edge-tread/2,sidePaving,'Bed of the central stair tread');
+    const joints=step%2 ? [-stairHalf,-.73,.73,stairHalf] : [-stairHalf,-1.45,0,1.45,stairHalf];
+    for (let j=1;j<joints.length;j++) {
+      const a=joints[j-1], b=joints[j];
+      box(b-a-.005,.074,tread+.012,(a+b)/2,y-.037,edge-tread/2,limestone,'Dressed axial stair nosing',.008);
     }
-    const depth = south - north - 2 * tread;
-    const pieces = Math.ceil(depth / 1.28), length = depth / pieces;
-    for (const side of [-1, 1]) for (let k = 0; k < pieces; k++) {
-      box(tread + .012, .085, length - .007, side * (w - tread / 2), top - .0425,
-        north + tread + length * (k + .5), limestone, 'Return of the stone stair tread', .011);
+    for (const side of [-1,1]) {
+      const x=side*(halfWidth+run-tread/2);
+      box(tread,y-.3-.012,depth,x,(y+.3-.012)/2,midZ,sidePaving,'Bed of the lateral stair tread');
+      const bays=Math.ceil(depth/1.25), length=depth/bays;
+      for (let i=0;i<bays;i++) box(tread+.012,.074,length-.005,x,y-.037,rear+length*(i+.5),
+        limestone,'Dressed lateral stair nosing',.008);
     }
   }
+  const landingStones=Math.ceil(halfWidth*2/1.28), capWidth=halfWidth*2/landingStones;
+  for (let i=0;i<landingStones;i++) box(capWidth-.005,.095,.256,-halfWidth+capWidth*(i+.5),top-.0435,
+    front-.124,limestone,'Bevelled leading stones of the porch landing',.008);
+  // The sloping cheek is one solid stone, with its toe resting on the same flags as the wings.
+  const cheekSide=new THREE.Shape();
+  cheekSide.moveTo(-.11,.0); cheekSide.lineTo(toe-front+.15,0);
+  cheekSide.lineTo(toe-front+.15,.16); cheekSide.lineTo(.02,NORTH_HALL_RISE+.075);
+  cheekSide.lineTo(-.11,NORTH_HALL_RISE+.075); cheekSide.closePath();
+  const cheekGeo=keep(new THREE.ExtrudeGeometry(cheekSide,{depth:cheek-.012,bevelEnabled:true,
+    bevelThickness:.006,bevelSize:.006,bevelSegments:1}));
+  cheekGeo.translate(0,0,-(cheek-.012)/2); cheekGeo.rotateY(-Math.PI/2);
+  for (const side of [-1,1]) {
+    const x=side*(stairHalf+cheek/2);
+    add(cheekGeo,limestone,'Solid sloping cheek of the axial stair',x,.3,front);
+    obstacle(x,(front+toe+.04)/2,cheek/2,(toe+.26-front)/2);
+    const outer=halfWidth, inner=stairHalf+cheek;
+    // Two bonded courses and a projecting coping show the true height of the retaining wall.
+    for (let row=0;row<2;row++) {
+      const unit=1.34, offset=row*.50*unit;
+      for (let a=inner-offset;a<outer;a+=unit) {
+        const lo=Math.max(inner,a), hi=Math.min(outer,a+unit);
+        if (hi-lo<.018) continue;
+        box(hi-lo-.006,.248,.064,side*(lo+hi)/2,.435+row*.251,front+.019,
+          sidePaving,'Bonded ashlar face of the porch',.004);
+      }
+    }
+    obstacle(side*(inner+sideToe)/2,front+.018,(sideToe-inner)/2,.031);
+  }
+  obstacle(0,rear,sideToe,.038);
 
   assembly = hallInterior;
   wall('x', -10, -6.1, 6.1, 4.18);
@@ -332,7 +388,18 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     horizontal(lo, hi, top - .09, face + inward * .035, axis, archiveElm, 'Timber wall plate under the archive eaves', .18, .082);
   }
   archiveWall('z',-6.1,-5.8,.6,3.47,wingDoor);
-  archiveWall('x',.6,-6.1,-3.2,3.16);
+  const entry=LIBRARY_ENTRY;
+  archiveWall('x',entry.front,entry.west,entry.jamb,3.16);
+  archiveWall('z',entry.jamb,entry.returnEnd,entry.front,3.16);
+  // The old plaster screen returns beside the cabinet, exposing its book spines along the pond walk.
+  const clearStart=entry.jamb+.11, clearEnd=entry.east-.13, entryFace=entry.front-.04;
+  horizontal(clearStart,clearEnd,.304,entryFace,'x',limestone,'Flush stone sill of the library porch',.012,.28).castShadow=false;
+  horizontal(clearStart,clearEnd,2.67,entryFace,'x',archiveElm,'Recessed opening head',.085,.15);
+  for (let i=0;i<6;i++) {
+    const x=clearStart+(i+.5)*(clearEnd-clearStart)/6;
+    box(.032,.24,.056,x,2.828,entryFace,joinery,'Upright in the library transom',.003);
+  }
+  horizontal(clearStart,clearEnd,2.942,entryFace,'x',archiveElm,'Library transom top rail',.045,.12);
   wall('z',6.1,-5.8,.6,3.47,[
     wingDoor, {from:-3.12,to:.46,bottom:1.07,top:2.96,lattice:true},
   ]);
@@ -356,7 +423,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     for (const z of GALLERY.bents) {
       beam(new THREE.Vector3(sign*GALLERY.innerPost,3.21,z),new THREE.Vector3(sign*GALLERY.outerPost,3.07,z),.12,.16,'Covered walk cross beam');
     }
-    for (const z of [GALLERY.bents[0],GALLERY.bents[3]]) post(sign*GALLERY.innerPost,z,3.19,.16);
+    post(sign*GALLERY.innerPost,GALLERY.bents[0],3.19,.16,.3+NORTH_HALL_RISE);
+    post(sign*GALLERY.innerPost,GALLERY.bents[3],3.19,.16);
     const span = GALLERY.south-GALLERY.north-.46, midZ = (GALLERY.north+GALLERY.south)/2;
     box(.17,.16,span,sign*GALLERY.innerPost,3.19,midZ,joinery,'Inner gallery plate');
     box(.19,.19,span,sign*GALLERY.outerPost,3.06,midZ,joinery,'Outer gallery plate');
@@ -368,7 +436,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   // Capture the undersides before scenery is batched. Jumping never raycasts the roof tiles.
   const headPieces = new Set(['Recessed opening head', 'Painted lintel frame', 'Carved plaque backing', '留云阁', 'Recessed central lintel',
     'Continuous open-gallery bearing beam', 'Visible gallery cross beam', 'Covered walk cross beam',
-    'Inner gallery plate', 'Outer gallery plate', 'Weighted roll at the foot of a bamboo blind']);
+    'Inner gallery plate', 'Outer gallery plate', 'Weighted roll at the foot of a bamboo blind',
+    'Elm tie beam across the pavilion bay','Rebated moulding below an open bay','Timber knee below the tea cornice']);
   const overheads: Overhead[] = [];
   const bounds = new THREE.Box3();
   group.traverse(object => {
@@ -387,6 +456,7 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
   });
 
   const walkAreas: WalkArea[] = [
+    { x: 0, z: midZ, halfX: sideToe, halfZ: depth/2 },
     { x: 0, z: -7.9 - NORTH_HALL_SETBACK, halfX: 6.1, halfZ: 2.1 },
     { x: 0, z: -5.8 - NORTH_HALL_SETBACK / 2, halfX: 6.1, halfZ: NORTH_HALL_SETBACK / 2 },
     { x: -4.65, z: -2.6, halfX: 1.45, halfZ: 3.2 },
@@ -402,6 +472,8 @@ export function createStudyArchitecture(root: THREE.Group, library: SurfaceLibra
     { x: 26, z: 5, halfX: 4.3, halfZ: 4.3, shape: 'ellipse' },
     { x: -10.15, z: .10, halfX: 2.81, halfZ: 8.1 },
     { x: 10.15, z: .10, halfX: 2.81, halfZ: 8.1 },
+    { x:(TEA_PAVILION.apron.x0+TEA_PAVILION.apron.x1)/2,z:(TEA_PAVILION.apron.z0+TEA_PAVILION.apron.z1)/2,
+      halfX:(TEA_PAVILION.apron.x1-TEA_PAVILION.apron.x0)/2,halfZ:(TEA_PAVILION.apron.z1-TEA_PAVILION.apron.z0)/2 },
   ];
   for (const side of [-1,1]) {
     walkAreas.push({

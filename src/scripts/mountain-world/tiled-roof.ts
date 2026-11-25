@@ -8,9 +8,9 @@ export function rectangularRing(x: number, z: number, halfWidth: number, halfDep
     new THREE.Vector2(x + u * halfWidth, z + v * halfDepth));
 }
 
-export function hexagonalRing(x: number, z: number, radius: number): Ring {
+export function hexagonalRing(x: number, z: number, radius: number, orientation = 0): Ring {
   return Array.from({ length: 6 }, (_, i) => {
-    const a = i * Math.PI / 3;
+    const a = orientation + i * Math.PI / 3;
     return new THREE.Vector2(x + Math.cos(a) * radius, z - Math.sin(a) * radius);
   });
 }

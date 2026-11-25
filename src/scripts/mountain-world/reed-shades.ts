@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GALLERY, PINE_PAVILIONS } from './hall-terrace';
+import { GALLERY, TEA_PAVILION } from './hall-terrace';
 import type { SurfaceLibrary } from './materials';
 
 /** Split-reed blinds tied across actual openings. Each local Z axis runs along the supporting beam. */
@@ -53,8 +53,7 @@ export function buildReedShades(parent: THREE.Group, library: SurfaceLibrary, ge
   // Between the workshop's three inner posts. Both roller edges clear a two-metre visitor on the gallery floor.
   shade('North workshop reed blind',3.20,2.983,-3.02,0,1.97,.48);
   shade('South workshop reed blind',3.20,2.983,-.74,0,2.05,.53);
-  // Reeds behind the seat shelter the western bays; the two eastern bays frame the cloud sea.
-  const {x,z,postCircle,beamY}=PINE_PAVILIONS;
-  for(const side of [-1,1]) shade('Outlook pavilion reed blind',x-postCircle*.75,beamY-.084,
-    z+side*postCircle*Math.sqrt(3)/4,side*Math.PI/6,postCircle-.42,.43);
+  // A single long blind shelters the back of the settle and leaves the east-facing view open.
+  const tea=TEA_PAVILION;
+  shade('Outlook pavilion reed blind',tea.x-tea.postHalfX,tea.beamY-.12,tea.z,0,2*tea.postHalfZ-.30,.42);
 }

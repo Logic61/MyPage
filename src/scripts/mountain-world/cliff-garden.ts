@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { gridSurface, seeded } from './environment-geometry';
-import { bankSedges } from './woodland-foliage';
+import { bankSedges, type PlantingBank } from './woodland-foliage';
 
 /** The inhabited rim stays true to the walking polygon. Fissures deepen below the cap. */
 export function cragFace(outline: number[][]) {
@@ -23,16 +23,23 @@ export function cragFace(outline: number[][]) {
 type Spur = { x: number; y: number; z: number; angle: number; width: number; depth: number; height: number; phase: number };
 
 // Planted ground outside each covered walk and where the southern pine meets the landing.
-const gardenBanks = [
-  [-2.82,35.47,.94,1.10,.15], [-13.85,-3.4,.77,2.37,.18], [-13.80,.38,.82,2.14,.23],
-  [-13.56,4.05,.59,1.46,.17], [13.59,-3.89,.62,2.18,.19], [13.49,.46,.56,1.87,.14],
-  [12.6,8.72,.82,.96,.17], [-7.91,10.65,1.43,.94,.23], [8.24,10.71,1.34,.81,.18],
-  [-4.52,14.08,.97,.90,.15], [3.66,14.67,1.0,.66,.14],
+const gardenBanks: PlantingBank[] = [
+  { soil:[-2.82,35.47,.94,1.10,.15], sedges:[[.27,.10,.82],[-.42,-.16,.53]] },
+  { soil:[-13.85,-3.4,.77,2.37,.18] },
+  { soil:[-13.80,.38,.82,2.14,.23], sedges:[[.12,.31,.87],[-.20,-.13,.72]] },
+  { soil:[-13.56,4.05,.59,1.46,.17] },
+  { soil:[13.59,-3.89,.62,2.18,.19], sedges:[[-.16,.28,.84]] },
+  { soil:[13.51,-.17,.56,1.02,.14] },
+  { soil:[13.70,1.67,.65,.89,.18], sedges:[[.13,-.17,.74]] },
+  { soil:[-7.91,10.65,1.43,.94,.23], sedges:[[-.27,.28,.86],[.20,.31,.57]] },
+  { soil:[8.04,10.70,.60,.84,.18], sedges:[[.14,-.33,.80]] },
+  { soil:[-4.52,14.08,.97,.90,.15] },
+  { soil:[3.66,14.67,1.0,.66,.14], sedges:[[-.19,.05,.62]] },
 ];
 
 export function plantingSoil() {
   const p: number[] = [], faces: number[] = [], sides = 32;
-  for (const [bed,[x,z,rx,rz,h]] of gardenBanks.entries()) {
+  for (const [bed,{soil:[x,z,rx,rz,h]}] of gardenBanks.entries()) {
     const first = p.length / 3;
     for (let ring=0; ring<=5; ring++) {
       const r = ring / 5;

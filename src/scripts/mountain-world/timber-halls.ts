@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { neutralSurfaceMap } from './environment-geometry';
 import { stoneBalustrade } from './stone-balustrade';
 import { hexagonalRing, rectangularRing, tiledRoof } from './tiled-roof';
-import { GALLERY, NORTH_HALL_RISE, NORTH_HALL_SETBACK, PINE_PAVILIONS } from './hall-terrace';
+import { CHESS_PAVILION, GALLERY, LIBRARY_ENTRY, NORTH_HALL_RISE, NORTH_HALL_SETBACK, TEA_PAVILION } from './hall-terrace';
 import { buildGoSetting } from './go-pavilion';
 import { buildForecourtLanterns } from './forecourt-lantern';
 import { inscribedPost, type GateLine } from './inscribed-post';
@@ -340,12 +340,17 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, addObstacle:
     box(cedar,'Deep lintel battens',x,4.22,doorZ+.14,.052,.84,.065);
   paintedBeam(0,3.77,doorZ,6.20,.22,.32);
   box(cedar,'Central collar above the name tablet',0,4.91,doorZ,6.22,.35,.31);
+  box(m.stone,'Flush threshold of the north hall',0,.303,doorZ+.04,2*gateHalf-.035,.012,.24);
   for(const side of [-1,1]) {
     const x=side*(gateHalf+.08);
+    box(m.stone,'Stone pad beneath the inner door column',x,.366,doorZ+.04,.285,.132,.285);
+    turned('Shaped shoe of the door jamb',m.stone,x,.425,doorZ+.04,
+      [[.137,0],[.137,.039],[.119,.058],[.111,.099],[.114,.132],[.110,.172],[.104,.238]]);
+    obstacle(x,doorZ+.04,.143,.143);
     part(cylinder,lacquer,'Twin inner door columns',x,2.76,doorZ+.04,.105,4.20,.105);
     brackets(x,4.84,doorZ+.03,.81);
     box(cedar,'Door column collar',x,1.81,doorZ+.04,.22,.10,.22);
-    for(const y of [.44,1.80,4.68])
+    for(const y of [.67,1.80,4.68])
       part(disk,gold,'Fine column ring',x,y,doorZ+.04,.112,.024,.112);
   }
   // Deep raised transoms leave the central opening and its first-person sightline clear.
@@ -366,11 +371,13 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, addObstacle:
     group.add(tiledRoof({ name:sign<0?'Library roof':'Instrument hall roof', eave:rectangularRing(x,-2.46,2.12,3.87),
       ridge:rectangularRing(x,-2.46,.022,2.12),height:3.33,rise:.94,lift:.48 },roofMaterials));
     const windowX=sign*4.65, front=.763;
-    box(cedar,'Timber apron of the courtyard wing',windowX,.76,front,2.89,.51,.089);
-    for(const dx of [-1.25,-.62,0,.62,1.25])
-      box(lacquer,'Wing apron stile',windowX+dx,.76,front+.052,.050,.53,.048);
+    const apronWidth=sign<0 ? LIBRARY_ENTRY.jamb-LIBRARY_ENTRY.west : 2.89;
+    const apronX=sign<0 ? (LIBRARY_ENTRY.jamb+LIBRARY_ENTRY.west)/2 : windowX;
+    box(cedar,'Timber apron of the courtyard wing',apronX,.76,front,apronWidth,.51,.089);
+    for(const fraction of sign<0 ? [-.39,.39] : [-.433,-.215,0,.215,.433])
+      box(lacquer,'Wing apron stile',apronX+fraction*apronWidth,.76,front+.052,.050,.53,.048);
     for(const y of sign < 0 ? [.50,1.01] : [.50,1.01,2.86])
-      box(cedar,'Window reveal rail',windowX,y,front,2.91,.083,.16);
+      box(cedar,'Window reveal rail',apronX,y,front,apronWidth+.02,.083,.16);
     if (sign > 0) {
       for(const dx of [-1.31,-1.13,1.13,1.31])
         box(cedar,'Boarded window cheek',windowX+dx,1.92,front,.155,1.81,.096);
@@ -430,30 +437,63 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, addObstacle:
     lantern(side*gateHalfSpan,3.04+gateLift,gateZ+.92,.58);
   }
 
-  const pavilion = PINE_PAVILIONS;
-  for (const px of [-pavilion.x,pavilion.x]) {
-    const pz = pavilion.z;
-    const columns = hexagonalRing(px,pz,pavilion.postCircle);
-    columns.forEach((p,i) => {
-      post(p.x,p.y,2.97,.132);
-      const q = columns[(i+1)%columns.length];
-      const middle = p.clone().lerp(q,.5), yaw = Math.atan2(p.y-q.y,q.x-p.x);
-      box(lacquer,'Hexagonal ring beam',middle.x,pavilion.beamY,middle.y,p.distanceTo(q),.22,.18).rotation.y=yaw;
-      box(mineral,'Recessed pavilion fascia',middle.x,pavilion.beamY,middle.y,1.74,.105,.193).rotation.y=yaw;
-      for (const offset of [-.064,.064])
-        box(gold,'Bronze rule on the pavilion fascia',middle.x,pavilion.beamY+offset,middle.y,1.84,.010,.194).rotation.y=yaw;
-      brackets(p.x,2.93,p.y,.83,i*Math.PI/3+Math.PI/2);
-    });
-    group.add(tiledRoof({ name:'Six-sided cloud pavilion',eave:hexagonalRing(px,pz,pavilion.eaves),ridge:hexagonalRing(px,pz,.095),
-      height:3.30,rise:1.43,lift:.49,tileWidth:.19 },roofMaterials));
-    turned('Flared foot of the pavilion finial',ridge,px,4.70,pz,[[0,0],[.235,0],[.212,.046],[.152,.071],[.134,.095]],24);
-    turned('Bronze gourd finial',gold,px,4.78,pz,[[.134,0],[.147,.040],[.127,.069],[.089,.11],[.126,.16],[.143,.23],[.116,.295],[.059,.348],[.045,.371],[.085,.412],[.087,.455],[.055,.509],[.012,.578],[0,.605]]);
+  function timberBetween(a:THREE.Vector3,b:THREE.Vector3,depth:number,height:number,name:string) {
+    const at=a.clone().lerp(b,.5), length=a.distanceTo(b), along=b.clone().sub(a).normalize();
+    const beam=box(cedar,name,at.x,at.y,at.z,length,height,depth);
+    const across=new THREE.Vector3(-along.z,0,along.x).normalize();
+    const up=across.clone().cross(along);
+    beam.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(along,up,across));
+    return beam;
   }
-  textures.push(buildGoSetting(group, m.stone, m.sideStone, cedar, jujube, gold, obstacle));
-  for (const side of [-1,1]) {
-    lantern(pavilion.x + pavilion.postCircle*.75, pavilion.beamY-.075,
-      pavilion.z + side*pavilion.postCircle*Math.sqrt(3)/4, .68);
+  function pavilionBay(a:THREE.Vector2,b:THREE.Vector2,height:number) {
+    const at=a.clone().lerp(b,.5), span=a.distanceTo(b), yaw=Math.atan2(a.y-b.y,b.x-a.x);
+    box(cedar,'Elm tie beam across the pavilion bay',at.x,height,at.y,span,.197,.169).rotation.y=yaw;
+    box(jujube,'Rebated moulding below an open bay',at.x,height-.088,at.y,span-.06,.057,.183).rotation.y=yaw;
+    box(gold,'Thin brass line on the timber cornice',at.x,height+.078,at.y,span-.04,.012,.174).rotation.y=yaw;
   }
+
+  const chess=CHESS_PAVILION, lifted=new THREE.Group();lifted.name='Chess pavilion on a stepped stone terrace';
+  lifted.position.y=chess.rise;group.add(lifted);assembly=lifted;
+  const circle=(r:number)=>hexagonalRing(chess.x,chess.z,r,chess.orientation);
+  const posts=circle(chess.posts), beamHeight=chess.beamY;
+  posts.forEach((p,i)=>{
+    post(p.x,p.y,beamHeight-.13,.132);
+    pavilionBay(p,posts[(i+1)%posts.length],beamHeight);
+    brackets(p.x,beamHeight-.195,p.y,.70,chess.orientation+i*Math.PI/3+Math.PI/2);
+    timberBetween(new THREE.Vector3(p.x,beamHeight+.18,p.y),new THREE.Vector3(chess.x,4.19,chess.z),.096,.11,
+      'Hip rafter rising to the carved chess pavilion boss');
+  });
+  assembly.add(tiledRoof({name:'Six-sided chess pavilion',eave:circle(chess.eaves),ridge:circle(.065),
+    height:3.25,rise:1.16,lift:.41,tileWidth:.188},roofMaterials));
+  turned('Carved ceiling boss below the six hips',cedar,chess.x,4.116,chess.z,
+    [[0,0],[.072,.013],[.13,.053],[.162,.075],[.142,.097],[.139,.13],[.114,.162],[.10,.24],[0,.26]],30);
+  turned('Lobed collar on the chess pavilion finial',ridge,chess.x,4.36,chess.z,
+    [[0,0],[.184,0],[.194,.032],[.148,.060],[.114,.095],[.098,.116]],30);
+  turned('Bronze gourd finial',gold,chess.x,4.46,chess.z,
+    [[.084,0],[.105,.026],[.077,.054],[.061,.089],[.096,.123],[.108,.174],[.091,.224],[.050,.27],[.038,.291],
+      [.064,.32],[.061,.36],[.029,.412],[0,.47]],32);
+  textures.push(buildGoSetting(assembly,m.stone,m.sideStone,cedar,jujube,gold,obstacle));
+  assembly=group;
+
+  const tea=TEA_PAVILION, corners=rectangularRing(tea.x,tea.z,tea.postHalfX,tea.postHalfZ);
+  corners.forEach((p,i)=>{
+    post(p.x,p.y,tea.beamY-.135,.139);
+    pavilionBay(p,corners[(i+1)%corners.length],tea.beamY);
+    const dx=Math.sign(p.x-tea.x),dz=Math.sign(p.y-tea.z);
+    brackets(p.x,tea.beamY-.183,p.y,.68,dx*Math.PI/2);
+    timberBetween(new THREE.Vector3(p.x,tea.beamY+.12,p.y),new THREE.Vector3(tea.x,3.82,p.y),.104,.115,
+      'Open gable truss above the tea seats');
+    timberBetween(new THREE.Vector3(p.x-dx*.024,tea.beamY-.45,p.y),new THREE.Vector3(p.x-dx*.38,tea.beamY-.07,p.y),
+      .075,.088,'Curved-bay corner brace of the tea pavilion');
+    timberBetween(new THREE.Vector3(p.x,tea.beamY-.43,p.y-dz*.023),new THREE.Vector3(p.x,tea.beamY-.085,p.y-dz*.36),
+      .075,.086,'Timber knee below the tea cornice');
+  });
+  box(cedar,'Tea pavilion ridge tie',tea.x,3.815,tea.z,.13,.13,2*tea.postHalfZ+.12);
+  group.add(tiledRoof({name:'Low-ridged tea pavilion',eave:rectangularRing(tea.x,tea.z,tea.eaveHalfX,tea.eaveHalfZ),
+    ridge:rectangularRing(tea.x,tea.z,.032,1.24),height:3.237,rise:.82,lift:.31,tileWidth:.19},roofMaterials));
+  const gable=new THREE.Group();gable.position.set(tea.x,0,tea.z);gable.rotation.y=Math.PI/2;group.add(gable);assembly=gable;
+  ridgeCrest(0,0,4.085,1.27,.52);assembly=group;
+  for(const end of [-1,1]) lantern(tea.x+tea.postHalfX,tea.beamY-.09,tea.z+end*.98,.61);
   // At the outer ends of the pine beds, the two lamps frame the view into the garden.
   box(m.stone,'Gate approach paving',0,.17,13.625,3.3,.24,4.25);
   textures.push(buildForecourtLanterns(group,lanternStone,gold,obstacle));

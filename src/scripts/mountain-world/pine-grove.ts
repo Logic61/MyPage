@@ -180,7 +180,8 @@ export function buildPines(root: THREE.Group, bark: THREE.MeshStandardMaterial, 
   pine(-pineX,pineZ,4.25,-1.06,91,.88);
   pine(-13.7,3.4,6.05,1.38,13); pine(-11.75,9,5.1,-1.03,42);
   pine(-10.8,-10.4,6.0,-.92,77); pine(10.7,-10.4,5.4,1.16,31);
-  pine(13.65,8.4,5.10,.85,108,.90);
+  // A pine frames the north bank; the whole sun disc stays visible between the tea columns.
+  pine(13.70,1.52,5.10,.85,108,.90);
   pine(8.1,10.6,4.75,.91,86,.84); pine(-8.35,10.7,5.05,-.94,52,.94);
   pine(-2.85,35.5,4.8,-.94,67,.94);
   return { material, ready, dispose() { disposed=true; } };

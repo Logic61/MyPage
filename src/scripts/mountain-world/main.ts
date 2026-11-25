@@ -12,7 +12,7 @@ import { createLandscapeBackdrop } from './landscape-backdrop';
 import type { EntryArt } from './entry-art';
 import { createStudyRenderer, type RenderQuality } from './rendering';
 import { createInteractionPicker, movementDirection, FLOOR_HEIGHT, EYE_HEIGHT, SEATED_EYE_HEIGHT } from './first-person';
-import { EAST_BRIDGE, GALLERY, NORTH_HALL_FRONT, NORTH_HALL_SETBACK, walkRiseAt } from './hall-terrace';
+import { CHESS_PAVILION, EAST_BRIDGE, GALLERY, NORTH_HALL_FRONT, NORTH_HALL_SETBACK, TEA_PAVILION, chessRiseAt, walkRiseAt } from './hall-terrace';
 import { COURTYARD_POOL, poolDepthAt, poolFloorAt, POOL_WATER_Y } from './water-court';
 import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from './look-controls';
 import { createCourtyardMouseLock } from './pointer-lock';
@@ -41,6 +41,11 @@ function describePlace(x: number, z: number) {
     return { name: '日轮台', nameEn: 'Sunwheel Terrace', indoor: false };
   if (x > EAST_BRIDGE.start && x < EAST_BRIDGE.end && Math.abs(z - EAST_BRIDGE.z) <= EAST_BRIDGE.width / 2)
     return { name: '东云栈', nameEn: 'East Skywalk', indoor: false };
+  if (chessRiseAt(x,z)>=CHESS_PAVILION.rise-.004)
+    return { name: '松下棋亭', nameEn: 'Pine Chess Pavilion', indoor: false };
+  const tea=TEA_PAVILION.apron;
+  if (x>=tea.x0 && x<=tea.x1 && z>=tea.z0 && z<=tea.z1)
+    return { name: '临云茶榭', nameEn: 'Cloudview Tea Pavilion', indoor: false };
   if (Math.abs(x) <= 6.1 && z >= -10 - NORTH_HALL_SETBACK && z <= NORTH_HALL_FRONT)
     return { name: '留云阁', nameEn: 'Cloudrest Pavilion', indoor: true };
   if (Math.abs(x) <= 6.1 && z > NORTH_HALL_FRONT && z <= -5.8)
@@ -246,8 +251,9 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
     guideLabelsInput.checked = true; immersive.checked = false;
     try {
       const saved = JSON.parse(sessionStorage.getItem(stateKey) || 'null');
-      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.z) && navigation.canWalk(saved.x, saved.z)) {
-        position.set(saved.x, FLOOR_HEIGHT, saved.z);
+      const restored=saved && Number.isFinite(saved.x) && Number.isFinite(saved.z) ? navigation.nearest(saved,1.35) : null;
+      if (restored) {
+        position.set(restored.x, FLOOR_HEIGHT, restored.z);
         look.snap(Number.isFinite(saved.yaw) ? saved.yaw : 0, Number.isFinite(saved.pitch) ? saved.pitch : -0.035);
       } else if (location.hash === '#study') {
         look.snap(0, -.035);

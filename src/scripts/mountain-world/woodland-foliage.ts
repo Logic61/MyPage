@@ -99,18 +99,22 @@ export function fernCrown() {
   return batch.finish();
 }
 
-/** A few separate sedge tussocks on the established soil banks. Granite faces stay exposed. */
-export function bankSedges(banks:number[][]) {
+export type PlantingBank = {
+  soil: [x:number, z:number, radiusX:number, radiusZ:number, height:number];
+  sedges?: [u:number, v:number, scale:number][];
+};
+
+/** Each tussock stays with its own patch of soil when a bank is moved or removed. */
+export function bankSedges(banks: readonly PlantingBank[]) {
   const batch=new PlantSurface(), rng=seeded(952);
-  for (const [index,u,v,size] of [[0,.27,.10,.82],[0,-.42,-.16,.53],[2,.12,.31,.87],
-    [2,-.20,-.13,.72],[4,-.16,.28,.84],[6,.13,-.17,.74],[7,-.27,.28,.86],[7,.20,.31,.57],
-    [8,.14,-.33,.80],[10,-.19,.05,.62]]) {
-    const [cx,cz,rx,rz,h]=banks[index], x=cx+u*rx,z=cz+v*rz;
-    const root=new THREE.Vector3(x,.274+h*(1-u*u-v*v),z);
-    for(let i=0;i<10;i++) {
-      const reach=(.085+rng()*.17)*size;
-      strap(batch,root,i*2.39996+rng()*.6,reach,size*(.12+rng()*.17),.0055*size,
-        reach*(.30+rng()*.28),(rng()-.5)*.64,.02+rng()*.22);
+  for (const {soil:[cx,cz,rx,rz,h], sedges=[]} of banks) {
+    for (const [u,v,size] of sedges) {
+      const root=new THREE.Vector3(cx+u*rx,.274+h*(1-u*u-v*v),cz+v*rz);
+      for(let i=0;i<10;i++) {
+        const reach=(.085+rng()*.17)*size;
+        strap(batch,root,i*2.39996+rng()*.6,reach,size*(.12+rng()*.17),.0055*size,
+          reach*(.30+rng()*.28),(rng()-.5)*.64,.02+rng()*.22);
+      }
     }
   }
   return batch.finish();

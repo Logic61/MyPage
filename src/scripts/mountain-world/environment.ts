@@ -9,7 +9,7 @@ import { buildCliffCrossings } from './cliff-crossings';
 import { buildPines } from './pine-grove';
 import { createStudyArchitecture } from './environment-design';
 import { COURTYARD_POOL } from './water-court';
-import { GALLERY, PINE_PAVILIONS } from './hall-terrace';
+import { CHESS_PAVILION, EAST_BRIDGE, GALLERY, TEA_PAVILION } from './hall-terrace';
 import type { Collider, Environment } from './types';
 
 /** A bright, inhabited mountain courtyard on a continuous level walking plane. */
@@ -110,19 +110,44 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   // Timber veranda. Its outer carved-stone parapets meet the bridge railing at the pavilion gate.
   const architecture = createStudyArchitecture(root, library, en);
   graniteFaces.push(architecture.galleryStone,architecture.pineStone);
+  const bridgeNorth=EAST_BRIDGE.z-EAST_BRIDGE.width/2, bridgeSouth=EAST_BRIDGE.z+EAST_BRIDGE.width/2;
+  const apron=TEA_PAVILION.apron;
   for (const side of [-1,1]) {
     mesh(cube, wood, side * 10.15, .111, .1, 5.65, .36, 16.4);
     // Join the longitudinal gallery boards at the outer margin. In the open
     // forecourt the deck runs crosswise towards the pavilions.
-    for (const [inner,z0,z1] of [[7.36,-8.08,GALLERY.north],[GALLERY.outerFloor,GALLERY.north,GALLERY.south],[7.36,GALLERY.south,8.29]]) {
+    for (const [inner,z0,z1] of [[7.36,-8.08,GALLERY.north],[GALLERY.outerFloor,GALLERY.north,GALLERY.south],
+      [7.36,GALLERY.south,side<0?8.29:bridgeNorth]]) {
       const x0 = side < 0 ? -12.94 : inner, x1 = side < 0 ? -inner : 12.94;
       architecture.floors.boards(root,{x0,x1,z0,z1},true);
     }
-    architecture.floors.pavilion(root,side*PINE_PAVILIONS.x,PINE_PAVILIONS.z,PINE_PAVILIONS.paving);
     for (const z of [-6.3, -.2, 6.4]) {
       timber(new THREE.Vector3(side * 9.8, -2.4, z), new THREE.Vector3(side * 12.62, -.12, z), .105);
       mesh(block, wood, side * 11, -.17, z, 4.1, .28, .22);
     }
+  }
+  const chess=CHESS_PAVILION;
+  const cutStone=own(library.material('limestone',{color:'#d8cbb5',worldScale:1.1,normalScale:.34,roughness:.89}));
+  const hex=keep(new THREE.CylinderGeometry(1,1,1,6));
+  // CylinderGeometry has vertices at the north and south tips, matching the rotated chess roof.
+  mesh(hex,cutStone,chess.x,.252,chess.z,chess.step,.216,chess.step).name='Broad first step into the chess pavilion';
+  mesh(hex,stone,chess.x,.393,chess.z,chess.paving,.082,chess.paving).name='Stone plinth supporting the chess chairs';
+  architecture.floors.pavilion(root,chess.x,chess.z,chess.paving,chess.orientation,chess.rise);
+
+  architecture.floors.flags(root,{x0:7.36,x1:EAST_BRIDGE.landing,z0:bridgeNorth,z1:bridgeSouth},.52,1.49,[],'threshold');
+  for(const [x0,x1,z0,z1] of [[7.36,EAST_BRIDGE.landing,bridgeSouth,apron.z0],
+    [7.36,apron.x0,apron.z0,8.29],[apron.x1,EAST_BRIDGE.landing,apron.z0,8.29]]) {
+    architecture.floors.boards(root,{x0,x1,z0,z1},true);
+  }
+  // The central strip abuts the stone forecourt on the west. Its paving is already at the same height.
+  for(const [x0,z0,z1] of [[apron.x0,apron.z0,8.29],[9.48,8.29,9.58],[apron.x0,9.58,apron.z1]]) {
+    const rect={x0,x1:apron.x1,z0,z1};
+    mesh(cube,cutStone,(x0+rect.x1)/2,.146,(z0+z1)/2,rect.x1-x0,.304,z1-z0).name='Continuous masonry below the tea terrace';
+    architecture.floors.flags(root,rect,.52,1.27,[],'field',.307);
+  }
+  for(const z of [9.66,10.48]) {
+    mesh(cube,cutStone,11.52,-.17,z,2.47,.33,.38).name='Cantilevered stone bearing under the overlook';
+    timber(new THREE.Vector3(10.77,-1.97,z),new THREE.Vector3(12.52,-.31,z),.162);
   }
 
   buildCliffCrossings(root, library, { stone, darkStone }, colliders, keep, own, architecture.floors);

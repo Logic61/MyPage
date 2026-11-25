@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { NORTH_HALL_RISE, NORTH_HALL_SETBACK, PINE_PAVILIONS, SUN_DAIS } from './hall-terrace';
+import { NORTH_HALL_RISE, NORTH_HALL_SETBACK, SUN_DAIS, TEA_PAVILION } from './hall-terrace';
 import { POOL_LAMP } from './water-court';
 import { createStoneBeacon } from './court-beacon';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -533,7 +533,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   }
 
   // ---------------------- Writing desk and open book ----------------------
-  const desk = group('writing-desk', 0, -7 - NORTH_HALL_SETBACK);
+  const desk = group('writing-desk', 0, -7.70 - NORTH_HALL_SETBACK);
   desk.position.y += NORTH_HALL_RISE;
   paintingTable(desk);
   bevel(desk,walnut,2.56,.003,1.00,0,.7815,0,.001);
@@ -648,7 +648,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   colliders.push({ x: 0, z: desk.position.z-1.01, halfX: .28, halfZ: .26 });
 
   // ----------------------- The instrument workbench -----------------------
-  const workbench = group('project-workbench', 5, -2.30); workbench.rotation.y = -Math.PI / 2;
+  const workbench = group('project-workbench', 4.09, -1.65); workbench.rotation.y = -Math.PI / 2;
   instrumentTable(workbench);
   const instrumentBase = new THREE.Group(); instrumentBase.name = 'armillary-pedestal';
   instrumentBase.position.set(-.43,.37,-.245); workbench.add(instrumentBase);
@@ -743,7 +743,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   colliders.push({ x: workbench.position.x+.17, z: workbench.position.z, halfX: .72, halfZ: 1.17 });
   let instrumentImpulse = 0;
   interactions.push({ id:'projects',kind:'projects',label:'翻阅项目',labelEn:'Explore projects',
-    position:workbench.localToWorld(armillary.position.clone()),approach:new THREE.Vector3(3.15,.3,workbench.position.z),radius:2.45,
+    position:workbench.localToWorld(armillary.position.clone()),approach:new THREE.Vector3(workbench.position.x-1.85,.3,workbench.position.z),radius:2.45,
     meshes:[armillary,instrumentBase,projectCard],activate:()=>{instrumentImpulse=2.7;} });
 
   // Two nearer corner lamps can be switched from the side walks. The far pair reflects in the pool.
@@ -777,8 +777,9 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   for(const side of [-1,1]) courtLamp(side,POOL_LAMP.northZ);
 
   // --------------------------- Overlook bench ---------------------------
-  const bench = group('overlook-carved-bench',PINE_PAVILIONS.x-.54,PINE_PAVILIONS.z+.98);
-  bench.rotation.y = -Math.PI/2;
+  const outlook=TEA_PAVILION;
+  const bench = group('overlook-carved-bench',outlook.benchX,outlook.benchZ);
+  bench.rotation.y=outlook.benchYaw;
   for(const x of [-1.075,1.075]) {
     for(const z of [-.238,.238]){
       bevel(bench,rosewood,.084,.45,.082,x,.226,z);
@@ -815,9 +816,15 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
     for(const z of [-.231,.207]) rod(bench,welt,new THREE.Vector3(x-.34,.497,z),new THREE.Vector3(x+.34,.497,z),.002,5);
   }
   batchStatic(bench);
-  colliders.push({x:bench.position.x,z:bench.position.z,halfX:.37,halfZ:1.22});
+  // Divide the slightly angled settle into three sections so its open front corners remain accessible.
+  const benchCos=Math.abs(Math.cos(outlook.benchYaw)),benchSin=Math.abs(Math.sin(outlook.benchYaw));
+  for(const offset of [-.80,0,.80]) {
+    const centre=bench.localToWorld(new THREE.Vector3(offset,0,.014));
+    colliders.push({x:centre.x,z:centre.z,halfX:.406*benchCos+.346*benchSin,halfZ:.406*benchSin+.346*benchCos});
+  }
 
-  const teaStand=group('Side table with covered cup and Yixing pot',bench.position.x+.89,bench.position.z+.75);
+  const teaPlace=bench.localToWorld(new THREE.Vector3(1.23,0,-.53));
+  const teaStand=group('Side table with covered cup and Yixing pot',teaPlace.x,teaPlace.z);
   bevel(teaStand,rosewood,.47,.044,.445,0,.514,0,.007);
   for(const x of [-.19,.19])for(const z of [-.173,.173]) bevel(teaStand,walnut,.039,.49,.041,x,.245,z,.003);
   cloudApron(teaStand,.363,.059,0,.487,-.174,Math.PI);
@@ -840,7 +847,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   const seatContact = bench.localToWorld(new THREE.Vector3(0,.524,-.12));
   interactions.push({
     id: 'bench', kind: 'bench', label: '坐看山色', labelEn: 'Pause by the mountains',
-    position: seatContact, approach: bench.localToWorld(new THREE.Vector3(0,0,-1.40)), radius: 2.05, meshes: [bench],
+    position: seatContact, approach: bench.localToWorld(new THREE.Vector3(-.30,0,-1.40)), radius: 2.05, meshes: [bench],
     sitPosition: seatContact, sitYaw: Math.atan2(seatContact.x-SUN_DAIS.x,seatContact.z-SUN_DAIS.z),
   });
 

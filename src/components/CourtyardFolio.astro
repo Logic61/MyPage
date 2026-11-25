@@ -1,6 +1,6 @@
 ---
 import FolioGlyph from './FolioGlyph.astro';
-import { EAST_BRIDGE, GALLERY, NORTH_HALL_SETBACK, PINE_PAVILIONS } from '../scripts/mountain-world/hall-terrace';
+import { CHESS_PAVILION, EAST_BRIDGE, GALLERY, HALL_STEPS, LIBRARY_ENTRY, NORTH_HALL_SETBACK, TEA_PAVILION } from '../scripts/mountain-world/hall-terrace';
 import { COURTYARD_POOL, FORECOURT_PLANTER } from '../scripts/mountain-world/water-court';
 import { getBlogPosts, postDate, postDescription, postSlug } from '../utils/posts';
 
@@ -9,9 +9,9 @@ const { isEn } = Astro.props;
 const t = (zh: string, en: string) => isEn ? en : zh;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const prefix = base + (isEn ? '/en' : '');
-const pavilionFootprint = (side: number) => Array.from({length:6}, (_,i) => {
-  const angle = i*Math.PI/3, {x,z,eaves} = PINE_PAVILIONS;
-  return `${side*x+eaves*Math.cos(angle)},${z-eaves*Math.sin(angle)}`;
+const chessFootprint = Array.from({length:6}, (_,i) => {
+  const {x,z,eaves,orientation} = CHESS_PAVILION, angle = orientation+i*Math.PI/3;
+  return `${x+eaves*Math.cos(angle)},${z-eaves*Math.sin(angle)}`;
 }).join(' ');
 const posts = (await getBlogPosts(isEn)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
 const categoryOf = (post: typeof posts[number]) => post.data.category || t('手记', 'Notes');
@@ -24,7 +24,7 @@ const places = [
   { id: 'books', section: 'blog', glyph: 'blog', name: t('藏书架', 'Bookshelf'), place: t('西翼 · 博客', 'West wing · Writing') },
   { id: 'projects', section: 'projects', glyph: 'projects', name: t('项目', 'Projects'), place: t('东翼 · 工作案', 'East wing · Workbench') },
   { id: 'about', section: 'cv', glyph: 'cv', name: t('简历', 'CV'), place: t('北厅东壁 · 挂轴', 'North hall · Hanging scroll') },
-  { id: 'bench', section: null, glyph: 'map', name: t('临崖小坐', 'Cliffside bench'), place: t('东亭 · 观山', 'East pavilion · Overlook') },
+  { id: 'bench', section: null, glyph: 'map', name: t('临崖小坐', 'Cliffside bench'), place: t('东桥南侧 · 临云茶榭', 'Tea pavilion south of the east bridge') },
   { id: 'sunwheel', section: null, glyph: 'map', name: t('日轮台', 'Sunwheel Terrace'), place: t('东云栈 · 临崖', 'Across the eastern skywalk') },
 ] as const;
 ---
@@ -72,9 +72,19 @@ const places = [
                   <defs><pattern id="hatch" width=".8" height=".8" patternUnits="userSpaceOnUse"><path d="m0 .8.8-.8" stroke="currentColor" stroke-width=".12" opacity=".35"/></pattern></defs>
                   <g fill="none" stroke="currentColor" stroke-width=".2" stroke-linejoin="round">
                     <polygon points="-14.5,-11.7 -7.8,-14.2 .2,-13.2 8.7,-12.4 13.7,-8.4 15,-1.2 14.1,8.3 10.7,12 5.5,14.4 3.6,17.1 -1.1,17.9 -5.1,15.1 -11.4,12 -14.9,6.1 -16,-.8" fill="#c6bfa32b"/>
+                    <g stroke-width=".09">
+                      <title>{t('北厅月台及中央石阶','North hall porch and central flight of steps')}</title>
+                      <rect x={-HALL_STEPS.halfWidth} y={HALL_STEPS.rear} width={2*HALL_STEPS.halfWidth} height={HALL_STEPS.front-HALL_STEPS.rear}/>
+                      {Array.from({length:HALL_STEPS.count-1},(_,i)=>(i+1)*HALL_STEPS.tread).map(run=><>
+                        <path d={`M${-HALL_STEPS.stairHalf} ${HALL_STEPS.front}v${run}h${2*HALL_STEPS.stairHalf}v${-run}`}/>
+                        {[-1,1].map(side=><path d={`M${side*HALL_STEPS.halfWidth} ${HALL_STEPS.rear}h${side*run}V${HALL_STEPS.front}h${-side*run}`}/>)}
+                      </>)}
+                    </g>
                     <rect x={-6.1} y={-10 - NORTH_HALL_SETBACK} width="12.2" height="4.2" fill="url(#hatch)"/>
                     {[-1,1].map(side => <g transform={`scale(${side},1)`}>
-                      <path d={`M6.1 ${GALLERY.door.from}V-5.8H3.2V.6H6.1V${GALLERY.door.to}`} fill="url(#hatch)"><title>{t('两翼侧门通往长廊','Side doors from both wings to the galleries')}</title></path>
+                      <path d={`M6.1 ${GALLERY.door.from}V-5.8H3.2V.6H6.1V${GALLERY.door.to}Z`} fill="url(#hatch)" stroke="none"/>
+                      <path d={`M6.1 ${GALLERY.door.from}V-5.8H3.2 M6.1 ${GALLERY.door.to}V.6` +
+                        (side<0 ? `H${-LIBRARY_ENTRY.jamb}V${LIBRARY_ENTRY.returnEnd}` : 'H3.2')}><title>{side<0 ? t('西书阁面池廊口与侧门','Library porch on the pond walk and side door') : t('东翼侧门通往长廊','Side door from the workroom to the gallery')}</title></path>
                       <path d={`M6.1 ${GALLERY.north}H${GALLERY.outerFloor}V${GALLERY.south}H6.35`} stroke-width=".12"/>
                       {GALLERY.bents.map(z => <circle cx={GALLERY.outerPost} cy={z} r=".15" fill="currentColor" stroke="none"/>)}
                     </g>)}
@@ -87,7 +97,15 @@ const places = [
                     </rect>)}
                     <path d="M-2.99 12.01h5.98v2.42h-5.98z M-2.99 12.01l1.07 1.21-1.07 1.21m1.07-1.21h3.84l1.07-1.21m-1.07 1.21 1.07 1.21" fill="url(#hatch)"/>
                     <rect x={COURTYARD_POOL.x0} y={COURTYARD_POOL.z0} width={COURTYARD_POOL.x1-COURTYARD_POOL.x0} height={COURTYARD_POOL.z1-COURTYARD_POOL.z0} fill="#8fa99c9c"><title>{t('天光水庭 · 方荷池','Water court · Lotus pond')}</title></rect>
-                    {[-1,1].map(side => <polygon points={pavilionFootprint(side)}><title>{side < 0 ? t('松间棋亭','Go pavilion') : t('临崖小坐','Overlook pavilion')}</title></polygon>)}
+                    <g><title>{t('松下棋亭','Pine chess pavilion')}</title><polygon points={chessFootprint}/>
+                      <rect x={CHESS_PAVILION.boardX-.705} y={CHESS_PAVILION.boardZ-.64} width="1.41" height="1.28" fill="url(#hatch)" stroke-width=".12"/></g>
+                    <a href="#bench" data-world-destination="bench" aria-label={t('指路至临云茶榭','Guide me to the tea pavilion')}>
+                      <title>{t('临云茶榭 · 观山坐榻','Cloudview tea pavilion and bench')}</title>
+                      <rect x={TEA_PAVILION.x-TEA_PAVILION.eaveHalfX} y={TEA_PAVILION.z-TEA_PAVILION.eaveHalfZ}
+                        width={2*TEA_PAVILION.eaveHalfX} height={2*TEA_PAVILION.eaveHalfZ}/>
+                      <rect x="-1.205" y="-.30" width="2.41" height=".60" fill="currentColor" stroke="none"
+                        transform={`translate(${TEA_PAVILION.benchX} ${TEA_PAVILION.benchZ}) rotate(${-TEA_PAVILION.benchYaw*180/Math.PI})`}/>
+                    </a>
                     <circle cx="0" cy="34" r="4.2" fill="url(#hatch)"/>
                     <a href="#sunwheel" data-world-destination="sunwheel" aria-label={t('指路至日轮台','Guide me to Sunwheel Terrace')}>
                       <circle cx="26" cy="5" r="4.3" fill="url(#hatch)"/><circle cx="26" cy="5" r="2.55"/>
