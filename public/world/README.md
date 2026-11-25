@@ -28,7 +28,7 @@ The 2172 × 724 WebP depicts granite pinnacles in morning haze. The separate clo
 
 ### 3D integration
 
-`landscape-backdrop.ts` maps one image across 180 degrees of a 108 m radius cylinder and mirrors the geometry's U coordinates across the other half. Its height is `π × radius / 3` (about 113.1 m), preserving the 3:1 ratio along each half-circumference. The distant ridgeline is calibrated at 46% from the image top and placed at world y=25.5 m, so mountains remain visible through the windows and above the terrace rail. These dimensions keep the geometry within the default 230 m camera far plane.
+`landscape-backdrop.ts` maps one image across 180 degrees of a 108 m radius cylinder and mirrors the U coordinates across the other half. Its height is `π × radius / 3` (about 113.1 m). The south courtyard at (0, 1.98, 12) preserves the original framing, with the painted horizon 46% down the image at y=25.5 m. As the eye moves from there, the cylinder and sky translate by `1 − 108 / 20,000` of its displacement along all three axes. The peaks have the apparent parallax of a ridge about 20 km away while the meshes fit within the 230 m camera far plane. Turning changes which part of the painting is visible.
 
 The local texture is sRGB with `flipY=true`, `repeat=[1,1]` and clamped UV sampling. Ordinary `MeshBasicMaterial` uses the same tone mapping as the rest of the scene. A separate linear alpha map softens the sky/cloud edges and mirror folds. The upper edge blends into the sky canopy. Two translucent surfaces at y=-11 m and -17 m carry a tileable cloud density field on independent wind currents. Their perimeter fades into the mountain painting.
 

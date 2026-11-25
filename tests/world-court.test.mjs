@@ -13,11 +13,11 @@ import { createInteractionPicker } from '../src/scripts/mountain-world/first-per
 import * as terrace from '../src/scripts/mountain-world/hall-terrace.ts';
 
 // Exercise the production geometry without a GPU. Only lettering and optional images need a DOM.
-function loadModule(file, imports) {
+function loadModule(file, imports, canvasMethods = {}) {
   const source = fs.readFileSync(new URL('../src/scripts/mountain-world/'+file+'.ts',import.meta.url),'utf8')
     .replaceAll('import.meta.env?.BASE_URL', "'/MyPage/'");
   const code = ts.transpileModule(source,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText;
-  const exports = {}, ink = new Proxy({}, { get:()=>()=>ink });
+  const exports = {}, ink = new Proxy(canvasMethods, { get:(methods,key)=>methods[key] ?? (()=>ink) });
   vm.runInNewContext(code,{
     exports,require:id=>{ assert.ok(id in imports,id); return imports[id]; },
     document:{ createElement:()=>({getContext:()=>ink}) },
@@ -26,6 +26,45 @@ function loadModule(file, imports) {
   return exports;
 }
 const three = {...THREE,TextureLoader:class { async loadAsync(){return new THREE.Texture();} }};
+
+test('walking across the island barely changes the painted peaks; the cloud sea remains below the cliffs', async () => {
+  const { createLandscapeBackdrop } = loadModule('landscape-backdrop',{
+    three,'../../assets/mountain-panorama-preview.webp?inline':{default:'preview'},
+    './entry-art':{decodePainting:async()=>null},
+  },{createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)})});
+  const scene=new THREE.Scene(), backdrop=createLandscapeBackdrop(scene);
+  try {
+    await backdrop.ready;
+    const ridge=backdrop.root.getObjectByName('continuous-180-degree-panoramas');
+    const canopy=backdrop.root.getObjectByName('painted-blue-sky-and-white-clouds');
+    const cloud=backdrop.root.getObjectByName('cloud-sea-depth-layer-1');
+    const cloudPoint=cloud.getWorldPosition(new THREE.Vector3()), wind=cloud.material.map.offset.clone();
+    const {radiusTop:r,height}=ridge.geometry.parameters;
+    // Use two details on the same painted peak in the northwest half of the panorama.
+    const theta=(2-.245)*Math.PI, crest=new THREE.Vector3(r*Math.sin(theta),height*.27,r*Math.cos(theta));
+    const slope=crest.clone(); slope.y=-height*.10;
+    const camera=new THREE.PerspectiveCamera(67,1280/720,.055,230);
+    function frame(x,y,z,yaw=0) {
+      camera.position.set(x,y,z); camera.rotation.set(.12,yaw,0,'YXZ'); camera.updateMatrixWorld();
+      backdrop.setViewpoint(camera.position); scene.updateMatrixWorld(true);
+      const project=point=>ridge.localToWorld(point.clone()).project(camera);
+      const a=project(crest), b=project(slope);
+      const sky=canopy.localToWorld(new THREE.Vector3(0,80,-100)).project(camera);
+      return {height:Math.abs(a.y-b.y)*360, x:a.x*640, skyX:sky.x*640};
+    }
+    const gate=frame(0,1.98,12), bridge=frame(0,1.98,34), porch=frame(0,2.62,-7.78);
+    assert.ok(gate.height>100, 'Measure a prominent peak at the original viewing scale');
+    assert.ok(porch.height>bridge.height && porch.height/bridge.height<1.003, 'The full approach produces under 0.3% magnification');
+    const west=frame(-3.6,1.98,7.86), east=frame(3.6,1.98,7.86);
+    assert.ok(Math.abs(east.x-west.x)<.5 && Math.abs(east.skyX-west.skyX)<.5, 'Crossing the pool moves the distant mountain and sky by less than half a pixel');
+    const jump=frame(3.6,3.08,7.86), turn=frame(3.6,1.98,7.86,.45);
+    assert.ok(Math.abs(jump.height-east.height)<.1 && Math.abs(turn.x-east.x)>160);
+    assert.deepEqual(cloud.getWorldPosition(new THREE.Vector3()).toArray(),cloudPoint.toArray());
+    backdrop.update(2);
+    assert.ok(cloud.material.map.offset.distanceTo(wind)>0);
+  } finally { backdrop.dispose(); }
+});
+
 const roof = loadModule('tiled-roof',{three,'./environment-geometry':shapes});
 const stoneRail = loadModule('stone-balustrade',{three});
 const { buildCliffCrossings } = loadModule('cliff-crossings',{three,'./environment-geometry':shapes,'./stone-balustrade':stoneRail,

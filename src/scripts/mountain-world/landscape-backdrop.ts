@@ -9,7 +9,7 @@ export const LANDSCAPE_FOG_COLOR = '#c7dfe6';
 
 export interface LandscapeBackdropOptions {
   artwork?: Pick<EntryArt, 'panorama' | 'sky'>;
-  /** Metres from the island centre, bounded for the default 230m camera far plane. */
+  /** Render radius in metres, within the default 230 m camera far plane. */
   radius?: number;
   /** Rotation about world Y. The default places the high ridge behind the north hall. */
   yaw?: number;
@@ -24,6 +24,7 @@ export interface LandscapeBackdrop {
   readonly firstPaint: Promise<void>;
   /** All geometry and a visible fallback exist immediately; the two local paintings load independently. */
   readonly ready: Promise<void>;
+  setViewpoint(eye: THREE.Vector3): void;
   update(time: number, delta?: number): void;
   dispose(): void;
 }
@@ -31,6 +32,9 @@ export interface LandscapeBackdrop {
 const IMAGE_ASPECT = 3;
 // Calibrated against this panorama's distant ridgeline, not the amount of sky in its prompt.
 const IMAGE_HORIZON_FROM_TOP = .46;
+// Preserve the view from the south court, where the high ridge frames the north hall.
+const COURT_VIEWPOINT = new THREE.Vector3(0, 1.98, 12);
+const RIDGE_DISTANCE = 20_000;
 
 function canvas(width: number, height: number) {
   const result = document.createElement('canvas');
@@ -158,6 +162,10 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
   root.userData.ignoreAmbientOcclusion = true;
   scene.add(root);
   const radius = THREE.MathUtils.clamp(options.radius ?? 108, 60, 130);
+  const distant = new THREE.Group();
+  distant.name = 'distant-mountains-and-sky';
+  root.add(distant);
+  const follow = 1 - radius / RIDGE_DISTANCE;
   const height = Math.PI * radius / IMAGE_ASPECT;
   const horizonY = options.horizonY ?? 25.5;
   const fogColor = new THREE.Color(options.fogColor ?? LANDSCAPE_FOG_COLOR);
@@ -167,11 +175,11 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
   const keepGeometry = <T extends THREE.BufferGeometry>(value: T) => { geometries.add(value); return value; };
   const keepMaterial = <T extends THREE.Material>(value: T) => { materials.add(value); return value; };
   const keepTexture = <T extends THREE.Texture>(value: T) => { textures.add(value); return value; };
-  function mesh(name: string, geometry: THREE.BufferGeometry, material: THREE.Material, order: number) {
+  function mesh(name: string, geometry: THREE.BufferGeometry, material: THREE.Material, order: number, parent = distant) {
     const result = new THREE.Mesh(geometry, material);
     result.name = name; result.renderOrder = order;
     result.castShadow = false; result.receiveShadow = false;
-    result.userData.ignoreInteractionRay = true; root.add(result); return result;
+    result.userData.ignoreInteractionRay = true; parent.add(result); return result;
   }
 
   // A closed sky avoids a rectangular top edge or an empty nadir when looking around.
@@ -230,7 +238,7 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
   for (const [index, map] of [upperClouds, lowerClouds].entries()) {
     const material = keepMaterial(new THREE.MeshBasicMaterial({ map, transparent: true, vertexColors: true,
       opacity: Math.min(1, cloudOpacity * (index ? .88 : 1.10)), depthWrite: false, fog: true }));
-    const layer = mesh(`cloud-sea-depth-layer-${index + 1}`, cloudGeometry, material, -880 - index);
+    const layer = mesh(`cloud-sea-depth-layer-${index + 1}`, cloudGeometry, material, -880 - index, root);
     layer.position.y = index ? -17 : -11; layer.rotation.y = index * .42;
   }
 
@@ -264,6 +272,11 @@ export function createLandscapeBackdrop(scene: THREE.Scene, options: LandscapeBa
 
   return {
     root, firstPaint, ready,
+    setViewpoint(eye) {
+      // Moving the shell by the complementary fraction gives the picture the parallax
+      // of a 20 km ridge while keeping its geometry inside the depth buffer's range.
+      distant.position.subVectors(eye, COURT_VIEWPOINT).multiplyScalar(follow);
+    },
     update(time) {
       if (disposed) return;
       // The far bank moves more slowly. Both textures wrap continuously while their perimeter stays feathered.

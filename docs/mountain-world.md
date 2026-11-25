@@ -110,7 +110,7 @@
 - `honed-limestone.webp` 与 `lacquer-grain.webp` 分别用于石栏、铺地和朱漆木纹。
 
 - `mountain-silk-landscape.webp`：保留的圆屏山水绢画，使用普通 sRGB 漫反射贴图；画面不自发光。
-- `immortal-mountains-panorama.webp` 环绕台地呈现远山。`cloud-court-sky.webp` 将画心映在正头顶，向四周淡入远山上方的晴空。
+- `immortal-mountains-panorama.webp` 从荷池南侧取景。人物前进、横移或起身时，远山与天幕按约 20 公里的距离产生视差。`cloud-court-sky.webp` 将画心映在天顶，向四周淡入远山上方的晴空。
 - 台地下方两层云海以不同速度平移。崖边的雾带随风起伏、收展，头顶的白云缓慢漂移。打开卷轴或启用系统的「减少动态效果」时，云雾停在当前位置。
 
 各张图片的来源、尺寸、WebP 编码和投影方式见[美术资源记录](../public/world/README.md)。

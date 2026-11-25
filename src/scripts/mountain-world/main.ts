@@ -465,6 +465,7 @@ export async function initializeWorld(root: HTMLElement, ambience: ReturnType<ty
       camera.position.set(eye.x, eye.y + bob, eye.z);
       camera.rotation.set(look.pitch, look.yaw, 0, 'YXZ');
       camera.updateMatrixWorld();
+      backdrop.setViewpoint(camera.position);
     }
     function aimPoint() {
       if (mode !== 'exploring' || ui.isOpen() || seatedAt || air.kind !== 'grounded') return null;

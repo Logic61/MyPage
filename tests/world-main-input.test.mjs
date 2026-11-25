@@ -116,7 +116,10 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
     './aerial-motion': aerialMotion,
     './landscape-backdrop': { createLandscapeBackdrop(scene) {
       const root = new THREE.Group(); root.name = 'test-backdrop'; root.userData.ignoreAmbientOcclusion = true; scene.add(root);
-      return { root, firstPaint: backdropReady, ready: backdropReady, update(time) { lifecycle.backdropUpdates++; lifecycle.landscapeTime = time; }, dispose() { disposed('backdrop'); root.removeFromParent(); } };
+      return { root, firstPaint: backdropReady, ready: backdropReady,
+        setViewpoint(eye) { lifecycle.backdropEye = eye.toArray(); },
+        update(time) { lifecycle.backdropUpdates++; lifecycle.landscapeTime = time; },
+        dispose() { disposed('backdrop'); root.removeFromParent(); } };
     } },
     './materials': { createSurfaceLibrary: () => ({ dispose() { disposed('surfaces'); } }) },
     './environment': { createEnvironment(scene) { const root = new THREE.Group(); scene.add(root); return { root, walkAreas: [], colliders: [],
@@ -129,7 +132,11 @@ async function world({ coarse = false, legacy = false, unavailable = false, benc
         'The backdrop must be part of the scene when the rendering pipeline is created.');
       camera = value;
       lifecycle.resolutionAdjustments = 0;
-      return { dispose() { disposed('pipeline'); }, compile: () => _renderer.compileAsync(_scene, value), setQuality() {}, render() { lifecycle.renders++; },
+      return { dispose() { disposed('pipeline'); }, compile: () => _renderer.compileAsync(_scene, value), setQuality() {},
+        render() {
+          assert.deepEqual(lifecycle.backdropEye, camera.position.toArray(), 'The horizon uses the current eye on every rendered frame, including entry');
+          lifecycle.renders++;
+        },
         easeResolution() { lifecycle.resolutionAdjustments++; return true; },
         resize(width, height) { camera.aspect = width / height; camera.updateProjectionMatrix(); } };
     } },
