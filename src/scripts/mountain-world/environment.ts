@@ -2,14 +2,14 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { createSurfaceLibrary, type SurfaceLibrary } from './materials';
 import { branchGeometry, mistTexture, roundedBlock, seeded } from './environment-geometry';
-import { bambooWind, buildBamboo } from './bamboo';
+import { BAMBOO_GROVE, bambooWind, buildBamboo } from './bamboo';
 import { cliffGarden, cliffSpurs, cragFace, plantingSoil } from './cliff-garden';
 import { buildCliffSpring, stainSpringCliff } from './cliff-spring';
 import { buildCliffCrossings } from './cliff-crossings';
 import { buildPines } from './pine-grove';
 import { createStudyArchitecture } from './environment-design';
 import { COURTYARD_POOL } from './water-court';
-import { CHESS_PAVILION, EAST_BRIDGE, GALLERY, TEA_PAVILION } from './hall-terrace';
+import { CHESS_PAVILION, COURT_OUTLINE, EAST_BRIDGE, GALLERY, TEA_PAVILION, VERANDA_RIM } from './hall-terrace';
 import type { Collider, Environment } from './types';
 
 /** A bright, inhabited mountain courtyard on a continuous level walking plane. */
@@ -52,7 +52,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   }
 
   // The ledge grows into a mountainside below the mist, rather than tapering into a floating toy island.
-  const outline = [[-14.5, -11.7], [-7.8, -14.2], [.2, -13.2], [8.7, -12.4], [13.7, -8.4], [15, -1.2], [14.1, 8.3], [10.7, 12], [5.5, 14.4], [3.6, 17.1], [-1.1, 17.9], [-5.1, 15.1], [-11.4, 12], [-14.9, 6.1], [-16, -.8]];
+  const outline = COURT_OUTLINE;
   const granite = own(library.material('stone', { worldScale: .28, normalScale: .63, roughness: .86 }));
   granite.vertexColors = true;
   for (const rock of [granite,darkStone]) {
@@ -111,19 +111,25 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
   const architecture = createStudyArchitecture(root, library, en);
   graniteFaces.push(architecture.galleryStone,architecture.pineStone);
   const bridgeNorth=EAST_BRIDGE.z-EAST_BRIDGE.width/2, bridgeSouth=EAST_BRIDGE.z+EAST_BRIDGE.width/2;
-  const apron=TEA_PAVILION.apron;
+  const apron=TEA_PAVILION.apron, rim=VERANDA_RIM;
   for (const side of [-1,1]) {
-    mesh(cube, wood, side * 10.15, .111, .1, 5.65, .36, 16.4);
-    // Join the longitudinal gallery boards at the outer margin. In the open
-    // forecourt the deck runs crosswise towards the pavilions.
-    for (const [inner,z0,z1] of [[7.36,-8.08,GALLERY.north],[GALLERY.outerFloor,GALLERY.north,GALLERY.south],
-      [7.36,GALLERY.south,side<0?8.29:bridgeNorth]]) {
-      const x0 = side < 0 ? -12.94 : inner, x1 = side < 0 ? -inner : 12.94;
+    const plan=[[rim.inner,rim.north],[rim.outer,rim.north],[rim.outer,rim.shoulderZ],
+      [rim.pavilionEdge,rim.joinZ],[rim.pavilionEdge,rim.south],[rim.inner,rim.south]];
+    const footprint=new THREE.Shape(plan.map(([x,z])=>new THREE.Vector2(side*x,-z)));
+    const platform=keep(new THREE.ExtrudeGeometry(footprint,{depth:.36,steps:1,bevelEnabled:false}).rotateX(-Math.PI/2));
+    mesh(platform,wood,0,-.069,0).name='Timber bearing below the splayed gallery landing';
+    // An open margin runs the length of each covered gallery, then turns onto the old pavilion deck.
+    for (const [inner,outer,z0,z1] of [[rim.inner,rim.outer,rim.north,GALLERY.north],
+      [GALLERY.outerFloor,rim.outer,GALLERY.north,GALLERY.south],
+      [rim.inner,rim.outer,GALLERY.south,rim.shoulderZ],
+      [rim.inner,rim.pavilionEdge,rim.shoulderZ,side<0?rim.south:bridgeNorth]]) {
+      const x0=side<0?-outer:inner, x1=side<0?-inner:outer;
       architecture.floors.boards(root,{x0,x1,z0,z1},true);
     }
-    for (const z of [-6.3, -.2, 6.4]) {
-      timber(new THREE.Vector3(side * 9.8, -2.4, z), new THREE.Vector3(side * 12.62, -.12, z), .105);
-      mesh(block, wood, side * 11, -.17, z, 4.1, .28, .22);
+    architecture.floors.splayedBoards(root,side*rim.pavilionEdge,side*rim.outer,rim.shoulderZ,rim.joinZ);
+    for (const [z,edge] of [[-6.80,rim.outer],[-3.56,rim.outer],[.66,rim.outer],[6.4,rim.pavilionEdge]]) {
+      timber(new THREE.Vector3(side*(edge-3.07),-2.40,z),new THREE.Vector3(side*(edge-.21),-.18,z),.136);
+      mesh(block,wood,side*(edge-1.95),-.19,z,3.85,.32,.29);
     }
   }
   const chess=CHESS_PAVILION;
@@ -166,7 +172,7 @@ export function createEnvironment(scene: THREE.Scene, surfaces?: SurfaceLibrary,
     const plant = mesh(keep(geometry), material);
     plant.name = name; plant.userData.dynamic = true;
   }
-  obstacle(-13.7, -.75, .72, 1.38);
+  obstacle(BAMBOO_GROVE.x,BAMBOO_GROVE.z,.72,1.38);
 
   // The distant mountains belong to the generated landscape backdrop, not opaque polygon rings.
   const mistMap = mistTexture(); localTextures.add(mistMap);

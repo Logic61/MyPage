@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { architecturalBlock } from './environment-geometry';
 import { stoneBalustrade } from './stone-balustrade';
 import { createStoneBeacon } from './court-beacon';
-import { EAST_BRIDGE, SUN_DAIS, TEA_PAVILION } from './hall-terrace';
+import { EAST_BRIDGE, GALLERY, SUN_DAIS, TEA_PAVILION, VERANDA_RIM } from './hall-terrace';
 import type { SurfaceLibrary } from './materials';
 import type { createFloorFinishes } from './courtyard-paving';
 import type { Collider } from './types';
@@ -60,20 +60,25 @@ export function buildCliffCrossings(
   const parapet = stoneBalustrade(root,lime,slate,keep,true);
 
   // Use short solid pieces on a diagonal so the middle of an arc is never an invisible obstacle.
-  function edge(points: [number,number][], height: number, omitFirst=false) {
+  function edge(points: [number,number][], height: number, omitFirst=false, diagonalStep?:number) {
     parapet(points,height,.301,omitFirst);
     for (let i=1; i<points.length; i++) {
       const [x0,z0]=points[i-1], [x1,z1]=points[i], dx=x1-x0, dz=z1-z0;
-      const steps=Math.abs(dx)<.001 || Math.abs(dz)<.001 ? 1 : Math.ceil(Math.hypot(dx,dz)/.33);
+      const diagonal=Math.abs(dx)>.001 && Math.abs(dz)>.001, length=Math.hypot(dx,dz);
+      const steps=diagonal ? Math.ceil(length/(diagonalStep??.33)) : 1;
+      // A close-fitting diagonal follows the projected thickness of the actual stone foot.
+      const fitted=diagonal && diagonalStep!==undefined;
+      const padX=fitted ? .139*Math.abs(dz)/length : .118;
+      const padZ=fitted ? .139*Math.abs(dx)/length : .118;
       for (let k=0;k<steps;k++) {
         const t=(k+.5)/steps;
-        colliders.push({x:x0+dx*t,z:z0+dz*t, halfX:Math.abs(dx)/(2*steps)+.118, halfZ:Math.abs(dz)/(2*steps)+.118});
+        colliders.push({x:x0+dx*t,z:z0+dz*t, halfX:Math.abs(dx)/(2*steps)+padX, halfZ:Math.abs(dz)/(2*steps)+padZ});
       }
     }
   }
 
-  function line(x0: number,z0: number,x1: number,z1: number,bays: number,height: number,omitFirst=false) {
-    edge(Array.from({length:bays+1},(_,i)=>[x0+(x1-x0)*i/bays,z0+(z1-z0)*i/bays]),height,omitFirst);
+  function line(x0: number,z0: number,x1: number,z1: number,bays: number,height: number,omitFirst=false,diagonalStep?:number) {
+    edge(Array.from({length:bays+1},(_,i)=>[x0+(x1-x0)*i/bays,z0+(z1-z0)*i/bays]),height,omitFirst,diagonalStep);
   }
 
   function arc(x: number,z: number,r: number,start: number,end: number,bays: number,height: number) {
@@ -223,11 +228,12 @@ export function buildCliffCrossings(
     // The gate terminates the bridge and anchors both wings of the welcoming terrace.
     line(side*2.20,13.06,side*6.10,13.06,2,.85);
     line(side*6.10,13.06,side*6.10,11.17,1,.85,true);
-    // The pavilion exit stays open in the middle of each gallery edge.
-    line(side*7.8,-7.9,side*12.84,-7.9,3,.91);
-    const opening = side > 0 ? bridgeHalf+.16 : 1.34;
-    line(side*12.84,-7.9,side*12.84,EAST_BRIDGE.z-opening,6,.91,true);
-    if (side<0) line(-12.84,EAST_BRIDGE.z+opening,-12.84,8.04,1,.91);
+    // The gallery parapet turns with the shoulder, leaving the pavilion forecourts open.
+    const r=VERANDA_RIM, end=r.pavilionEdge-.20, back=r.north+.20, turn=r.shoulderZ-.17;
+    line(side*(GALLERY.wall+.14),back,side*r.rail,back,3,.91);
+    line(side*r.rail,back,side*r.rail,turn,5,.91,true);
+    line(side*r.rail,turn,side*end,r.joinZ-.20,2,.91,true,.10);
+    if(side<0) line(-end,EAST_BRIDGE.z+1.34,-end,8.04,1,.91);
   }
   const teaRim=TEA_PAVILION.apron;
   edge([[12.84,EAST_BRIDGE.z+bridgeHalf+.16],[teaRim.x1-.13,8.03],[teaRim.x1-.13,9.35],

@@ -139,6 +139,19 @@ export function createFloorFinishes(library: SurfaceLibrary, keep: Owner, own: <
     batch.finish(parent,'Matched elm boards with long-grain margins',wood,keep);
   }
 
+  /** Crosswise decking is cut to the angled cheek where the wider gallery meets the old pavilion landing. */
+  function splayedBoards(parent: THREE.Object3D, inner: number, outer: number, z0: number, z1: number) {
+    const batch=new CourseMesh(5378), side=Math.sign(outer), count=Math.round((z1-z0)/.175);
+    const edge=(z:number)=>THREE.MathUtils.lerp(outer,inner,(z-z0)/(z1-z0));
+    for(let row=0;row<count;row++) {
+      const a=z0+(z1-z0)*row/count+.0025, b=z0+(z1-z0)*(row+1)/count-.0025;
+      const start=inner+side*.0025;
+      const board:Point[]=[[start,a],[start,b],[edge(b),b],[edge(a),a]];
+      batch.polygon(side>0?board:board.reverse(),.304,'wood',true);
+    }
+    batch.finish(parent,'Splayed ends of the gallery landing boards',wood,keep);
+  }
+
   function round(parent: THREE.Object3D,x:number,z:number,outer:number,top:number,inner=0) {
     const batch=new CourseMesh(Math.round(260+x*83+z*17+outer*54));
     const center=.50, start=inner || center;
@@ -220,5 +233,5 @@ export function createFloorFinishes(library: SurfaceLibrary, keep: Owner, own: <
     paving.finish(parent,'Six-sided inset of dressed pavilion flags',stone,keep);
   }
 
-  return {flags,boards,round,pavilion,flowerPanel,ready,dispose(){released=true;for(const texture of textures)texture.dispose();}};
+  return {flags,boards,splayedBoards,round,pavilion,flowerPanel,ready,dispose(){released=true;for(const texture of textures)texture.dispose();}};
 }

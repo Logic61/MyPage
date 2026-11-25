@@ -628,9 +628,10 @@ test('an unsafe entrance uses only a validated neighbour or fails without an unc
 
 test('roofed courtyard wings and outdoor spaces use their matching location and ambience', async () => {
   for (const [x, z, name, indoor] of [
-    [0, -7, '堂前月台', false], [0, -8.6, '留云阁', true], [-4, -2, '藏书小阁', true], [4, -2, '临庭观物', true],
-    [0, -2, '天光水庭', false], [0, 7.5, '天光水庭', false], [0, 4, '庭中荷池', false], [7, -4, '临云长廊', false],
-    [9, -4, '临云长廊', false], [7.8, 4.8, '松间露台', false], [10, 5, '松间露台', false], [1.3, 11, '山门前庭', false],
+    [0, -7, '堂前月台', false], [0, -8.6, '留云阁', true], [-8.1, -2, '藏书小阁', true], [8.1, -2, '临庭观物', true],
+    [-4, -2, '天光水庭', false], [4, -2, '天光水庭', false], [0, -2, '天光水庭', false], [0, 7.5, '天光水庭', false],
+    [0, 4, '庭中荷池', false], [11, -4, '临云长廊', false], [-12.6, -4, '临云长廊', false],
+    [7.8, 4.8, '松间露台', false], [10, 5, '松间露台', false], [1.3, 11, '山门前庭', false],
   ]) {
     const h = await world({ session: { [courtyardStateKey]: JSON.stringify({ x, z }) } });
     h.step(40);

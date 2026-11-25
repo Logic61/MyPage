@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { NORTH_HALL_RISE, NORTH_HALL_SETBACK, SUN_DAIS, TEA_PAVILION } from './hall-terrace';
+import { NORTH_HALL_RISE, NORTH_HALL_SETBACK, SUN_DAIS, TEA_PAVILION, WING } from './hall-terrace';
 import { POOL_LAMP } from './water-court';
 import { createStoneBeacon } from './court-beacon';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -353,7 +353,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
 
   // ---------------------------- The library ----------------------------
   // The cabinet sits entirely inside the timber-floored bay. Model, collision and reading point move together.
-  const shelf = group('library-carved-wood-shelf', -5.53, -1.82);
+  const shelf = group('library-carved-wood-shelf', -WING.outer+.57, -1.82);
   shelf.rotation.y = Math.PI / 2;
   const elm = surface('paleWood', { color: '#c4835b', worldScale: .85, roughness: .66, normalScale: .33 });
   const polishedEdge = surface('paleWood', { color: '#d69a69', worldScale: .86, roughness: .59, normalScale: .22 });
@@ -648,7 +648,7 @@ export function createFurnishings(scene: THREE.Scene, isEn: boolean, surfaces?: 
   colliders.push({ x: 0, z: desk.position.z-1.01, halfX: .28, halfZ: .26 });
 
   // ----------------------- The instrument workbench -----------------------
-  const workbench = group('project-workbench', 4.09, -1.65); workbench.rotation.y = -Math.PI / 2;
+  const workbench = group('project-workbench', WING.inner+.89, -1.65); workbench.rotation.y = -Math.PI / 2;
   instrumentTable(workbench);
   const instrumentBase = new THREE.Group(); instrumentBase.name = 'armillary-pedestal';
   instrumentBase.position.set(-.43,.37,-.245); workbench.add(instrumentBase);

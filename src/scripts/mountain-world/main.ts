@@ -12,7 +12,7 @@ import { createLandscapeBackdrop } from './landscape-backdrop';
 import type { EntryArt } from './entry-art';
 import { createStudyRenderer, type RenderQuality } from './rendering';
 import { createInteractionPicker, movementDirection, FLOOR_HEIGHT, EYE_HEIGHT, SEATED_EYE_HEIGHT } from './first-person';
-import { CHESS_PAVILION, EAST_BRIDGE, GALLERY, NORTH_HALL_FRONT, NORTH_HALL_SETBACK, TEA_PAVILION, chessRiseAt, walkRiseAt } from './hall-terrace';
+import { CHESS_PAVILION, EAST_BRIDGE, GALLERY, NORTH_HALL_FRONT, NORTH_HALL_SETBACK, TEA_PAVILION, WING, chessRiseAt, walkRiseAt } from './hall-terrace';
 import { COURTYARD_POOL, poolDepthAt, poolFloorAt, POOL_WATER_Y } from './water-court';
 import { LookController, DragLookGesture, StanceTransition, pointerToNDC } from './look-controls';
 import { createCourtyardMouseLock } from './pointer-lock';
@@ -50,13 +50,15 @@ function describePlace(x: number, z: number) {
     return { name: '留云阁', nameEn: 'Cloudrest Pavilion', indoor: true };
   if (Math.abs(x) <= 6.1 && z > NORTH_HALL_FRONT && z <= -5.8)
     return { name: '堂前月台', nameEn: 'Hall terrace', indoor: false };
-  if (x >= -6.1 && x <= -3.2 && z > -5.8 && z <= .6)
-    return { name: '藏书小阁', nameEn: 'The library wing', indoor: true };
-  if (x >= 3.2 && x <= 6.1 && z > -5.8 && z <= .6)
-    return { name: '临庭观物', nameEn: 'The courtyard workroom', indoor: true };
-  if (Math.abs(x) >= (z > .6 ? 6.35 : GALLERY.wall) && Math.abs(x) <= GALLERY.outerFloor && z >= GALLERY.north && z <= GALLERY.south)
+  const across=Math.abs(x);
+  if (across>=WING.inner && across<=WING.outer && z>WING.north && z<=WING.south)
+    return x<0 ? { name: '藏书小阁', nameEn: 'The library wing', indoor: true }
+      : { name: '临庭观物', nameEn: 'The courtyard workroom', indoor: true };
+  if (across>=GALLERY.wall && across<=GALLERY.outerFloor && z>=GALLERY.north && z<=GALLERY.south)
     return { name: '临云长廊', nameEn: 'The cloudside gallery', indoor: false };
-  if ((Math.abs(x) <= 3.2 && z > -5.8 && z <= .6) || (Math.abs(x) < 6.35 && z > .6 && z <= 8.4))
+  if ((across<=WING.inner && z>WING.north && z<=WING.south)
+    || (across<WING.outer && z>WING.south && z<=GALLERY.south)
+    || (across<6.35 && z>GALLERY.south && z<=8.4))
     return { name: '天光水庭', nameEn: 'The sunlit water court', indoor: false };
   if (z > 8.4 && z <= 13.17 && Math.abs(x) <= (z <= 9.58 ? 9.48 : 6.27))
     return { name: '山门前庭', nameEn: 'The entrance terrace', indoor: false };

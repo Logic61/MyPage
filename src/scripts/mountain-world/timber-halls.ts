@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { neutralSurfaceMap } from './environment-geometry';
 import { stoneBalustrade } from './stone-balustrade';
 import { hexagonalRing, rectangularRing, tiledRoof } from './tiled-roof';
-import { CHESS_PAVILION, GALLERY, LIBRARY_ENTRY, NORTH_HALL_RISE, NORTH_HALL_SETBACK, TEA_PAVILION } from './hall-terrace';
+import { CHESS_PAVILION, GALLERY, LIBRARY_ENTRY, NORTH_HALL_RISE, NORTH_HALL_SETBACK, TEA_PAVILION, WING } from './hall-terrace';
 import { buildGoSetting } from './go-pavilion';
 import { buildForecourtLanterns } from './forecourt-lantern';
 import { inscribedPost, type GateLine } from './inscribed-post';
@@ -367,10 +367,10 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, addObstacle:
   for (const x of [-3.16,3.16]) lantern(x,4.75,-5.06,.98);
   assembly = group;
   for (const sign of [-1,1]) {
-    const x = sign * 4.75;
+    const windowX=sign*(WING.inner+WING.outer)/2, x=windowX+sign*.10;
     group.add(tiledRoof({ name:sign<0?'Library roof':'Instrument hall roof', eave:rectangularRing(x,-2.46,2.12,3.87),
       ridge:rectangularRing(x,-2.46,.022,2.12),height:3.33,rise:.94,lift:.48 },roofMaterials));
-    const windowX=sign*4.65, front=.763;
+    const front=WING.south+.163;
     const apronWidth=sign<0 ? LIBRARY_ENTRY.jamb-LIBRARY_ENTRY.west : 2.89;
     const apronX=sign<0 ? (LIBRARY_ENTRY.jamb+LIBRARY_ENTRY.west)/2 : windowX;
     box(cedar,'Timber apron of the courtyard wing',apronX,.76,front,apronWidth,.51,.089);
@@ -387,7 +387,7 @@ export function buildTimberHalls(parent: THREE.Group, m: Materials, addObstacle:
         box(m.timber,'Short rail in the wing lattice',windowX+side*.82,y,front-.03,.40,.037,.049);
     }
     paintedBeam(windowX,3.03,.71,2.91,.24,.25);
-    for (const z of [-4.22,.52]) brackets(sign*3.2,2.93,z,.66,Math.PI/2);
+    for (const z of [-5.73,-4.22,.52]) brackets(sign*WING.inner,2.93,z,.66,Math.PI/2);
   }
   for (const sign of [-1,1]) {
     // Daylight falls between this short hip and the independent pavilion roof.

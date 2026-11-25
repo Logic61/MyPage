@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { NORTH_HALL_SETBACK } from './hall-terrace';
+import { NORTH_HALL_SETBACK, WING } from './hall-terrace';
 
 /** Shared with the offline geometry review; no renderer is needed to create the lights. */
 export function createStudyLighting(scene: THREE.Scene, coarse = false) {
@@ -27,12 +27,12 @@ export function createStudyLighting(scene: THREE.Scene, coarse = false) {
 
   const shelfBounce = new THREE.RectAreaLight(0xf4e8d4, 1.8, 3.8, 2.2);
   shelfBounce.name = 'Open-court sky in the library wing';
-  shelfBounce.position.set(-2.95, 2.76, -1.38); shelfBounce.lookAt(-5.55, 1.45, -1.82);
+  shelfBounce.position.set(-WING.inner+.25, 2.76, -1.38); shelfBounce.lookAt(-WING.outer+.55, 1.45, -1.82);
   scene.add(shelfBounce); lights.push(shelfBounce);
 
   const sideSky = new THREE.RectAreaLight(0xe4edf0, 1.6, 3.8, 2.2);
   sideSky.name = 'Open-court sky in the instrument wing';
-  sideSky.position.set(2.95, 2.7, -2.30); sideSky.lookAt(5.9, 1.4, -2.30);
+  sideSky.position.set(WING.inner-.25, 2.7, -2.30); sideSky.lookAt(WING.outer-.20, 1.4, -2.30);
   scene.add(sideSky); lights.push(sideSky);
 
   // A broad, quiet wash gives the silk painting and its timber rim a readable

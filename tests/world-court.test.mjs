@@ -206,13 +206,14 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     scene.updateMatrixWorld(true);
     const books = furnishings.interactions.find(item=>item.id==='books');
     const cabinet = new THREE.Box3().setFromObject(books.meshes[0],true);
+    const wing=terrace.WING, outerWall=wing.outer, windowCentre=(wing.inner+wing.outer)/2;
     const { front, tread, count } = terrace.HALL_STEPS;
     assert.ok(cabinet.min.z - front >= 3.1, 'The west cabinet stands on its own level floor south of the porch shoulder');
     assert.equal(terrace.hallRiseAt(cabinet.min.x,cabinet.min.z),0);
-    assert.ok(cabinet.min.x > -6.1 + .14 && cabinet.max.z < .6 - .14, 'Cabinet clears the inner plaster faces');
+    assert.ok(cabinet.min.x > -outerWall + .14 && cabinet.max.z < wing.south - .14, 'Cabinet clears the inner plaster faces');
     const nav = createNavigation(site.walkAreas,[...site.colliders,...furnishings.colliders]);
     const floorPieces=[];
-    const finishes=new Set(['Matched elm boards with long-grain margins','Staggered, honed limestone courses',
+    const finishes=new Set(['Matched elm boards with long-grain margins','Staggered, honed limestone courses','Long ashlar of the pond walks',
       'Flush door threshold','Flush threshold of the north hall','Recessed floor joint bed','Bound north-study carpet','Solid ashlar body of the hall terrace',
       'Bevelled leading stones of the porch landing','Dressed axial stair nosing','Dressed lateral stair nosing']);
     scene.traverse(part=>{if(part.isMesh&&finishes.has(part.name))floorPieces.push(part);});
@@ -240,22 +241,31 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
       standingRoom(x,thresholdZ-(x===0?.72:1.04),x===0?.44:.38,porchY);
     }
     for (const side of [-1,1]) {
-      for (const x of [5.25,6.95]) standingRoom(side*x,-4.51,.69,.30);
-      assert.ok(nav.clearLine({x:side*6.97,z:-4.90},{x:0,z:-4.90}),'The side doors reach the foot of the axial stair without a riser');
+      for (const x of [outerWall-.85,outerWall+.85]) standingRoom(side*x,-4.51,.69,.30);
+      assert.ok(nav.clearLine({x:side*(outerWall+.87),z:-4.90},{x:0,z:-4.90}),'The side doors reach the foot of the axial stair without a riser');
       assert.equal(nav.clearLine({x:side*4,z:front+.7},{x:side*4,z:front-.7}),false,'The shoulder has a physical retaining face');
+      assert.ok(nav.clearLine({x:side*3.25,z:-1.62},{x:side*6.45,z:-1.62}),'The former wing floor is open paving all the way across');
+      const formerRoof = new THREE.Raycaster(new THREE.Vector3(side*4.65,1.98,-1.62),new THREE.Vector3(0,1,0),0,8);
+      assert.equal(formerRoof.intersectObject(scene.getObjectByName(side<0?'Library roof':'Instrument hall roof'),true).length,0,
+        'The original room footprint now opens to the sky');
     }
-    for (const x of [5.37,5.45,5.52])
+    for (const x of [outerWall-.73,outerWall-.65,outerWall-.58])
       assert.ok(nav.clearLine({x,z:-4.35},{x,z:0}),'A continuous walking aisle separates the instrument table and the window');
     for (let level=1;level<=count;level++) {
       const offset=(count-level-.5)*tread, y=.30+level*terrace.HALL_STEPS.riser;
       for(const [x,z] of [[.13,front+offset],[terrace.HALL_STEPS.halfWidth+offset,front-2.18]])
         assert.ok(Math.abs(floorAt(x,z)-y)<.012 && Math.abs(.30+terrace.hallRiseAt(x,z)-y)<.001,'Measured stone and foot agree on each tread centre');
     }
-    const feet=[...scene.getObjectsByProperty('name','Low stone column foot')
-      .filter(o=>Math.abs(o.position.z-terrace.GALLERY.bents[0])<.001),
+    const lowFeet=scene.getObjectsByProperty('name','Low stone column foot');
+    assert.equal(lowFeet.length,10,'Three inner posts carry each wing and two posts carry each inner gallery plate');
+    for(const foot of lowFeet) {
+      const box=new THREE.Box3().setFromObject(foot,true);
+      assert.ok(Math.abs(box.min.y-.304)<.002,'The gallery and wing plinths start on the lower, boarded floor');
+    }
+    const feet=[...lowFeet,
       ...scene.getObjectsByProperty('name','Square plinth').filter(o=>o.parent.name==='North hall on its stone terrace'),
       ...scene.getObjectsByProperty('name','Stone pad beneath the inner door column')];
-    assert.equal(feet.length,8);
+    assert.equal(feet.length,16);
     for (const foot of feet) {
       const box=new THREE.Box3().setFromObject(foot,true);
       for(const x of [box.min.x+.018,box.max.x-.018])for(const z of [box.min.z+.018,box.max.z-.018])
@@ -270,14 +280,17 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     }
     const spectator = createNavigation(site.walkAreas,[...site.colliders,...furnishings.colliders],.44);
     for(const x of [-8.01,-7.61,-7.21]) assert.ok(spectator.clearLine({x,z:2.24},{x,z:7.65}),'A spectator can pass beside the chess game');
-    assert.ok(spectator.clearLine({x:-8.22,z:1.78},{x:chess.x+.77,z:chess.z-1.36}),'A broad bay admits the visitor from the west gallery');
+    const fromGallery={x:-outerWall-1.5,z:1.10};
+    const chessWalk=[fromGallery,{x:-10.20,z:2.45},{x:-9.50,z:3.57},{x:chess.x+.77,z:chess.z-1.36}];
+    assert.ok(chessWalk.every((p,i)=>spectator.canWalk(p.x,p.z) && (!i || spectator.clearLine(chessWalk[i-1],p))),
+      'An 88 cm wide route leads from the timber gallery, around the corner, into the open chess bay');
     assert.equal(scene.getObjectsByProperty('name','Rush-seated chess armchair').length,2);
     const chessBoard=scene.getObjectByName('Nineteen-line end-grain playing field'), boardTarget=chessBoard.getWorldPosition(new THREE.Vector3());
-    const galleryEye=new THREE.Vector3(-8.22,1.98,1.78), alongBoard=boardTarget.clone().sub(galleryEye);
+    const galleryEye=new THREE.Vector3(fromGallery.x,1.98,fromGallery.z), alongBoard=boardTarget.clone().sub(galleryEye);
     const westColumns=scene.getObjectByName('Chess pavilion on a stepped stone terrace').getObjectsByProperty('name','Lacquered timber pillar');
     assert.equal(westColumns.length,6);
-    assert.equal(new THREE.Raycaster(galleryEye,alongBoard.clone().normalize(),0,alongBoard.length()).intersectObjects(westColumns).length,0,
-      'The west gallery looks through an open bay at the board');
+    assert.equal(new THREE.Raycaster(galleryEye,alongBoard.clone().normalize(),.03,alongBoard.length()-.03).intersectObject(scene,true).length,0,
+      'The visitor can see the board across the open bay from the relocated west gallery');
     assert.equal(terrace.chessRiseAt(chess.x,chess.z),chess.rise);
     assert.equal(terrace.chessRiseAt(chess.x+3.2,chess.z),0);
     const bench = furnishings.interactions.find(item=>item.id==='bench');
@@ -307,10 +320,9 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
       trees.dispose();pineTextures.forEach(t=>t.dispose());
       grove.traverse(node=>{if(node.isInstancedMesh)node.dispose()});
     }
-    const crossingNav = createNavigation(site.walkAreas,[...site.colliders,...furnishings.colliders],.32,
-      [[-8,-11],[8,-11],[8,2],[-8,2]],site.overheads);
+    const crossingNav = createNavigation(site.walkAreas,[...site.colliders,...furnishings.colliders],.32,[],site.overheads);
     for (const [x,z,yaw,normal,plane] of [
-      [4.65,1.27,0,'z',.6], [6.77,-.62,Math.PI/2,'x',6.1],
+      [windowCentre,wing.south+.67,0,'z',wing.south], [outerWall+.67,-.62,Math.PI/2,'x',outerWall],
       [4.54,-8.02-terrace.NORTH_HALL_SETBACK,-Math.PI/2,'x',6.1], [-4.54,-8.02-terrace.NORTH_HALL_SETBACK,Math.PI/2,'x',-6.1],
     ]) {
       const p = { x,z };
@@ -331,10 +343,10 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
         assert.deepEqual(p, pass.landing);
       }
     }
-    assert.ok(crossingNav.findVault({x:6.77,z:-2.28},Math.PI/2),'The workbench leaves a landing aisle along the east window');
-    assert.equal(crossingNav.findVault({x:-5.45,z:-1.65},Math.PI/2),null,'The archive wall is solid');
-    assert.equal(crossingNav.findVault({x:4.65,z:1.27},Math.PI),null,'Looking away cannot trigger a vault');
-    for (const doorX of [-6.1,6.1]) {
+    assert.ok(crossingNav.findVault({x:outerWall+.67,z:-2.28},Math.PI/2),'The workbench leaves a landing aisle along the east window');
+    assert.equal(crossingNav.findVault({x:-outerWall+.65,z:-1.65},Math.PI/2),null,'The archive wall is solid');
+    assert.equal(crossingNav.findVault({x:windowCentre,z:wing.south+.67},Math.PI),null,'Looking away cannot trigger a vault');
+    for (const doorX of [-outerWall,outerWall]) {
       const doorZ = -4.65, floor = .3+terrace.walkRiseAt(doorX,doorZ);
       const ceiling = crossingNav.ceilingAt(doorX,doorZ);
       assert.ok(ceiling < 2.89 && ceiling > floor+STANDING_HEAD);
@@ -350,7 +362,7 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     }
     assert.equal(nav.canWalk(books.meshes[0].position.x, books.meshes[0].position.z),false);
     const plasters = scene.getObjectsByProperty('name','Solid lime-plaster wall with depth');
-    for (const [x,z,dx,dz] of [[-5.25,-3.31,-1,0],[-5.25,-1.1,-1,0],[-5.78,-.36,0,1]]) {
+    for (const [x,z,dx,dz] of [[-outerWall+.85,-3.31,-1,0],[-outerWall+.85,-1.1,-1,0],[-outerWall+.32,-.36,0,1]]) {
       for (const y of [.63,1.85,2.62]) {
         const ray = new THREE.Raycaster(new THREE.Vector3(x,y,z),new THREE.Vector3(dx,0,dz),0,1.16);
         assert.ok(ray.intersectObjects(plasters,false).length, 'Solid masonry remains beside the door and behind the cabinet');
@@ -362,6 +374,7 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
       const x=bookBay+dx;
       assert.ok(nav.clearLine({x,z:1.53},{x,z:-.70}), 'A visitor can enter the book bay across the full approach');
     }
+    assert.ok(nav.clearLine({x:-4.30,z:1.12},{x:bookBay,z:1.12}),'The pond walk turns west across level paving directly to the archive');
     // Test actual visibility from the visitor's side of the bank, before they know which way to turn.
     for(const eye of [new THREE.Vector3(-3.48,1.98,3.17), new THREE.Vector3(-3.38,1.98,6.54), new THREE.Vector3(-3.38,1.98,8.15)]) {
       assert.ok(nav.canWalk(eye.x,eye.z));
@@ -376,7 +389,8 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
       assert.ok(visible.length>=2,'Multiple rows of the real shelf are visible across the retreating wall');
     }
     const walkStones=scene.getObjectsByProperty('name','Long ashlar of the pond walks');
-    for(const [x,z] of [[0,10.1],[0,8.53],[bookBay,5.11],[bookBay,.91],[-bookBay,4.85],[5.58,4.83],[.12,1.58]]) {
+    for(const [x,z] of [[0,10.1],[0,8.53],[-4.30,5.11],[4.30,4.85],[-6.65,1.12],[bookBay,1.12],
+      [bookBay,.91],[5.58,4.83],[.12,1.58]]) {
       assert.ok(nav.canWalk(x,z),'The flush stone route clears the lanterns and planters');
       // Sample a shoe-width patch. Its centre can lie exactly over a 7 mm mortar joint.
       const stoneUnderfoot=[[-.06,-.07],[.06,-.07],[.06,.07],[-.06,.07],[0,0]].filter(([dx,dz])=>{
@@ -387,25 +401,26 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     }
     const thresholds = scene.getObjectsByProperty('name','Flush door threshold');
     for (const side of [-1,1]) {
-      const threshold = thresholds.find(mesh=>Math.abs(mesh.position.x-side*6.1)<.001);
+      const doorX=side*outerWall, insideX=doorX-side*.85, outsideX=doorX+side*1.25;
+      const threshold = thresholds.find(mesh=>Math.abs(mesh.position.x-doorX)<.001);
       assert.ok(threshold && Math.abs(threshold.position.z+4.51)<.001, 'Paired thresholds align across the courtyard');
       const jambs = scene.getObjectsByProperty('name','Deep timber window or door jamb')
-        .filter(mesh => Math.abs(mesh.position.x-side*6.1)<.001 && Math.abs(mesh.position.z+4.51)<1.12)
+        .filter(mesh => Math.abs(mesh.position.x-doorX)<.001 && Math.abs(mesh.position.z+4.51)<1.12)
         .map(mesh => new THREE.Box3().setFromObject(mesh,true)).sort((a,b)=>a.min.z-b.min.z);
       assert.equal(jambs.length,2);
       assert.ok(jambs[1].min.z - jambs[0].max.z >= 2.07, 'Two metres clear between the finished jambs');
       const north=jambs[0].max.z, south=jambs[1].min.z, body=.32;
       for (const [edge,inward] of [[north,1],[south,-1]]) {
         const fits=edge+inward*(body+.025), clips=edge+inward*(body-.025);
-        assert.ok(nav.clearLine({x:side*5.25,z:fits},{x:side*7.35,z:fits}),'Body clears the modelled jamb with 2.5 cm to spare');
-        assert.equal(nav.clearLine({x:side*5.25,z:clips},{x:side*7.35,z:clips}),false,'The same body clips the actual jamb 5 cm farther out');
+        assert.ok(nav.clearLine({x:insideX,z:fits},{x:outsideX,z:fits}),'Body clears the modelled jamb with 2.5 cm to spare');
+        assert.equal(nav.clearLine({x:insideX,z:clips},{x:outsideX,z:clips}),false,'The same body clips the actual jamb 5 cm farther out');
       }
       for (const z of [north+body+.028,(north+south)/2,south-body-.028]) {
-        const inside={x:side*5.25,z}, outside={x:side*7.35,z};
+        const inside={x:insideX,z}, outside={x:outsideX,z};
         assert.ok(nav.clearLine(inside,outside) && nav.clearLine(outside,inside), 'The side gallery door fits the player from either side');
-        const sill=floorAt(side*6.1,z);
+        const sill=floorAt(doorX,z);
         assert.ok(Math.abs(sill-.308)<.002,'The physical threshold is 8 mm above the nominal floor');
-        for (const x of [5.83,6.37]) assert.ok(Math.abs(floorAt(side*x,z)-sill)<.025,'Both ends of the stone threshold meet the wooden floor');
+        for (const x of [doorX-.27,doorX+.27]) assert.ok(Math.abs(floorAt(x,z)-sill)<.025,'Both ends of the stone threshold meet the wooden floor');
         for (const [dy,dz] of [[.045,0],[.92,-.30],[.92,.30],[STANDING_HEAD-.025,0]]) {
           const ray=new THREE.Raycaster(new THREE.Vector3(inside.x,.3+dy,z+dz),new THREE.Vector3(side,0,0),0,2.1);
           assert.equal(ray.intersectObject(scene,true).length,0,'The threshold, shoulders and crown have a clear line across the whole doorway');
@@ -426,7 +441,7 @@ test('the furnished wings and terraces preserve clear sightlines, solid walls an
     assert.ok(trough.min.x-innerFace >= 2.20, 'Two people fit between the scholar stone and the column foot');
     for (const x of [innerFace+.33,(innerFace+trough.min.x)/2,trough.min.x-.33])
       assert.ok(nav.clearLine({x,z:.25},{x,z:-3.8}),'The full gallery lane is clear');
-    assert.equal(nav.canWalk(-6.64,-1.87),false);
+    assert.equal(nav.canWalk(-terrace.GALLERY.wall-.54,-1.87),false);
     const rock=scene.getObjectByName('Double-perforated Taihu scholar stone');
     const ray=new THREE.Raycaster(), axis=new THREE.Vector3(1,0,0).transformDirection(rock.matrixWorld);
     function throughRock(y,z) {
@@ -571,7 +586,51 @@ test('entrance, hall and mirror-paired roofs share the built courtyard axis',asy
     buildCliffCrossings(bridges,{material:()=>new THREE.MeshStandardMaterial()},{stone:bridgeStone,darkStone:bridgeStone},
       site.colliders,keep,own,site.floors);
     bridges.updateMatrixWorld(true);
-    const nav=createNavigation(site.walkAreas,site.colliders);
+    const nav=createNavigation(site.walkAreas,site.colliders,.32,terrace.COURT_OUTLINE,site.overheads);
+    // Walk past the last outer plinth and turn with the stone rail onto the pavilion landing.
+    const galleryTurn=[[14.10,-6.95],[14.10,1.23],[14.03,1.70],[13.67,1.98],[13.30,2.18],
+      [12.90,2.43],[12.44,2.73],[11.97,3.12],[11.71,3.39]];
+    for (const side of [-1,1]) {
+      const route=galleryTurn.map(([x,z])=>({x:side*x,z}));
+      for(let i=1;i<route.length;i++) {
+        assert.ok(nav.clearLine(route[i-1],route[i]) && nav.clearLine(route[i],route[i-1]),
+          `A walking visitor can follow the gallery rail at (${route[i].x}, ${route[i].z})`);
+      }
+    }
+    // A clear line to the sign alone misses the outer columns and most of the lower front.
+    const northHall=root.getObjectByName('North hall on its stone terrace');
+    const hallMeshes=new Set();
+    northHall.traverse(part=>{if(part.isMesh) hallMeshes.add(part);});
+    const frontPieces=['Square plinth','Lacquered timber pillar','Hall side-bay transom','Amber paper in the shutter']
+      .flatMap(name=>northHall.getObjectsByProperty('name',name));
+    assert.equal(frontPieces.length,12);
+    const centreOf=piece=>new THREE.Box3().setFromObject(piece,true).getCenter(new THREE.Vector3());
+    const samples=frontPieces.map(piece=>({name:piece.name,point:centreOf(piece)}));
+    const porchCaps=root.getObjectsByProperty('name','Bevelled leading stones of the porch landing')
+      .sort((a,b)=>a.position.x-b.position.x);
+    for (const piece of [porchCaps[0],porchCaps.at(-1)]) {
+      hallMeshes.add(piece);
+      samples.push({name:'outer edge of the porch landing',point:centreOf(piece)});
+    }
+    const hipShoes=northHall.getObjectByName('North hall lower eaves').getObjectsByProperty('name','Lifted bronze hip shoe')
+      .sort((a,b)=>centreOf(b).z-centreOf(a).z);
+    assert.equal(hipShoes.length,4);
+    for (const shoe of hipShoes.slice(0,2)) {
+      const vertices=shoe.geometry.getAttribute('position');
+      const point=new THREE.Vector3().fromBufferAttribute(vertices,Math.floor(vertices.count/2));
+      samples.push({name:'front upturned eave',point:shoe.localToWorld(point)});
+    }
+    for(const [x,z] of [[-.3941,11.76],[0,12.52],[-3.55,6.72],[3.55,6.72]]) {
+      assert.ok(nav.canWalk(x,z),'The viewing point is reachable on foot');
+      const eye=new THREE.Vector3(x,1.98,z);
+      for(const {name,point} of samples) {
+        const delta=point.clone().sub(eye);
+        const ray=new THREE.Raycaster(eye,delta.clone().normalize(),.03,delta.length()+.15);
+        const first=ray.intersectObject(root,true)[0];
+        assert.ok(first && hallMeshes.has(first.object),
+          `Looking at the ${name} from (${x}, ${z}) first met ${first?.object.name}`);
+      }
+    }
     for(let z=origin.z;z>=6.7;z-=.125) assert.ok(nav.canWalk(0,z),'Open bridge and gate at '+z);
     assert.equal(root.getObjectsByProperty('name','Open reflecting pool').length,1);
     const middle = {x:0,z:(waterCourt.COURTYARD_POOL.z0+waterCourt.COURTYARD_POOL.z1)/2};
@@ -608,7 +667,7 @@ test('entrance, hall and mirror-paired roofs share the built courtyard axis',asy
       const lamp=waterCourt.POOL_LAMP;
       const pavilionEntry=side<0?{x:terrace.CHESS_PAVILION.x+.77,z:terrace.CHESS_PAVILION.z-1.36}
         :{x:terrace.TEA_PAVILION.x+.44,z:terrace.TEA_PAVILION.apron.z0+.6};
-      for(const end of [pavilionEntry,{x:side*4.65,z:-3.2},{x:side*lamp.approachX,z:lamp.approachZ}]) {
+      for(const end of [pavilionEntry,{x:side*(terrace.WING.inner+1.45),z:-3.2},{x:side*lamp.approachX,z:lamp.approachZ}]) {
         assert.ok(nav.canWalk(end.x,end.z));
         const path=nav.findPath(origin,end);
         assert.ok(path.length && Math.hypot(path.at(-1).x-end.x,path.at(-1).z-end.z)<.01);

@@ -1,6 +1,6 @@
 ---
 import FolioGlyph from './FolioGlyph.astro';
-import { CHESS_PAVILION, EAST_BRIDGE, GALLERY, HALL_STEPS, LIBRARY_ENTRY, NORTH_HALL_SETBACK, TEA_PAVILION } from '../scripts/mountain-world/hall-terrace';
+import { CHESS_PAVILION, COURT_OUTLINE, EAST_BRIDGE, GALLERY, HALL_STEPS, LIBRARY_ENTRY, NORTH_HALL_SETBACK, TEA_PAVILION, WING } from '../scripts/mountain-world/hall-terrace';
 import { COURTYARD_POOL, FORECOURT_PLANTER } from '../scripts/mountain-world/water-court';
 import { getBlogPosts, postDate, postDescription, postSlug } from '../utils/posts';
 
@@ -9,6 +9,7 @@ const { isEn } = Astro.props;
 const t = (zh: string, en: string) => isEn ? en : zh;
 const base = import.meta.env.BASE_URL.replace(/\/$/, '');
 const prefix = base + (isEn ? '/en' : '');
+const wingCentre = (WING.inner+WING.outer)/2;
 const chessFootprint = Array.from({length:6}, (_,i) => {
   const {x,z,eaves,orientation} = CHESS_PAVILION, angle = orientation+i*Math.PI/3;
   return `${x+eaves*Math.cos(angle)},${z-eaves*Math.sin(angle)}`;
@@ -71,7 +72,7 @@ const places = [
                 <svg class="floorplan" viewBox="-19 -19 56 62" aria-label={t('北为书斋，南为候云台，东为日轮台。金色标记为当前位置。','The study is north, Cloudwatch Landing south and Sunwheel Terrace east. Gold marks your position.')}>
                   <defs><pattern id="hatch" width=".8" height=".8" patternUnits="userSpaceOnUse"><path d="m0 .8.8-.8" stroke="currentColor" stroke-width=".12" opacity=".35"/></pattern></defs>
                   <g fill="none" stroke="currentColor" stroke-width=".2" stroke-linejoin="round">
-                    <polygon points="-14.5,-11.7 -7.8,-14.2 .2,-13.2 8.7,-12.4 13.7,-8.4 15,-1.2 14.1,8.3 10.7,12 5.5,14.4 3.6,17.1 -1.1,17.9 -5.1,15.1 -11.4,12 -14.9,6.1 -16,-.8" fill="#c6bfa32b"/>
+                    <polygon points={COURT_OUTLINE.map(p=>p.join(',')).join(' ')} fill="#c6bfa32b"/>
                     <g stroke-width=".09">
                       <title>{t('北厅月台及中央石阶','North hall porch and central flight of steps')}</title>
                       <rect x={-HALL_STEPS.halfWidth} y={HALL_STEPS.rear} width={2*HALL_STEPS.halfWidth} height={HALL_STEPS.front-HALL_STEPS.rear}/>
@@ -82,10 +83,10 @@ const places = [
                     </g>
                     <rect x={-6.1} y={-10 - NORTH_HALL_SETBACK} width="12.2" height="4.2" fill="url(#hatch)"/>
                     {[-1,1].map(side => <g transform={`scale(${side},1)`}>
-                      <path d={`M6.1 ${GALLERY.door.from}V-5.8H3.2V.6H6.1V${GALLERY.door.to}Z`} fill="url(#hatch)" stroke="none"/>
-                      <path d={`M6.1 ${GALLERY.door.from}V-5.8H3.2 M6.1 ${GALLERY.door.to}V.6` +
-                        (side<0 ? `H${-LIBRARY_ENTRY.jamb}V${LIBRARY_ENTRY.returnEnd}` : 'H3.2')}><title>{side<0 ? t('西书阁面池廊口与侧门','Library porch on the pond walk and side door') : t('东翼侧门通往长廊','Side door from the workroom to the gallery')}</title></path>
-                      <path d={`M6.1 ${GALLERY.north}H${GALLERY.outerFloor}V${GALLERY.south}H6.35`} stroke-width=".12"/>
+                      <rect x={WING.inner} y={WING.north} width={WING.outer-WING.inner} height={WING.south-WING.north} fill="url(#hatch)" stroke="none"/>
+                      <path d={`M${WING.outer} ${GALLERY.door.from}V${WING.north}H${WING.inner} M${WING.outer} ${GALLERY.door.to}V${WING.south}` +
+                        (side<0 ? `H${-LIBRARY_ENTRY.jamb}V${LIBRARY_ENTRY.returnEnd}` : `H${WING.inner}`)}><title>{side<0 ? t('西书阁面池廊口与侧门','Library porch on the pond walk and side door') : t('东翼侧门通往长廊','Side door from the workroom to the gallery')}</title></path>
+                      <path d={`M${GALLERY.wall} ${GALLERY.north}H${GALLERY.outerFloor}V${GALLERY.south}H${GALLERY.wall}`} stroke-width=".12"/>
                       {GALLERY.bents.map(z => <circle cx={GALLERY.outerPost} cy={z} r=".15" fill="currentColor" stroke="none"/>)}
                     </g>)}
                     <path d="M-6.1 11.17v1.89h3.9m4.4 0h3.9v-1.89 M-1.65 15.75V31.9m3.3-16.15V31.9"/>
@@ -111,7 +112,7 @@ const places = [
                       <circle cx="26" cy="5" r="4.3" fill="url(#hatch)"/><circle cx="26" cy="5" r="2.55"/>
                     </a>
                   </g>
-                  <g class="map-labels" style="font-size: 1.85px"><text x="0" y="-15.5">N</text><text x="-10.8" y="-3.5">{t('藏书','Library')}</text><text x="11.1" y="-3.5">{t('工作案','Workbench')}</text><text x="26" y="12">{t('日轮台','Sunwheel Terrace')}</text><text x="0" y="41.1">{t('候云台','Cloudwatch Landing')}</text></g>
+                  <g class="map-labels" style="font-size: 1.85px"><text x="0" y="-15.5">N</text><text x={-wingCentre} y="-3.5">{t('藏书','Library')}</text><text x={wingCentre} y="-3.5">{t('工作案','Workbench')}</text><text x="26" y="12">{t('日轮台','Sunwheel Terrace')}</text><text x="0" y="41.1">{t('候云台','Cloudwatch Landing')}</text></g>
                   <g id="map-player" transform="translate(0 34) scale(.17)"><circle r="3.5"/><path d="M0-10l-3.2 5.8h6.4z"/></g>
                 </svg>
                 <div class="map-directory">{places.map(p => <div>

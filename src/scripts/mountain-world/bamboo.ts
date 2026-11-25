@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { seeded } from './environment-geometry';
 
 type Surface = { vertices: number[]; colors: number[]; faces: number[] };
+export const BAMBOO_GROVE = { x:-16.08, z:-.82 } as const;
 const up = new THREE.Vector3(0, 1, 0);
 const east = new THREE.Vector3(1, 0, 0);
 
@@ -65,6 +66,8 @@ export function buildBamboo(rng: () => number) {
 
   function spray(node: THREE.Vector3, angle: number, length: number) {
     const ray = new THREE.Vector3(Math.cos(angle), 0, Math.sin(angle));
+    // Shorter low, path-facing shoots keep the foliage behind the rail at eye height.
+    length *= 1-.42*(1-THREE.MathUtils.smoothstep(node.y,2.55,3.35))*Math.max(0,ray.x);
     const onBranch = (t: number) => node.clone().addScaledVector(ray, length * t)
       .addScaledVector(up, length * (.95 * t - .61 * t * t));
     tube(stems, [0,.45,1].map(t => ({ center: onBranch(t), radius: .014 * (1 - .8*t), color: twig })), 6);
@@ -81,11 +84,12 @@ export function buildBamboo(rng: () => number) {
   }
 
   for (let i = 0; i < 15; i++) {
-    const x = -13.7 + (rng() - .5) * 1.2, z = -.75 + (rng() - .5) * 2.5;
+    const x=BAMBOO_GROVE.x+(rng()-.5)*1.12, z=BAMBOO_GROVE.z+(rng()-.5)*2.46;
     const height = 2.7 + rng() * 2, radius = .027 + rng() * .022;
     const intervals = Array.from({length: 12}, (_,j) => (.65 + .55 * Math.sin(Math.PI*j/11)) * (.86 + .28*rng()));
     const total = intervals.reduce((sum,n) => sum+n, 0);
-    const lean = new THREE.Vector3((x + 13.7)*.78 + (detail()-.5)*.28, 0, (z+.75)*.39 + (detail()-.5)*.24);
+    const lean=new THREE.Vector3((x-BAMBOO_GROVE.x)*.68-.18+(detail()-.5)*.24,0,
+      (z-BAMBOO_GROVE.z)*.39+(detail()-.5)*.24);
     const axis = (t: number) => new THREE.Vector3(x,.28 + t*height,z).addScaledVector(lean,t*t);
     const skin = new THREE.Color().lerpColors(new THREE.Color('#69804d'),new THREE.Color('#9da45d'),detail());
     const rings: Ring[] = [{center: axis(0), radius, color: skin}];

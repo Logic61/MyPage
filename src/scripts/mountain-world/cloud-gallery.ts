@@ -87,7 +87,7 @@ export function buildCloudGallery(parent: THREE.Group, library: SurfaceLibrary, 
     colliders.push({x:postX,z:along,halfX:.177,halfZ:.177});
   }
 
-  const x=-6.64,z=-1.87,w=.71,h=.25,d=1.86, rim=.072;
+  const x=-GALLERY.wall-.54,z=-1.87,w=.71,h=.25,d=1.86, rim=.072;
   function ashlar(width:number,height:number,depth:number,px:number,py:number,pz:number) {
     place(keep(architecturalBlock(width,height,depth,.012)),stone,'Dressed curb of the fern trough',px,py,pz);
   }
